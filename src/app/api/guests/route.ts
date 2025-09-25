@@ -3,40 +3,22 @@ import fs from 'fs/promises';
 import path from 'path';
 
 const dataFilePath = path.join(process.cwd(), 'src', 'data', 'guests.json');
+const tempDataFilePath = path.join('/tmp', 'guests.json');
 
 async function readData() {
   try {
-    const fileData = await fs.readFile(dataFilePath, 'utf-8');
+    await fs.access(tempDataFilePath);
+    const fileData = await fs.readFile(tempDataFilePath, 'utf-8');
     return JSON.parse(fileData);
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-      return [
-        {
-          id: "guest-001",
-          name: "Olivia Martin",
-          email: "olivia.martin@email.com",
-          avatar: "https://picsum.photos/seed/om/40/40",
-          phone: "+1 (555) 123-4567",
-          lastStay: new Date(2024, 6, 18).toISOString(),
-          totalBookings: 3,
-        },
-        {
-          id: "guest-002",
-          name: "Jackson Lee",
-          email: "jackson.lee@email.com",
-          avatar: "https://picsum.photos/seed/jl/40/40",
-          phone: "+1 (555) 987-6543",
-          lastStay: new Date(2024, 6, 22).toISOString(),
-          totalBookings: 1,
-        },
-      ];
-    }
-    throw error;
+    const originalData = await fs.readFile(dataFilePath, 'utf-8').then(JSON.parse);
+    await fs.writeFile(tempDataFilePath, JSON.stringify(originalData, null, 2), 'utf-8');
+    return originalData;
   }
 }
 
 async function writeData(data: any) {
-  await fs.writeFile(dataFilePath, JSON.stringify(data, null, 2), 'utf-8');
+  await fs.writeFile(tempDataFilePath, JSON.stringify(data, null, 2), 'utf-8');
 }
 
 export async function GET() {

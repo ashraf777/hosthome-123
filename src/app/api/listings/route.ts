@@ -3,49 +3,22 @@ import fs from 'fs/promises';
 import path from 'path';
 
 const dataFilePath = path.join(process.cwd(), 'src', 'data', 'listings.json');
+const tempDataFilePath = path.join('/tmp', 'listings.json');
 
 async function readData() {
   try {
-    const fileData = await fs.readFile(dataFilePath, 'utf-8');
+    await fs.access(tempDataFilePath);
+    const fileData = await fs.readFile(tempDataFilePath, 'utf-8');
     return JSON.parse(fileData);
   } catch (error) {
-    // If the file doesn't exist, return initial data
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-      return [
-        {
-          id: "prop-001",
-          name: "Cozy Downtown Apartment",
-          imageUrl: "https://picsum.photos/seed/prop1/800/600",
-          imageHint: "apartment interior",
-          roomType: "Entire Place",
-          status: "Listed",
-          instantBook: true,
-          price: 150,
-          description: "A lovely apartment in the heart of the city.",
-          address: "123 Main St, Anytown, USA",
-          amenities: "Wi-Fi, Kitchen, Free Parking"
-        },
-        {
-          id: "prop-002",
-          name: "Beachside Villa",
-          imageUrl: "https://picsum.photos/seed/prop2/800/600",
-          imageHint: "beach villa",
-          roomType: "Entire Place",
-          status: "Listed",
-          instantBook: false,
-          price: 450,
-          description: "Stunning villa with ocean views.",
-          address: "456 Ocean Ave, Beachtown, USA",
-          amenities: "Wi-Fi, Pool, Air Conditioning"
-        },
-      ];
-    }
-    throw error;
+    const originalData = await fs.readFile(dataFilePath, 'utf-8').then(JSON.parse);
+    await fs.writeFile(tempDataFilePath, JSON.stringify(originalData, null, 2), 'utf-8');
+    return originalData;
   }
 }
 
 async function writeData(data: any) {
-  await fs.writeFile(dataFilePath, JSON.stringify(data, null, 2), 'utf-8');
+  await fs.writeFile(tempDataFilePath, JSON.stringify(data, null, 2), 'utf-8');
 }
 
 export async function GET() {

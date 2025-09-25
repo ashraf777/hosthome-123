@@ -3,48 +3,22 @@ import fs from 'fs/promises';
 import path from 'path';
 
 const dataFilePath = path.join(process.cwd(), 'src', 'data', 'bookings.json');
+const tempDataFilePath = path.join('/tmp', 'bookings.json');
 
 async function readData() {
   try {
-    const fileData = await fs.readFile(dataFilePath, 'utf-8');
+    await fs.access(tempDataFilePath);
+    const fileData = await fs.readFile(tempDataFilePath, 'utf-8');
     return JSON.parse(fileData);
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-      return [
-        {
-          id: "booking-001",
-          guestName: "Olivia Martin",
-          checkIn: new Date(2024, 6, 15).toISOString(),
-          checkOut: new Date(2024, 6, 18).toISOString(),
-          status: "Confirmed",
-          total: 599.0,
-          guestEmail: "olivia.martin@email.com",
-          roomType: "Entire Place",
-          unitListing: "unit101",
-          bookingType: "nightly",
-          bookingSource: "HostHome"
-        },
-        {
-          id: "booking-002",
-          guestName: "Jackson Lee",
-          checkIn: new Date(2024, 6, 20).toISOString(),
-          checkOut: new Date(2024, 6, 22).toISOString(),
-          status: "Pending",
-          total: 250.0,
-          guestEmail: "jackson.lee@email.com",
-          roomType: "Private Room",
-          unitListing: "unit102",
-          bookingType: "nightly",
-          bookingSource: "Airbnb"
-        },
-      ];
-    }
-    throw error;
+    const originalData = await fs.readFile(dataFilePath, 'utf-8').then(JSON.parse);
+    await fs.writeFile(tempDataFilePath, JSON.stringify(originalData, null, 2), 'utf-8');
+    return originalData;
   }
 }
 
 async function writeData(data: any) {
-  await fs.writeFile(dataFilePath, JSON.stringify(data, null, 2), 'utf-8');
+  await fs.writeFile(tempDataFilePath, JSON.stringify(data, null, 2), 'utf-8');
 }
 
 export async function GET() {

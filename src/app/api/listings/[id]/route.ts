@@ -3,14 +3,23 @@ import fs from 'fs/promises';
 import path from 'path';
 
 const dataFilePath = path.join(process.cwd(), 'src', 'data', 'listings.json');
+const tempDataFilePath = path.join('/tmp', 'listings.json');
 
 async function readData() {
-  const fileData = await fs.readFile(dataFilePath, 'utf-8');
-  return JSON.parse(fileData);
+    try {
+        await fs.access(tempDataFilePath);
+        const fileData = await fs.readFile(tempDataFilePath, 'utf-8');
+        return JSON.parse(fileData);
+    } catch {
+        const fileData = await fs.readFile(dataFilePath, 'utf-8');
+        const data = JSON.parse(fileData);
+        await fs.writeFile(tempDataFilePath, JSON.stringify(data, null, 2), 'utf-8');
+        return data;
+    }
 }
 
 async function writeData(data: any) {
-  await fs.writeFile(dataFilePath, JSON.stringify(data, null, 2), 'utf-8');
+  await fs.writeFile(tempDataFilePath, JSON.stringify(data, null, 2), 'utf-8');
 }
 
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
