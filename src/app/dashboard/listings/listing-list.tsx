@@ -42,65 +42,74 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { useToast } from "@/hooks/use-toast"
+import { Skeleton } from "@/components/ui/skeleton"
 
-const initialListings = [
-  {
-    id: "prop-001",
-    name: "Cozy Downtown Apartment",
-    imageUrl: "https://picsum.photos/seed/prop1/80/60",
-    imageHint: "apartment interior",
-    roomType: "Entire Place",
-    status: "Listed",
-    instantBook: true,
-    price: 150,
-  },
-  {
-    id: "prop-002",
-    name: "Beachside Villa",
-    imageUrl: "https://picsum.photos/seed/prop2/80/60",
-    imageHint: "beach villa",
-    roomType: "Entire Place",
-    status: "Listed",
-    instantBook: false,
-    price: 450,
-  },
-  {
-    id: "prop-003",
-    name: "Mountain Cabin Retreat",
-    imageUrl: "https://picsum.photos/seed/prop3/80/60",
-    imageHint: "mountain cabin",
-    roomType: "Entire Place",
-    status: "Unlisted",
-    instantBook: true,
-    price: 220,
-  },
-  {
-    id: "prop-004",
-    name: "Urban Studio Loft",
-    imageUrl: "https://picsum.photos/seed/prop4/80/60",
-    imageHint: "studio loft",
-    roomType: "Private Room",
-    status: "Listed",
-    instantBook: true,
-    price: 95,
-  },
-];
+type Listing = {
+  id: string;
+  name: string;
+  imageUrl: string;
+  imageHint: string;
+  roomType: string;
+  status: string;
+  instantBook: boolean;
+  price: number;
+};
 
 const getStatusBadgeVariant = (status: string) => {
   return status === 'Listed' ? 'default' : 'secondary';
 }
 
 export function ListingList() {
-  const [listings, setListings] = React.useState(initialListings);
+  const [listings, setListings] = React.useState<Listing[]>([]);
+  const [loading, setLoading] = React.useState(true);
   const router = useRouter()
   const { toast } = useToast()
 
-  const handleDelete = (id: string) => {
+  React.useEffect(() => {
+    const fetchListings = async () => {
+      try {
+        const response = await fetch('/api/listings');
+        if (!response.ok) throw new Error("Failed to fetch");
+        const data = await response.json();
+        setListings(data);
+      } catch (error) {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Could not fetch listings.",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchListings();
+  }, [toast]);
+
+  const handleDelete = async (id: string) => {
+    const originalListings = [...listings];
     setListings(listings.filter(l => l.id !== id));
-    toast({
-        title: "Listing Deleted",
-        description: "The property listing has been successfully deleted.",
-    })
+    
+    try {
+      const response = await fetch(`/api/listings/${id}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to delete listing");
+      }
+      
+      toast({
+          title: "Listing Deleted",
+          description: "The property listing has been successfully deleted.",
+      })
+    } catch (error) {
+      setListings(originalListings);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to delete the listing. Please try again.",
+      });
+    }
   };
 
   return (
@@ -136,7 +145,23 @@ export function ListingList() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {listings.map((listing) => (
+            {loading ? (
+              Array.from({ length: 4 }).map((_, i) => (
+                <TableRow key={i}>
+                  <TableCell>
+                     <div className="flex items-center gap-3">
+                       <Skeleton className="h-[60px] w-[80px] rounded-md" />
+                       <Skeleton className="h-6 w-48" />
+                     </div>
+                  </TableCell>
+                  <TableCell><Skeleton className="h-6 w-24" /></TableCell>
+                  <TableCell><Skeleton className="h-6 w-20" /></TableCell>
+                  <TableCell><Skeleton className="h-6 w-16" /></TableCell>
+                  <TableCell className="text-right"><Skeleton className="h-6 w-20 ml-auto" /></TableCell>
+                  <TableCell className="text-right"><Skeleton className="h-8 w-8 ml-auto" /></TableCell>
+                </TableRow>
+              ))
+            ) : listings.map((listing) => (
               <TableRow key={listing.id}>
                 <TableCell className="font-medium">
                   <div className="flex items-center gap-3">
@@ -145,7 +170,7 @@ export function ListingList() {
                       alt={listing.name}
                       width={80}
                       height={60}
-                      className="rounded-md"
+                      className="rounded-md object-cover"
                       data-ai-hint={listing.imageHint}
                     />
                     <span>{listing.name}</span>
@@ -211,6 +236,11 @@ export function ListingList() {
             ))}
           </TableBody>
         </Table>
+         {!loading && listings.length === 0 && (
+          <div className="text-center py-12 text-muted-foreground">
+            No listings found.
+          </div>
+        )}
       </CardContent>
     </Card>
   )

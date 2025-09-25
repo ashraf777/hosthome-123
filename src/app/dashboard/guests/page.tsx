@@ -43,58 +43,70 @@ import {
 } from "@/components/ui/alert-dialog"
 import { useToast } from "@/hooks/use-toast"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Skeleton } from "@/components/ui/skeleton"
 
-// Mock Data
-const initialGuests = [
-  {
-    id: "guest-001",
-    name: "Olivia Martin",
-    email: "olivia.martin@email.com",
-    avatar: "https://picsum.photos/seed/om/40/40",
-    phone: "+1 (555) 123-4567",
-    lastStay: new Date(2024, 6, 18),
-    totalBookings: 3,
-  },
-  {
-    id: "guest-002",
-    name: "Jackson Lee",
-    email: "jackson.lee@email.com",
-    avatar: "https://picsum.photos/seed/jl/40/40",
-    phone: "+1 (555) 987-6543",
-    lastStay: new Date(2024, 6, 22),
-    totalBookings: 1,
-  },
-  {
-    id: "guest-003",
-    name: "Isabella Nguyen",
-    email: "isabella.nguyen@email.com",
-    avatar: "https://picsum.photos/seed/in/40/40",
-    phone: "+1 (555) 234-5678",
-    lastStay: new Date(2024, 7, 5),
-    totalBookings: 5,
-  },
-  {
-    id: "guest-004",
-    name: "William Kim",
-    email: "will@email.com",
-    avatar: "https://picsum.photos/seed/wk/40/40",
-    phone: "+1 (555) 876-5432",
-    lastStay: new Date(2024, 7, 12),
-    totalBookings: 2,
-  },
-];
+type Guest = {
+    id: string;
+    name: string;
+    email: string;
+    avatar: string;
+    phone: string;
+    lastStay: string;
+    totalBookings: number;
+}
 
 export default function GuestManagementPage() {
-  const [guests, setGuests] = React.useState(initialGuests);
+  const [guests, setGuests] = React.useState<Guest[]>([]);
+  const [loading, setLoading] = React.useState(true);
   const router = useRouter();
   const { toast } = useToast();
 
-  const handleDelete = (id: string) => {
+  React.useEffect(() => {
+    const fetchGuests = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch('/api/guests');
+        if (!response.ok) throw new Error("Failed to fetch");
+        const data = await response.json();
+        setGuests(data);
+      } catch (error) {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Could not fetch guests.",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchGuests();
+  }, [toast]);
+
+  const handleDelete = async (id: string) => {
+    const originalGuests = [...guests];
     setGuests(guests.filter(g => g.id !== id));
-    toast({
-        title: "Guest Deleted",
-        description: "The guest has been successfully deleted.",
-    })
+    
+    try {
+      const response = await fetch(`/api/guests/${id}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to delete guest");
+      }
+      
+      toast({
+          title: "Guest Deleted",
+          description: "The guest has been successfully deleted.",
+      })
+    } catch (error) {
+      setGuests(originalGuests);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to delete the guest. Please try again.",
+      });
+    }
   };
 
   return (
@@ -131,7 +143,22 @@ export default function GuestManagementPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {guests.map((guest) => (
+              {loading ? (
+                 Array.from({ length: 4 }).map((_, i) => (
+                  <TableRow key={i}>
+                    <TableCell>
+                      <div className="flex items-center gap-3">
+                        <Skeleton className="h-9 w-9 rounded-full" />
+                        <Skeleton className="h-6 w-32" />
+                      </div>
+                    </TableCell>
+                    <TableCell><Skeleton className="h-6 w-48" /></TableCell>
+                    <TableCell><Skeleton className="h-6 w-24" /></TableCell>
+                    <TableCell className="text-center"><Skeleton className="h-6 w-12 mx-auto" /></TableCell>
+                    <TableCell className="text-right"><Skeleton className="h-8 w-8 ml-auto" /></TableCell>
+                  </TableRow>
+                ))
+              ) : guests.map((guest) => (
                 <TableRow key={guest.id}>
                   <TableCell className="font-medium">
                      <div className="flex items-center gap-3">
@@ -148,7 +175,7 @@ export default function GuestManagementPage() {
                       <span className="text-muted-foreground text-sm">{guest.phone}</span>
                     </div>
                   </TableCell>
-                  <TableCell>{format(guest.lastStay, "PPP")}</TableCell>
+                  <TableCell>{format(new Date(guest.lastStay), "PPP")}</TableCell>
                   <TableCell className="text-center">
                     <Badge variant="secondary">{guest.totalBookings}</Badge>
                   </TableCell>
@@ -198,6 +225,11 @@ export default function GuestManagementPage() {
               ))}
             </TableBody>
           </Table>
+           {!loading && guests.length === 0 && (
+            <div className="text-center py-12 text-muted-foreground">
+              No guests found.
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

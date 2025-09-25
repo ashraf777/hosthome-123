@@ -1,10 +1,11 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { Loader2, UserPlus } from "lucide-react"
+import { useRouter } from "next/navigation"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -38,37 +39,84 @@ const userFormSchema = z.object({
   email: z.string().email("Invalid email address."),
   role: z.string({ required_error: "Please select a role." }),
   status: z.string({ required_error: "Please select a status." }),
+  avatar: z.string().url().optional(),
 })
+
+type UserFormValues = z.infer<typeof userFormSchema>;
 
 interface UserFormProps {
   isEditMode?: boolean;
+  userId?: string;
 }
 
-export function UserForm({ isEditMode = false }: UserFormProps) {
+export function UserForm({ isEditMode = false, userId }: UserFormProps) {
   const [loading, setLoading] = useState(false)
   const { toast } = useToast()
+  const router = useRouter();
 
-  const form = useForm<z.infer<typeof userFormSchema>>({
+  const form = useForm<UserFormValues>({
     resolver: zodResolver(userFormSchema),
     defaultValues: {
       name: "",
       email: "",
       role: "Staff",
       status: "Active",
+      avatar: `https://picsum.photos/seed/${Math.random()}/40/40`,
     },
   })
 
-  function onSubmit(values: z.infer<typeof userFormSchema>) {
+  useEffect(() => {
+    if (isEditMode && userId) {
+      setLoading(true);
+      const fetchUser = async () => {
+        try {
+          const response = await fetch(`/api/users/${userId}`);
+          if (!response.ok) throw new Error("Failed to fetch user");
+          const data = await response.json();
+          form.reset(data);
+        } catch (error) {
+          toast({ variant: "destructive", title: "Error", description: "Could not fetch user data." });
+        } finally {
+          setLoading(false);
+        }
+      };
+      fetchUser();
+    }
+  }, [isEditMode, userId, form, toast]);
+
+
+  async function onSubmit(values: UserFormValues) {
     setLoading(true)
-    console.log(values)
-    // Simulate API call
-    setTimeout(() => {
+    
+    const method = isEditMode ? 'PUT' : 'POST';
+    const url = isEditMode ? `/api/users/${userId}` : '/api/users';
+
+    try {
+      const response = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(values),
+      });
+
+      if (!response.ok) {
+        throw new Error(isEditMode ? 'Failed to update user' : 'Failed to create user');
+      }
+
       toast({
         title: isEditMode ? "User Updated" : "User Added",
         description: `The user has been successfully ${isEditMode ? 'updated' : 'added'}.`,
       })
+      router.push('/dashboard/users');
+      router.refresh();
+    } catch (error) {
+       toast({
+        variant: "destructive",
+        title: "An error occurred",
+        description: (error as Error).message || "Something went wrong.",
+      })
+    } finally {
       setLoading(false)
-    }, 1500)
+    }
   }
 
   return (
@@ -117,7 +165,7 @@ export function UserForm({ isEditMode = false }: UserFormProps) {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Role</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select a role" />
@@ -138,7 +186,7 @@ export function UserForm({ isEditMode = false }: UserFormProps) {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Status</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select a status" />

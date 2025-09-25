@@ -42,34 +42,16 @@ import {
 } from "@/components/ui/alert-dialog"
 import { useToast } from "@/hooks/use-toast"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Skeleton } from "@/components/ui/skeleton"
 
-// Mock Data
-const initialUsers = [
-  {
-    id: "user-001",
-    name: "Admin User",
-    email: "admin@hosthome.com",
-    avatar: "https://picsum.photos/seed/hosthome-user/40/40",
-    role: "Admin",
-    status: "Active",
-  },
-  {
-    id: "user-002",
-    name: "Jane Smith",
-    email: "jane.smith@example.com",
-    avatar: "https://picsum.photos/seed/js/40/40",
-    role: "Staff",
-    status: "Active",
-  },
-  {
-    id: "user-003",
-    name: "John Doe",
-    email: "john.doe@example.com",
-    avatar: "https://picsum.photos/seed/jd/40/40",
-    role: "Staff",
-    status: "Invited",
-  },
-];
+type User = {
+  id: string;
+  name: string;
+  email: string;
+  avatar: string;
+  role: string;
+  status: string;
+};
 
 const getRoleBadgeVariant = (role: string) => {
   return role === 'Admin' ? 'destructive' : 'secondary';
@@ -80,16 +62,57 @@ const getStatusBadgeVariant = (status: string) => {
 }
 
 export default function UserManagementPage() {
-  const [users, setUsers] = React.useState(initialUsers);
+  const [users, setUsers] = React.useState<User[]>([]);
+  const [loading, setLoading] = React.useState(true);
   const router = useRouter();
   const { toast } = useToast();
 
-  const handleDelete = (id: string) => {
+  React.useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch('/api/users');
+        if (!response.ok) throw new Error("Failed to fetch");
+        const data = await response.json();
+        setUsers(data);
+      } catch (error) {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Could not fetch users.",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchUsers();
+  }, [toast]);
+
+  const handleDelete = async (id: string) => {
+    const originalUsers = [...users];
     setUsers(users.filter(u => u.id !== id));
-    toast({
+
+    try {
+      const response = await fetch(`/api/users/${id}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to delete user");
+      }
+
+      toast({
         title: "User Deleted",
         description: "The user has been successfully deleted.",
-    })
+      })
+    } catch (error) {
+      setUsers(originalUsers);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to delete the user. Please try again.",
+      });
+    }
   };
 
   return (
@@ -125,7 +148,24 @@ export default function UserManagementPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {users.map((user) => (
+              {loading ? (
+                Array.from({ length: 3 }).map((_, i) => (
+                  <TableRow key={i}>
+                    <TableCell>
+                      <div className="flex items-center gap-3">
+                        <Skeleton className="h-9 w-9 rounded-full" />
+                        <div className="flex flex-col gap-1">
+                          <Skeleton className="h-5 w-24" />
+                          <Skeleton className="h-4 w-36" />
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell><Skeleton className="h-6 w-16" /></TableCell>
+                    <TableCell><Skeleton className="h-6 w-20" /></TableCell>
+                    <TableCell className="text-right"><Skeleton className="h-8 w-8 ml-auto" /></TableCell>
+                  </TableRow>
+                ))
+              ) : users.map((user) => (
                 <TableRow key={user.id}>
                   <TableCell className="font-medium">
                      <div className="flex items-center gap-3">
@@ -195,6 +235,11 @@ export default function UserManagementPage() {
               ))}
             </TableBody>
           </Table>
+          {!loading && users.length === 0 && (
+            <div className="text-center py-12 text-muted-foreground">
+              No users found.
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

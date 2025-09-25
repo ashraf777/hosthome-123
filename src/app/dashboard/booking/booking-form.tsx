@@ -1,11 +1,12 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { CalendarIcon, Loader2, BedDouble, User, Check, ChevronsUpDown } from "lucide-react"
 import { format } from "date-fns"
+import { useRouter } from "next/navigation"
 
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
@@ -68,26 +69,31 @@ const bookingFormSchema = z.object({
   tax: z.coerce.number().min(0).optional(),
   bookingType: z.string({ required_error: "Please select a booking type." }),
   bookingSource: z.string(),
+  total: z.coerce.number().min(0),
 })
 
-// Mock Data for existing guests
-const existingGuests = [
-  { id: "guest-001", name: "Olivia Martin", email: "olivia.martin@email.com", phone: "+1 (555) 123-4567" },
-  { id: "guest-002", name: "Jackson Lee", email: "jackson.lee@email.com", phone: "+1 (555) 987-6543" },
-  { id: "guest-003", name: "Isabella Nguyen", email: "isabella.nguyen@email.com", phone: "+1 (555) 234-5678" },
-  { id: "guest-004", name: "William Kim", email: "will@email.com", phone: "+1 (555) 876-5432" },
-];
+type BookingFormValues = z.infer<typeof bookingFormSchema>
+
+type Guest = {
+  id: string;
+  name: string;
+  email: string;
+  phone?: string;
+}
 
 interface BookingFormProps {
   isEditMode?: boolean;
+  bookingId?: string;
 }
 
-export function BookingForm({ isEditMode = false }: BookingFormProps) {
+export function BookingForm({ isEditMode = false, bookingId }: BookingFormProps) {
   const [loading, setLoading] = useState(false)
   const [openCombobox, setOpenCombobox] = useState(false)
+  const [existingGuests, setExistingGuests] = useState<Guest[]>([]);
   const { toast } = useToast()
+  const router = useRouter();
 
-  const form = useForm<z.infer<typeof bookingFormSchema>>({
+  const form = useForm<BookingFormValues>({
     resolver: zodResolver(bookingFormSchema),
     defaultValues: {
       status: "Confirmed",
@@ -95,21 +101,89 @@ export function BookingForm({ isEditMode = false }: BookingFormProps) {
       roomRate: 100,
       otherCharges: 0,
       discount: 0,
-      tax: 0
+      tax: 0,
+      total: 100,
     },
   })
 
-  function onSubmit(values: z.infer<typeof bookingFormSchema>) {
+  useEffect(() => {
+    const fetchGuests = async () => {
+      try {
+        const response = await fetch('/api/guests');
+        if (!response.ok) throw new Error("Failed to fetch guests");
+        const data = await response.json();
+        setExistingGuests(data);
+      } catch (error) {
+         toast({ variant: "destructive", title: "Error", description: "Could not fetch guests." });
+      }
+    };
+    fetchGuests();
+  }, [toast]);
+
+  useEffect(() => {
+    if (isEditMode && bookingId) {
+      setLoading(true);
+      const fetchBooking = async () => {
+        try {
+          const response = await fetch(`/api/bookings/${bookingId}`);
+          if (!response.ok) throw new Error("Failed to fetch booking");
+          const data = await response.json();
+          // Convert date strings to Date objects
+          const bookingData = {
+            ...data,
+            checkIn: new Date(data.checkIn),
+            checkOut: new Date(data.checkOut),
+          };
+          form.reset(bookingData);
+        } catch (error) {
+          toast({ variant: "destructive", title: "Error", description: "Could not fetch booking data." });
+        } finally {
+          setLoading(false);
+        }
+      };
+      fetchBooking();
+    }
+  }, [isEditMode, bookingId, form, toast]);
+
+
+  async function onSubmit(values: BookingFormValues) {
     setLoading(true)
-    console.log(values)
-    // Simulate API call
-    setTimeout(() => {
+    
+    // Calculate total
+    const total = (values.roomRate || 0) + (values.otherCharges || 0) - (values.discount || 0);
+    const totalWithTax = total * (1 + (values.tax || 0) / 100);
+    const finalValues = {...values, total: totalWithTax};
+    
+    const method = isEditMode ? 'PUT' : 'POST';
+    const url = isEditMode ? `/api/bookings/${bookingId}` : '/api/bookings';
+
+    try {
+      const response = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(finalValues),
+      });
+
+      if (!response.ok) {
+        throw new Error(isEditMode ? 'Failed to update booking' : 'Failed to create booking');
+      }
+
       toast({
         title: isEditMode ? "Booking Updated" : "Booking Created",
         description: `The booking has been successfully ${isEditMode ? 'updated' : 'saved'}.`,
       })
+      router.push('/dashboard/booking');
+      router.refresh();
+
+    } catch (error) {
+       toast({
+        variant: "destructive",
+        title: "An error occurred",
+        description: (error as Error).message || "Something went wrong.",
+      })
+    } finally {
       setLoading(false)
-    }, 1500)
+    }
   }
 
   const channels = [
@@ -145,6 +219,14 @@ export function BookingForm({ isEditMode = false }: BookingFormProps) {
             </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-6">
+            {loading && isEditMode ? (
+              <div className="space-y-4">
+                <div className="h-10 w-full bg-muted rounded-md animate-pulse" />
+                <div className="h-10 w-full bg-muted rounded-md animate-pulse" />
+                <div className="h-20 w-full bg-muted rounded-md animate-pulse" />
+              </div>
+            ) : (
+            <>
              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <FormField
                 control={form.control}
@@ -154,7 +236,7 @@ export function BookingForm({ isEditMode = false }: BookingFormProps) {
                     <FormLabel>Status</FormLabel>
                     <Select
                       onValueChange={field.onChange}
-                      defaultValue={field.value}
+                      value={field.value}
                     >
                       <FormControl>
                         <SelectTrigger>
@@ -296,7 +378,6 @@ export function BookingForm({ isEditMode = false }: BookingFormProps) {
                             <CommandInput 
                               placeholder="Search guest or add new..."
                               onValueChange={(search) => {
-                                // if no guest is found, still allow setting the name
                                 const isExisting = existingGuests.some(g => g.name.toLowerCase() === search.toLowerCase());
                                 if (!isExisting) {
                                   form.setValue("guestName", search);
@@ -360,7 +441,7 @@ export function BookingForm({ isEditMode = false }: BookingFormProps) {
                     <FormItem>
                       <FormLabel>Phone (Optional)</FormLabel>
                       <FormControl>
-                        <Input type="tel" placeholder="e.g., +1 234 567 890" {...field} />
+                        <Input type="tel" placeholder="e.g., +1 234 567 890" {...field} value={field.value ?? ""} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -380,7 +461,7 @@ export function BookingForm({ isEditMode = false }: BookingFormProps) {
                     <FormLabel>Channel</FormLabel>
                     <Select
                       onValueChange={field.onChange}
-                      defaultValue={field.value}
+                      value={field.value}
                     >
                       <FormControl>
                         <SelectTrigger>
@@ -388,7 +469,7 @@ export function BookingForm({ isEditMode = false }: BookingFormProps) {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="none">None (Direct)</SelectItem>
+                        <SelectItem value="HostHome">None (Direct)</SelectItem>
                         {channels.map((channel) => (
                           <SelectItem key={channel} value={channel}>
                             {channel}
@@ -408,8 +489,8 @@ export function BookingForm({ isEditMode = false }: BookingFormProps) {
                     <FormLabel>Channel Property</FormLabel>
                     <Select
                       onValueChange={field.onChange}
-                      defaultValue={field.value}
-                      disabled={!form.watch("channel") || form.watch("channel") === "none"}
+                      value={field.value}
+                      disabled={!form.watch("channel") || form.watch("channel") === "HostHome"}
                     >
                       <FormControl>
                         <SelectTrigger>
@@ -436,7 +517,7 @@ export function BookingForm({ isEditMode = false }: BookingFormProps) {
                     <FormLabel>Room Type</FormLabel>
                     <Select
                       onValueChange={field.onChange}
-                      defaultValue={field.value}
+                      value={field.value}
                     >
                       <FormControl>
                         <SelectTrigger>
@@ -461,7 +542,7 @@ export function BookingForm({ isEditMode = false }: BookingFormProps) {
                     <FormLabel>Unit Listing</FormLabel>
                     <Select
                       onValueChange={field.onChange}
-                      defaultValue={field.value}
+                      value={field.value}
                     >
                       <FormControl>
                         <SelectTrigger>
@@ -545,7 +626,7 @@ export function BookingForm({ isEditMode = false }: BookingFormProps) {
                     <FormLabel>Booking Type</FormLabel>
                     <Select
                       onValueChange={field.onChange}
-                      defaultValue={field.value}
+                      value={field.value}
                     >
                       <FormControl>
                         <SelectTrigger>
@@ -576,6 +657,8 @@ export function BookingForm({ isEditMode = false }: BookingFormProps) {
                   )}
                 />
              </div>
+            </>
+            )}
           </CardContent>
           <CardFooter>
             <Button type="submit" disabled={loading}>

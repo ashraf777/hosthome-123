@@ -42,42 +42,16 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { useToast } from "@/hooks/use-toast"
+import { Skeleton } from "@/components/ui/skeleton"
 
-// Mock Data
-const initialBookings = [
-  {
-    id: "booking-001",
-    guestName: "Olivia Martin",
-    checkIn: new Date(2024, 6, 15),
-    checkOut: new Date(2024, 6, 18),
-    status: "Confirmed",
-    total: 599.0,
-  },
-  {
-    id: "booking-002",
-    guestName: "Jackson Lee",
-    checkIn: new Date(2024, 6, 20),
-    checkOut: new Date(2024, 6, 22),
-    status: "Pending",
-    total: 250.0,
-  },
-  {
-    id: "booking-003",
-    guestName: "Isabella Nguyen",
-    checkIn: new Date(2024, 7, 1),
-    checkOut: new Date(2024, 7, 5),
-    status: "Cancelled",
-    total: 890.0,
-  },
-  {
-    id: "booking-004",
-    guestName: "William Kim",
-    checkIn: new Date(2024, 7, 10),
-    checkOut: new Date(2024, 7, 12),
-    status: "Confirmed",
-    total: 300.0,
-  },
-];
+type Booking = {
+    id: string;
+    guestName: string;
+    checkIn: string;
+    checkOut: string;
+    status: string;
+    total: number;
+}
 
 const getBadgeVariant = (status: string) => {
     switch (status) {
@@ -93,16 +67,58 @@ const getBadgeVariant = (status: string) => {
   }
 
 export function BookingList() {
-  const [bookings, setBookings] = React.useState(initialBookings);
+  const [bookings, setBookings] = React.useState<Booking[]>([]);
+  const [loading, setLoading] = React.useState(true);
   const router = useRouter()
   const { toast } = useToast()
 
-  const handleDelete = (id: string) => {
+  React.useEffect(() => {
+    const fetchBookings = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch('/api/bookings');
+        if (!response.ok) throw new Error("Failed to fetch");
+        const data = await response.json();
+        setBookings(data);
+      } catch (error) {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Could not fetch bookings.",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchBookings();
+  }, [toast]);
+
+
+  const handleDelete = async (id: string) => {
+    const originalBookings = [...bookings];
     setBookings(bookings.filter(b => b.id !== id));
-    toast({
-        title: "Booking Deleted",
-        description: "The booking has been successfully deleted.",
-    })
+    
+    try {
+      const response = await fetch(`/api/bookings/${id}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to delete booking");
+      }
+
+      toast({
+          title: "Booking Deleted",
+          description: "The booking has been successfully deleted.",
+      })
+    } catch (error) {
+       setBookings(originalBookings);
+       toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to delete the booking. Please try again.",
+      });
+    }
   };
 
   return (
@@ -138,11 +154,22 @@ export function BookingList() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {bookings.map((booking) => (
+             {loading ? (
+              Array.from({ length: 4 }).map((_, i) => (
+                <TableRow key={i}>
+                  <TableCell><Skeleton className="h-6 w-32" /></TableCell>
+                  <TableCell><Skeleton className="h-6 w-24" /></TableCell>
+                  <TableCell><Skeleton className="h-6 w-24" /></TableCell>
+                  <TableCell><Skeleton className="h-6 w-20" /></TableCell>
+                  <TableCell className="text-right"><Skeleton className="h-6 w-20 ml-auto" /></TableCell>
+                  <TableCell className="text-right"><Skeleton className="h-8 w-8 ml-auto" /></TableCell>
+                </TableRow>
+              ))
+            ) : bookings.map((booking) => (
               <TableRow key={booking.id}>
                 <TableCell className="font-medium">{booking.guestName}</TableCell>
-                <TableCell>{format(booking.checkIn, "PPP")}</TableCell>
-                <TableCell>{format(booking.checkOut, "PPP")}</TableCell>
+                <TableCell>{format(new Date(booking.checkIn), "PPP")}</TableCell>
+                <TableCell>{format(new Date(booking.checkOut), "PPP")}</TableCell>
                 <TableCell>
                   <Badge variant={getBadgeVariant(booking.status) as any}>
                     {booking.status}
@@ -197,6 +224,11 @@ export function BookingList() {
             ))}
           </TableBody>
         </Table>
+        {!loading && bookings.length === 0 && (
+          <div className="text-center py-12 text-muted-foreground">
+            No bookings found.
+          </div>
+        )}
       </CardContent>
     </Card>
   )

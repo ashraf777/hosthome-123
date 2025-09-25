@@ -17,12 +17,7 @@ export default function EditGuestPage({ params }: { params: { id: string } }) {
           <p className="text-muted-foreground">Editing guest with ID: {params.id}</p>
         </div>
       </div>
-      {/* 
-        In a real application, you would fetch the guest data using the id
-        and pass it as a prop to the GuestForm.
-        e.g. <GuestForm initialData={guestData} isEditMode />
-      */}
-      <GuestForm isEditMode />
+      <GuestForm isEditMode guestId={params.id} />
     </div>
   )
 }

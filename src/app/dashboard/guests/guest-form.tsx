@@ -1,10 +1,11 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { Loader2, UserPlus } from "lucide-react"
+import { useRouter } from "next/navigation"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -32,37 +33,83 @@ const guestFormSchema = z.object({
   email: z.string().email("Invalid email address."),
   phone: z.string().optional(),
   notes: z.string().optional(),
+  avatar: z.string().url().optional(),
 })
+
+type GuestFormValues = z.infer<typeof guestFormSchema>
 
 interface GuestFormProps {
   isEditMode?: boolean;
+  guestId?: string;
 }
 
-export function GuestForm({ isEditMode = false }: GuestFormProps) {
+export function GuestForm({ isEditMode = false, guestId }: GuestFormProps) {
   const [loading, setLoading] = useState(false)
   const { toast } = useToast()
+  const router = useRouter();
 
-  const form = useForm<z.infer<typeof guestFormSchema>>({
+  const form = useForm<GuestFormValues>({
     resolver: zodResolver(guestFormSchema),
     defaultValues: {
       name: "",
       email: "",
       phone: "",
       notes: "",
+      avatar: `https://picsum.photos/seed/${Math.random()}/40/40`,
     },
   })
+  
+  useEffect(() => {
+    if (isEditMode && guestId) {
+      setLoading(true);
+      const fetchGuest = async () => {
+        try {
+          const response = await fetch(`/api/guests/${guestId}`);
+          if (!response.ok) throw new Error("Failed to fetch guest");
+          const data = await response.json();
+          form.reset(data);
+        } catch (error) {
+          toast({ variant: "destructive", title: "Error", description: "Could not fetch guest data." });
+        } finally {
+          setLoading(false);
+        }
+      };
+      fetchGuest();
+    }
+  }, [isEditMode, guestId, form, toast]);
 
-  function onSubmit(values: z.infer<typeof guestFormSchema>) {
+  async function onSubmit(values: GuestFormValues) {
     setLoading(true)
-    console.log(values)
-    // Simulate API call
-    setTimeout(() => {
+    
+    const method = isEditMode ? 'PUT' : 'POST';
+    const url = isEditMode ? `/api/guests/${guestId}` : '/api/guests';
+
+    try {
+      const response = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(values),
+      });
+
+      if (!response.ok) {
+        throw new Error(isEditMode ? 'Failed to update guest' : 'Failed to create guest');
+      }
+
       toast({
         title: isEditMode ? "Guest Updated" : "Guest Added",
         description: `The guest has been successfully ${isEditMode ? 'updated' : 'added'}.`,
       })
+      router.push('/dashboard/guests');
+      router.refresh();
+    } catch (error) {
+       toast({
+        variant: "destructive",
+        title: "An error occurred",
+        description: (error as Error).message || "Something went wrong.",
+      })
+    } finally {
       setLoading(false)
-    }, 1500)
+    }
   }
 
   return (
@@ -111,7 +158,7 @@ export function GuestForm({ isEditMode = false }: GuestFormProps) {
                 <FormItem>
                   <FormLabel>Phone (Optional)</FormLabel>
                   <FormControl>
-                    <Input type="tel" placeholder="e.g., +1 234 567 890" {...field} />
+                    <Input type="tel" placeholder="e.g., +1 234 567 890" {...field} value={field.value ?? ""} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -124,7 +171,7 @@ export function GuestForm({ isEditMode = false }: GuestFormProps) {
                 <FormItem>
                   <FormLabel>Notes (Optional)</FormLabel>
                   <FormControl>
-                    <Textarea placeholder="Any notes about this guest..." {...field} />
+                    <Textarea placeholder="Any notes about this guest..." {...field} value={field.value ?? ""} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

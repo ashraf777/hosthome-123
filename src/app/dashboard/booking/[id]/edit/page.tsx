@@ -17,12 +17,7 @@ export default function EditBookingPage({ params }: { params: { id: string } }) 
           <p className="text-muted-foreground">Editing booking with ID: {params.id}</p>
         </div>
       </div>
-      {/* 
-        In a real application, you would fetch the booking data using the id
-        and pass it as a prop to the BookingForm.
-        e.g. <BookingForm initialData={bookingData} isEditMode />
-      */}
-      <BookingForm isEditMode />
+      <BookingForm isEditMode bookingId={params.id} />
     </div>
   )
 }
