@@ -1,0 +1,43 @@
+
+[
+  {
+    "id": "guest-1",
+    "name": "Olivia Martin",
+    "email": "olivia.martin@example.com",
+    "phone": "+1-202-555-0191",
+    "avatar": "https://picsum.photos/seed/om/40/40",
+    "notes": "Frequent guest, prefers a quiet room.",
+    "lastStay": "2024-07-25T10:00:00.000Z",
+    "totalBookings": 5
+  },
+  {
+    "id": "guest-2",
+    "name": "Jackson Lee",
+    "email": "jackson.lee@example.com",
+    "phone": "+1-202-555-0142",
+    "avatar": "https://picsum.photos/seed/jl/40/40",
+    "notes": "First-time guest. Booked via Booking.com.",
+    "lastStay": "2024-08-05T10:00:00.000Z",
+    "totalBookings": 1
+  },
+  {
+    "id": "guest-3",
+    "name": "Isabella Nguyen",
+    "email": "isabella.nguyen@example.com",
+    "phone": "+1-202-555-0165",
+    "avatar": "https://picsum.photos/seed/in/40/40",
+    "notes": "",
+    "lastStay": "2024-05-10T10:00:00.000Z",
+    "totalBookings": 2
+  },
+  {
+    "id": "guest-4",
+    "name": "William Kim",
+    "email": "william.kim@example.com",
+    "phone": "+1-202-555-0188",
+    "avatar": "https://picsum.photos/seed/wk/40/40",
+    "notes": "Business traveler.",
+    "lastStay": "2024-06-12T10:00:00.000Z",
+    "totalBookings": 3
+  }
+]

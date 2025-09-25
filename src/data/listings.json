@@ -1,0 +1,55 @@
+
+[
+    {
+        "id": "prop-1",
+        "name": "Cozy Downtown Apartment",
+        "description": "A charming and cozy apartment located in the heart of downtown, just steps away from the best restaurants, shops, and attractions. Perfect for solo travelers or couples looking for a comfortable and convenient stay.",
+        "status": "Listed",
+        "roomType": "Entire Place",
+        "price": 125,
+        "instantBook": true,
+        "address": "123 Main St, Anytown, USA 12345",
+        "amenities": "Wi-Fi, Kitchen, Free Parking, TV, Air Conditioning",
+        "imageUrl": "https://picsum.photos/seed/prop1/800/600",
+        "imageHint": "downtown apartment"
+    },
+    {
+        "id": "prop-2",
+        "name": "Beachside Villa",
+        "description": "Stunning villa with breathtaking ocean views. This property offers a private pool, direct beach access, and spacious living areas. Ideal for families or groups seeking a luxurious seaside escape.",
+        "status": "Listed",
+        "roomType": "Entire Place",
+        "price": 450,
+        "instantBook": false,
+        "address": "456 Ocean Ave, Beachtown, USA 54321",
+        "amenities": "Wi-Fi, Private Pool, Beach Access, Kitchen, Air Conditioning, TV",
+        "imageUrl": "https://picsum.photos/seed/prop2/800/600",
+        "imageHint": "beach villa"
+    },
+    {
+        "id": "prop-3",
+        "name": "Mountain Cabin Retreat",
+        "description": "Escape to this peaceful cabin nestled in the mountains. Enjoy hiking trails, wildlife, and serene forest views. The perfect getaway for nature lovers and those looking to disconnect and relax.",
+        "status": "Unlisted",
+        "roomType": "Entire Place",
+        "price": 210,
+        "instantBook": true,
+        "address": "789 Pine Rd, Mountainville, USA 67890",
+        "amenities": "Wi-Fi, Kitchen, Fireplace, Hiking Trails, Pet-friendly",
+        "imageUrl": "https://picsum.photos/seed/prop3/800/600",
+        "imageHint": "mountain cabin"
+    },
+    {
+        "id": "prop-4",
+        "name": "Urban Studio Loft",
+        "description": "A stylish and modern loft in a trendy urban neighborhood. Features high ceilings, large windows, and contemporary design. Great for creatives and professionals.",
+        "status": "Listed",
+        "roomType": "Private Room",
+        "price": 95,
+        "instantBook": true,
+        "address": "101 Art St, Metro City, USA 11223",
+        "amenities": "Wi-Fi, Workspace, Gym Access",
+        "imageUrl": "https://picsum.photos/seed/prop4/800/600",
+        "imageHint": "city loft"
+    }
+]

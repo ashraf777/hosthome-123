@@ -1,0 +1,27 @@
+
+[
+  {
+    "id": "user-1",
+    "name": "Admin User",
+    "email": "admin@hosthome.com",
+    "avatar": "https://picsum.photos/seed/hosthome-user/40/40",
+    "role": "Admin",
+    "status": "Active"
+  },
+  {
+    "id": "user-2",
+    "name": "Jane Staff",
+    "email": "jane.staff@hosthome.com",
+    "avatar": "https://picsum.photos/seed/js/40/40",
+    "role": "Staff",
+    "status": "Active"
+  },
+  {
+    "id": "user-3",
+    "name": "Mark Team",
+    "email": "mark.team@hosthome.com",
+    "avatar": "https://picsum.photos/seed/mt/40/40",
+    "role": "Staff",
+    "status": "Invited"
+  }
+]
