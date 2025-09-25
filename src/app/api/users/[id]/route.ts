@@ -3,9 +3,19 @@ import fs from 'fs/promises';
 import path from 'path';
 
 const dataFilePath = path.join(process.cwd(), 'src', 'data', 'users.json');
-const tempDataFilePath = path.join('/tmp', 'users.json');
+const tempDataDir = path.join('/tmp');
+const tempDataFilePath = path.join(tempDataDir, 'users.json');
+
+async function ensureTempDirExists() {
+  try {
+    await fs.access(tempDataDir);
+  } catch {
+    await fs.mkdir(tempDataDir, { recursive: true });
+  }
+}
 
 async function readData() {
+    await ensureTempDirExists();
     try {
         await fs.access(tempDataFilePath);
         const fileData = await fs.readFile(tempDataFilePath, 'utf-8');
@@ -19,6 +29,7 @@ async function readData() {
 }
 
 async function writeData(data: any) {
+  await ensureTempDirExists();
   await fs.writeFile(tempDataFilePath, JSON.stringify(data, null, 2), 'utf-8');
 }
 
@@ -46,6 +57,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 
     return NextResponse.json(users[index]);
   } catch (error) {
+    console.error("API Error (PUT):", error);
     return NextResponse.json({ message: 'Error updating user' }, { status: 500 });
   }
 }
@@ -64,6 +76,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
 
     return NextResponse.json({ message: 'User deleted' }, { status: 200 });
   } catch (error) {
+    console.error("API Error (DELETE):", error);
     return NextResponse.json({ message: 'Error deleting user' }, { status: 500 });
   }
 }

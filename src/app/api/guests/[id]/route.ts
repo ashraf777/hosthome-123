@@ -3,9 +3,19 @@ import fs from 'fs/promises';
 import path from 'path';
 
 const dataFilePath = path.join(process.cwd(), 'src', 'data', 'guests.json');
-const tempDataFilePath = path.join('/tmp', 'guests.json');
+const tempDataDir = path.join('/tmp');
+const tempDataFilePath = path.join(tempDataDir, 'guests.json');
+
+async function ensureTempDirExists() {
+  try {
+    await fs.access(tempDataDir);
+  } catch {
+    await fs.mkdir(tempDataDir, { recursive: true });
+  }
+}
 
 async function readData() {
+    await ensureTempDirExists();
     try {
         await fs.access(tempDataFilePath);
         const fileData = await fs.readFile(tempDataFilePath, 'utf-8');
@@ -19,6 +29,7 @@ async function readData() {
 }
 
 async function writeData(data: any) {
+  await ensureTempDirExists();
   await fs.writeFile(tempDataFilePath, JSON.stringify(data, null, 2), 'utf-8');
 }
 
@@ -38,7 +49,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     const index = guests.findIndex((g: any) => g.id === params.id);
 
     if (index === -1) {
-      return NextResponse.json({ message: 'Guest not found' }, { status: 444 });
+      return NextResponse.json({ message: 'Guest not found' }, { status: 404 });
     }
 
     guests[index] = { ...guests[index], ...updatedGuestData };
@@ -46,6 +57,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 
     return NextResponse.json(guests[index]);
   } catch (error) {
+    console.error("API Error (PUT):", error);
     return NextResponse.json({ message: 'Error updating guest' }, { status: 500 });
   }
 }
@@ -64,6 +76,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
 
     return NextResponse.json({ message: 'Guest deleted' }, { status: 200 });
   } catch (error) {
+    console.error("API Error (DELETE):", error);
     return NextResponse.json({ message: 'Error deleting guest' }, { status: 500 });
   }
 }

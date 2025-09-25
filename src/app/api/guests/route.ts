@@ -3,9 +3,19 @@ import fs from 'fs/promises';
 import path from 'path';
 
 const dataFilePath = path.join(process.cwd(), 'src', 'data', 'guests.json');
-const tempDataFilePath = path.join('/tmp', 'guests.json');
+const tempDataDir = path.join('/tmp');
+const tempDataFilePath = path.join(tempDataDir, 'guests.json');
+
+async function ensureTempDirExists() {
+  try {
+    await fs.access(tempDataDir);
+  } catch {
+    await fs.mkdir(tempDataDir, { recursive: true });
+  }
+}
 
 async function readData() {
+  await ensureTempDirExists();
   try {
     await fs.access(tempDataFilePath);
     const fileData = await fs.readFile(tempDataFilePath, 'utf-8');
@@ -18,6 +28,7 @@ async function readData() {
 }
 
 async function writeData(data: any) {
+  await ensureTempDirExists();
   await fs.writeFile(tempDataFilePath, JSON.stringify(data, null, 2), 'utf-8');
 }
 
@@ -40,6 +51,7 @@ export async function POST(req: NextRequest) {
     
     return NextResponse.json(newGuest, { status: 201 });
   } catch (error) {
+    console.error("API Error (POST):", error);
     return NextResponse.json({ message: 'Error creating guest' }, { status: 500 });
   }
 }
