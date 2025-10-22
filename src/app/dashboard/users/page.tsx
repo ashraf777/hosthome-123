@@ -3,7 +3,7 @@
 import * as React from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { MoreHorizontal, PlusCircle } from "lucide-react"
+import { MoreHorizontal, PlusCircle, UserCog } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -29,36 +29,22 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
 import { useToast } from "@/hooks/use-toast"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Skeleton } from "@/components/ui/skeleton"
+import { api } from "@/services/api"
 
 type User = {
   id: string;
   name: string;
   email: string;
   avatar: string;
-  role: string;
-  status: string;
+  role: { id: number; name: string; };
+  status: string; // The API doesn't seem to provide a status, so we'll treat all as active.
 };
 
 const getRoleBadgeVariant = (role: string) => {
   return role === 'Admin' ? 'destructive' : 'secondary';
-}
-
-const getStatusBadgeVariant = (status: string) => {
-  return status === 'Active' ? 'default' : 'outline';
 }
 
 export default function UserManagementPage() {
@@ -71,10 +57,14 @@ export default function UserManagementPage() {
     const fetchUsers = async () => {
       try {
         setLoading(true);
-        const response = await fetch('/api/users');
-        if (!response.ok) throw new Error("Failed to fetch");
-        const data = await response.json();
-        setUsers(data);
+        const response = await api.get('users');
+        // Add a placeholder status and avatar to match the UI component needs
+        const usersWithUiFields = response.data.map((user: any) => ({
+            ...user,
+            status: 'Active',
+            avatar: `https://picsum.photos/seed/${user.email}/40/40`
+        }));
+        setUsers(usersWithUiFields);
       } catch (error) {
         toast({
           variant: "destructive",
@@ -88,36 +78,23 @@ export default function UserManagementPage() {
     fetchUsers();
   }, [toast]);
 
+
+  // Note: The provided API spec does not include a DELETE /api/users/{id} endpoint.
+  // The delete functionality is therefore disabled.
   const handleDelete = async (id: string) => {
-    const originalUsers = [...users];
-    setUsers(users.filter(u => u.id !== id));
-
-    try {
-      const response = await fetch(`/api/users/${id}`, {
-        method: 'DELETE',
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to delete user");
-      }
-
-      toast({
-        title: "User Deleted",
-        description: "The user has been successfully deleted.",
-      })
-    } catch (error) {
-      setUsers(originalUsers);
-      toast({
+     toast({
         variant: "destructive",
-        title: "Error",
-        description: "Failed to delete the user. Please try again.",
+        title: "Not Implemented",
+        description: "User deletion is not supported by the API.",
       });
-    }
   };
 
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-3xl font-bold tracking-tight">User Management</h1>
+      <div className="flex items-center gap-2">
+        <UserCog className="h-8 w-8" />
+        <h1 className="text-3xl font-bold tracking-tight">User Management</h1>
+      </div>
        <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -180,17 +157,16 @@ export default function UserManagementPage() {
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Badge variant={getRoleBadgeVariant(user.role) as any}>
-                      {user.role}
+                    <Badge variant={getRoleBadgeVariant(user.role.name) as any}>
+                      {user.role.name}
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <Badge variant={getStatusBadgeVariant(user.status) as any}>
+                    <Badge variant={"default"}>
                       {user.status}
                     </Badge>
                   </TableCell>
                   <TableCell className="text-right">
-                     <AlertDialog>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button aria-haspopup="true" size="icon" variant="ghost">
@@ -203,33 +179,13 @@ export default function UserManagementPage() {
                           <DropdownMenuItem
                             onSelect={() => router.push(`/dashboard/users/${user.id}/edit`)}
                           >
-                            Edit
+                            Edit Role
                           </DropdownMenuItem>
-                          <AlertDialogTrigger asChild>
-                            <DropdownMenuItem className="text-destructive focus:text-destructive">
-                                Delete
-                            </DropdownMenuItem>
-                          </AlertDialogTrigger>
+                           <DropdownMenuItem disabled className="text-destructive focus:text-destructive">
+                              Delete (Not Implemented)
+                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            This action cannot be undone. This will permanently delete the user account.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction
-                            className="bg-destructive hover:bg-destructive/90"
-                            onClick={() => handleDelete(user.id)}
-                          >
-                            Delete
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
                   </TableCell>
                 </TableRow>
               ))}

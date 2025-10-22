@@ -15,9 +15,9 @@ import {
   BarChart2,
   Banknote,
   Receipt,
-  CreditCard,
   Wallet,
-  Settings
+  Settings,
+  ShieldCheck
 } from "lucide-react"
 import {
   Collapsible,
@@ -102,6 +102,7 @@ export function DashboardNav() {
 
   const isAccountsActive = pathname.startsWith("/dashboard/accounts")
   const isUserActive = pathname.startsWith("/dashboard/users")
+  const isAccessControlActive = pathname.startsWith("/dashboard/access-control")
   const isSettingsActive = pathname.startsWith("/dashboard/settings")
 
   return (
@@ -170,7 +171,18 @@ export function DashboardNav() {
               tooltip="User"
             >
               <UserCog className="text-sidebar-primary" />
-              <span>User</span>
+              <span>User Management</span>
+            </SidebarMenuButton>
+          </Link>
+        </SidebarMenuItem>
+        <SidebarMenuItem>
+          <Link href="/dashboard/access-control" passHref legacyBehavior>
+            <SidebarMenuButton
+              isActive={isAccessControlActive}
+              tooltip="Access Control"
+            >
+              <ShieldCheck className="text-sidebar-primary" />
+              <span>Access Control</span>
             </SidebarMenuButton>
           </Link>
         </SidebarMenuItem>

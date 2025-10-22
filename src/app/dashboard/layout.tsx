@@ -1,3 +1,5 @@
+
+'use client';
 import {
   SidebarProvider,
   Sidebar,
@@ -11,12 +13,32 @@ import { DashboardNav } from "@/components/dashboard-nav"
 import { UserNav } from "@/components/user-nav"
 import { Logo } from "@/components/icons"
 import Link from "next/link"
+import { useAuth } from "@/contexts/auth-context";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 
 export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
+  const { user, loading, token } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!loading && !token) {
+      router.replace('/login');
+    }
+  }, [user, loading, token, router]);
+
+  if (loading || !token) {
+    return (
+        <div className="flex h-screen items-center justify-center">
+            <div className="text-2xl font-semibold">Loading...</div>
+        </div>
+    );
+  }
+  
   return (
     <SidebarProvider>
       <Sidebar

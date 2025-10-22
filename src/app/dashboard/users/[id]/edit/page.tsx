@@ -14,7 +14,7 @@ export default function EditUserPage({ params }: { params: { id: string } }) {
         </Link>
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Edit User</h1>
-          <p className="text-muted-foreground">Editing user with ID: {params.id}</p>
+          <p className="text-muted-foreground">Editing role for user ID: {params.id}</p>
         </div>
       </div>
       <UserForm isEditMode userId={params.id} />

@@ -33,81 +33,96 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { useToast } from "@/hooks/use-toast"
+import { api } from "@/services/api"
 
-const userFormSchema = z.object({
+const userRegisterSchema = z.object({
   name: z.string().min(2, "Name is required."),
   email: z.string().email("Invalid email address."),
-  role: z.string({ required_error: "Please select a role." }),
-  status: z.string({ required_error: "Please select a status." }),
-  avatar: z.string().url().optional(),
-})
+  password: z.string().min(8, "Password must be at least 8 characters."),
+  hosting_company_id: z.coerce.number().default(1),
+  role_id: z.coerce.number({ required_error: "Please select a role." }),
+});
 
-type UserFormValues = z.infer<typeof userFormSchema>;
+const userEditSchema = z.object({
+  role_id: z.coerce.number({ required_error: "Please select a role." }),
+  name: z.string(), // Not editable via this form, but needed for display
+  email: z.string(), // Not editable, for display
+});
+
+
+type UserRegisterValues = z.infer<typeof userRegisterSchema>;
+type UserEditValues = z.infer<typeof userEditSchema>;
 
 interface UserFormProps {
   isEditMode?: boolean;
   userId?: string;
 }
 
+type Role = {
+  id: number;
+  name: string;
+}
+
 export function UserForm({ isEditMode = false, userId }: UserFormProps) {
   const [loading, setLoading] = useState(false)
+  const [roles, setRoles] = useState<Role[]>([]);
   const { toast } = useToast()
   const router = useRouter();
 
-  const form = useForm<UserFormValues>({
-    resolver: zodResolver(userFormSchema),
-    defaultValues: {
-      name: "",
-      email: "",
-      role: "Staff",
-      status: "Active",
-      avatar: `https://picsum.photos/seed/${Math.random()}/40/40`,
-    },
+  const form = useForm<UserRegisterValues | UserEditValues>({
+    resolver: zodResolver(isEditMode ? userEditSchema : userRegisterSchema),
   })
 
   useEffect(() => {
-    if (isEditMode && userId) {
+    async function fetchRolesAndUserData() {
       setLoading(true);
-      const fetchUser = async () => {
-        try {
-          const response = await fetch(`/api/users/${userId}`);
-          if (!response.ok) throw new Error("Failed to fetch user");
-          const data = await response.json();
-          form.reset(data);
-        } catch (error) {
-          toast({ variant: "destructive", title: "Error", description: "Could not fetch user data." });
-        } finally {
-          setLoading(false);
+      try {
+        const rolesResponse = await api.get('roles');
+        setRoles(rolesResponse.data);
+
+        if (isEditMode && userId) {
+          // The GET /api/users endpoint returns all users. We find the one we're editing.
+          const usersResponse = await api.get('users');
+          const currentUser = usersResponse.data.find((u: any) => u.id.toString() === userId);
+          if (currentUser) {
+            form.reset({
+              role_id: currentUser.role.id,
+              name: currentUser.name, // for display
+              email: currentUser.email, // for display
+            });
+          } else {
+            throw new Error('User not found');
+          }
         }
-      };
-      fetchUser();
+      } catch (error) {
+        toast({ variant: "destructive", title: "Error", description: "Could not fetch required data." });
+      } finally {
+        setLoading(false);
+      }
     }
+    fetchRolesAndUserData();
   }, [isEditMode, userId, form, toast]);
 
 
-  async function onSubmit(values: UserFormValues) {
+  async function onSubmit(values: UserRegisterValues | UserEditValues) {
     setLoading(true)
     
-    const method = isEditMode ? 'PUT' : 'POST';
-    const url = isEditMode ? `/api/users/${userId}` : '/api/users';
-
     try {
-      const response = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(values),
-      });
-
-      if (!response.ok) {
-        throw new Error(isEditMode ? 'Failed to update user' : 'Failed to create user');
+      if (isEditMode && userId) {
+        // We are updating the role
+        const editValues = values as UserEditValues;
+        await api.put(`users/${userId}/role`, { role_id: editValues.role_id });
+        toast({ title: "User Updated", description: "The user's role has been successfully updated." });
+      } else {
+        // We are creating a new user (registering)
+        const registerValues = values as UserRegisterValues;
+        await api.post('register', registerValues);
+        toast({ title: "User Created", description: "The new user has been successfully created." });
       }
 
-      toast({
-        title: isEditMode ? "User Updated" : "User Added",
-        description: `The user has been successfully ${isEditMode ? 'updated' : 'added'}.`,
-      })
       router.push('/dashboard/users');
       router.refresh();
+
     } catch (error) {
        toast({
         variant: "destructive",
@@ -119,14 +134,16 @@ export function UserForm({ isEditMode = false, userId }: UserFormProps) {
     }
   }
 
+  const schema = isEditMode ? userEditSchema : userRegisterSchema;
+
   return (
     <Card>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)}>
           <CardHeader>
-            <CardTitle>User Information</CardTitle>
+            <CardTitle>{isEditMode ? 'Edit User Role' : 'Add New User'}</CardTitle>
             <CardDescription>
-              Fill out the details for the user.
+              {isEditMode ? "Change the role for this user." : "Fill out the details to register a new user."}
             </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-6">
@@ -138,7 +155,7 @@ export function UserForm({ isEditMode = false, userId }: UserFormProps) {
                   <FormItem>
                     <FormLabel>Full Name</FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g., John Doe" {...field} />
+                      <Input placeholder="e.g., John Doe" {...field} disabled={isEditMode} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -151,51 +168,45 @@ export function UserForm({ isEditMode = false, userId }: UserFormProps) {
                   <FormItem>
                     <FormLabel>Email</FormLabel>
                     <FormControl>
-                      <Input type="email" placeholder="e.g., john.doe@example.com" {...field} />
+                      <Input type="email" placeholder="e.g., john.doe@example.com" {...field} disabled={isEditMode} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
             </div>
+             {!isEditMode && (
+                 <FormField
+                    control={form.control}
+                    name="password"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Password</FormLabel>
+                        <FormControl>
+                        <Input type="password" placeholder="••••••••" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+             )}
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <FormField
                 control={form.control}
-                name="role"
+                name="role_id"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Role</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
+                    <Select onValueChange={(value) => field.onChange(Number(value))} value={field.value?.toString()}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select a role" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="Admin">Admin</SelectItem>
-                        <SelectItem value="Staff">Staff</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-               <FormField
-                control={form.control}
-                name="status"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Status</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a status" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="Active">Active</SelectItem>
-                        <SelectItem value="Invited">Invited</SelectItem>
-                        <SelectItem value="Inactive">Inactive</SelectItem>
+                        {roles.map(role => (
+                           <SelectItem key={role.id} value={role.id.toString()}>{role.name}</SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                     <FormMessage />
