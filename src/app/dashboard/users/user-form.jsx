@@ -51,7 +51,8 @@ const userEditSchema = z.object({
 
 
 export function UserForm({ isEditMode = false, userId }) {
-  const [loading, setLoading] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const [loading, setLoading] = useState(true);
   const [roles, setRoles] = useState([]);
   const { toast } = useToast()
   const router = useRouter();
@@ -92,7 +93,7 @@ export function UserForm({ isEditMode = false, userId }) {
 
 
   async function onSubmit(values) {
-    setLoading(true)
+    setSubmitting(true)
     
     try {
       if (isEditMode && userId) {
@@ -111,31 +112,13 @@ export function UserForm({ isEditMode = false, userId }) {
       router.refresh();
 
     } catch (error) {
-       const statusCode = error.status || 'N/A';
-        const errorMessage = error.message || "Something wrong.";
-
-        console.error("Error create user:", error);
-        console.error("HTTP Status Code:", statusCode); // Now you'll see the 403
-
-        let toastTitle = "Error";
-        let toastDescription = "Could not create user.";
-
-        // Check for 403 Forbidden
-        if (statusCode === 403) {
-          toastTitle = "Unauthorized Access";
-          toastDescription = "You don't have permission to create user.";
-        } else {
-          // Use the generic message for other errors
-          toastDescription = errorMessage; 
-        }
-        
-        toast({
-          variant: "destructive",
-          title: toastTitle,
-          description: toastDescription,
-        })
+       toast({
+        variant: "destructive",
+        title: "An error occurred",
+        description: error.message || "Something went wrong.",
+      })
     } finally {
-      setLoading(false)
+      setSubmitting(false)
     }
   }
 
@@ -160,7 +143,7 @@ export function UserForm({ isEditMode = false, userId }) {
                   <FormItem>
                     <FormLabel>Full Name</FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g., John Doe" {...field} disabled={isEditMode} />
+                      <Input placeholder="e.g., John Doe" {...field} disabled={isEditMode || loading} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -173,7 +156,7 @@ export function UserForm({ isEditMode = false, userId }) {
                   <FormItem>
                     <FormLabel>Email</FormLabel>
                     <FormControl>
-                      <Input type="email" placeholder="e.g., john.doe@example.com" {...field} disabled={isEditMode} />
+                      <Input type="email" placeholder="e.g., john.doe@example.com" {...field} disabled={isEditMode || loading} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -188,7 +171,7 @@ export function UserForm({ isEditMode = false, userId }) {
                     <FormItem>
                         <FormLabel>Password</FormLabel>
                         <FormControl>
-                        <Input type="password" placeholder="••••••••" {...field} />
+                        <Input type="password" placeholder="••••••••" {...field} disabled={loading} />
                         </FormControl>
                         <FormMessage />
                     </FormItem>
@@ -202,7 +185,7 @@ export function UserForm({ isEditMode = false, userId }) {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Role</FormLabel>
-                    <Select onValueChange={(value) => field.onChange(Number(value))} value={field.value?.toString()}>
+                    <Select onValueChange={(value) => field.onChange(Number(value))} value={field.value?.toString()} disabled={loading}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select a role" />
@@ -221,8 +204,8 @@ export function UserForm({ isEditMode = false, userId }) {
             </div>
           </CardContent>
           <CardFooter>
-            <Button type="submit" disabled={loading}>
-              {loading ? (
+            <Button type="submit" disabled={submitting || loading}>
+              {submitting ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : (
                 <UserPlus className="mr-2 h-4 w-4" />

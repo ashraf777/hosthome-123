@@ -6,10 +6,9 @@ import { useRouter } from 'next/navigation';
 import { api } from '@/services/api';
 import { useToast } from '@/hooks/use-toast';
 
-
 const AuthContext = createContext(undefined);
 
-export function AuthProvider({ children }) {
+export function AuthProviderContext({ children }) {
     const [user, setUser] = useState(null);
     const [token, setToken] = useState(null);
     const [loading, setLoading] = useState(true);

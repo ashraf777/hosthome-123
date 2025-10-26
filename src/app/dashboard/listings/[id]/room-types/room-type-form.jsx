@@ -1,10 +1,11 @@
+
 "use client"
 
 import { useEffect, useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
-import { Loader2, UserPlus } from "lucide-react"
+import { Loader2, BedDouble } from "lucide-react"
 import { useRouter } from "next/navigation"
 
 import { Button } from "@/components/ui/button"
@@ -29,68 +30,65 @@ import { useToast } from "@/hooks/use-toast"
 import { api } from "@/services/api"
 import { Skeleton } from "@/components/ui/skeleton"
 
-const guestFormSchema = z.object({
-  first_name: z.string().min(2, "First name is required."),
-  last_name: z.string().min(2, "Last name is required."),
-  email: z.string().email("Invalid email address."),
-  password: z.string().min(8, "Password must be at least 8 characters.").optional().or(z.literal('')),
+const roomTypeSchema = z.object({
+  name: z.string().min(3, "Room type name is required."),
+  max_guests: z.coerce.number().min(1, "Max guests must be at least 1."),
+  property_id: z.coerce.number(),
 })
 
-
-export function GuestForm({ isEditMode = false, guestId }) {
+export function RoomTypeForm({ isEditMode = false, propertyId, roomTypeId }) {
   const [submitting, setSubmitting] = useState(false)
   const [formLoading, setFormLoading] = useState(false);
   const { toast } = useToast()
   const router = useRouter();
 
   const form = useForm({
-    resolver: zodResolver(guestFormSchema),
+    resolver: zodResolver(roomTypeSchema),
     defaultValues: {
-      first_name: "",
-      last_name: "",
-      email: "",
+      name: "",
+      max_guests: 2,
+      property_id: Number(propertyId),
     },
   })
   
   useEffect(() => {
-    if (isEditMode && guestId) {
+    if (isEditMode && roomTypeId) {
       setFormLoading(true);
-      const fetchGuest = async () => {
+      const fetchRoomType = async () => {
         try {
-          const response = await api.get(`guests/${guestId}`);
+          const response = await api.get(`room-types/${roomTypeId}`);
           form.reset(response.data);
         } catch (error) {
-          toast({ variant: "destructive", title: "Error", description: "Could not fetch guest data." });
+          toast({ variant: "destructive", title: "Error", description: "Could not fetch room type data." });
         } finally {
           setFormLoading(false);
         }
       };
-      fetchGuest();
+      fetchRoomType();
     }
-  }, [isEditMode, guestId, form, toast]);
+  }, [isEditMode, roomTypeId, form, toast]);
 
   async function onSubmit(values) {
     setSubmitting(true)
     
-    // Don't submit password if it's not being changed in edit mode
-    const submissionValues = { ...values };
-    if (isEditMode && !submissionValues.password) {
-      delete submissionValues.password;
-    }
-    
     try {
       if (isEditMode) {
-        await api.put(`guests/${guestId}`, submissionValues);
+        await api.put(`room-types/${roomTypeId}`, values);
+        toast({
+          title: "Room Type Updated",
+          description: `The room type has been successfully updated.`,
+        })
+        router.push(`/dashboard/listings/${propertyId}/room-types`);
+        router.refresh();
       } else {
-        await api.post('guests', submissionValues);
+        const response = await api.post('room-types', values);
+        toast({
+          title: "Room Type Created",
+          description: `Now you can add photos to your new room type.`,
+        })
+        router.push(`/dashboard/room-types/${response.data.id}`);
       }
 
-      toast({
-        title: isEditMode ? "Guest Updated" : "Guest Added",
-        description: `The guest has been successfully ${isEditMode ? 'updated' : 'added'}.`,
-      })
-      router.push('/dashboard/guests');
-      router.refresh();
     } catch (error) {
        toast({
         variant: "destructive",
@@ -114,7 +112,6 @@ export function GuestForm({ isEditMode = false, guestId }) {
             <Skeleton className="h-10 w-full" />
             <Skeleton className="h-10 w-full" />
           </div>
-          <Skeleton className="h-10 w-full" />
         </CardContent>
         <CardFooter>
           <Skeleton className="h-10 w-32" />
@@ -128,21 +125,21 @@ export function GuestForm({ isEditMode = false, guestId }) {
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)}>
           <CardHeader>
-            <CardTitle>Guest Information</CardTitle>
+            <CardTitle>Room Type Details</CardTitle>
             <CardDescription>
-              Fill out the details for the guest.
+              Fill out the details for the room type. You can add photos after creation.
             </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-6">
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <FormField
                 control={form.control}
-                name="first_name"
+                name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>First Name</FormLabel>
+                    <FormLabel>Room Type Name</FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g., John" {...field} />
+                      <Input placeholder="e.g., Deluxe King Suite" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -150,53 +147,27 @@ export function GuestForm({ isEditMode = false, guestId }) {
               />
               <FormField
                 control={form.control}
-                name="last_name"
+                name="max_guests"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Last Name</FormLabel>
+                    <FormLabel>Max Guests</FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g., Doe" {...field} />
+                      <Input type="number" placeholder="e.g., 2" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
             </div>
-            <FormField
-              control={form.control}
-              name="email"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Email</FormLabel>
-                  <FormControl>
-                    <Input type="email" placeholder="e.g., john.doe@example.com" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-             <FormField
-                control={form.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{isEditMode ? "New Password (Optional)" : "Password"}</FormLabel>
-                    <FormControl>
-                      <Input type="password" placeholder="••••••••" {...field} />
-                    </FormControl>
-                     <FormMessage />
-                  </FormItem>
-                )}
-              />
           </CardContent>
           <CardFooter>
             <Button type="submit" disabled={submitting}>
               {submitting ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : (
-                <UserPlus className="mr-2 h-4 w-4" />
+                <BedDouble className="mr-2 h-4 w-4" />
               )}
-              {isEditMode ? 'Update Guest' : 'Add Guest'}
+              {isEditMode ? 'Update Room Type' : 'Save and Add Photos'}
             </Button>
           </CardFooter>
         </form>

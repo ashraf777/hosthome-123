@@ -54,28 +54,10 @@ export default function AccessControlPage() {
       setCreateDialogOpen(false)
       setRoleUpdateCount(prev => prev + 1); // Trigger re-fetch
     } catch (error) {
-      const statusCode = error.status || 'N/A';
-      const errorMessage = error.message || "Could not create roles.";
-
-      console.error("Error create role:", error);
-      console.error("HTTP Status Code:", statusCode); // Now you'll see the 403
-
-      let toastTitle = "Error";
-      let toastDescription = "Could not create role.";
-
-      // Check for 403 Forbidden
-      if (statusCode === 403) {
-        toastTitle = "Unauthorized Access";
-        toastDescription = "You don't have permission to create role.";
-      } else {
-        // Use the generic message for other errors
-        toastDescription = errorMessage; 
-      }
-      
       toast({
         variant: "destructive",
-        title: toastTitle,
-        description: toastDescription,
+        title: "Error",
+        description: error.message || "Failed to create role.",
       })
     } finally {
       setIsSubmitting(false)

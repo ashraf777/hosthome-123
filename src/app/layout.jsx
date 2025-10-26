@@ -1,7 +1,7 @@
 
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster.jsx"
-import { AuthProvider } from '@/components/auth-provider.jsx';
+import { AuthProvider } from '@/providers/auth-provider.jsx';
 
 export const metadata = {
   title: 'HostHome',

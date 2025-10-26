@@ -1,7 +1,6 @@
+'use client'
 
-"use client"
-
-import { AuthProvider as AuthProviderContext } from "@/contexts/auth-context.tsx"
+import { AuthProviderContext } from "@/contexts/auth-context.jsx"
 
 export function AuthProvider({ children }) {
   return <AuthProviderContext>{children}</AuthProviderContext>

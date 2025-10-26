@@ -1,3 +1,30 @@
+
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "property-1",
+      "url": "https://picsum.photos/seed/prop1/80/60",
+      "hint": "apartment exterior"
+    },
+    {
+      "id": "property-2",
+      "url": "https://picsum.photos/seed/prop2/80/60",
+      "hint": "villa exterior"
+    },
+    {
+      "id": "property-3",
+      "url": "https://picsum.photos/seed/prop3/80/60",
+      "hint": "cabin exterior"
+    },
+    {
+      "id": "property-4",
+      "url": "https://picsum.photos/seed/prop4/80/60",
+      "hint": "modern house"
+    },
+    {
+      "id": "property-5",
+      "url": "https://picsum.photos/seed/prop5/80/60",
+      "hint": "city loft"
+    }
+  ]
 }

@@ -3,7 +3,6 @@
 import * as React from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { format } from "date-fns"
 import { MoreHorizontal, PlusCircle } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
@@ -44,6 +43,8 @@ import {
 import { useToast } from "@/hooks/use-toast"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Skeleton } from "@/components/ui/skeleton"
+import { api } from "@/services/api"
+import { format } from "date-fns"
 
 
 export default function GuestManagementPage() {
@@ -56,10 +57,8 @@ export default function GuestManagementPage() {
     const fetchGuests = async () => {
       try {
         setLoading(true);
-        const response = await fetch('/api/guests');
-        if (!response.ok) throw new Error("Failed to fetch");
-        const data = await response.json();
-        setGuests(data);
+        const response = await api.get('guests');
+        setGuests(response.data);
       } catch (error) {
         toast({
           variant: "destructive",
@@ -78,13 +77,7 @@ export default function GuestManagementPage() {
     setGuests(guests.filter(g => g.id !== id));
     
     try {
-      const response = await fetch(`/api/guests/${id}`, {
-        method: 'DELETE',
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to delete guest");
-      }
+      await api.delete(`guests/${id}`);
       
       toast({
           title: "Guest Deleted",
@@ -95,7 +88,7 @@ export default function GuestManagementPage() {
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to delete the guest. Please try again.",
+        description: error.message || "Failed to delete the guest. Please try again.",
       });
     }
   };
@@ -112,7 +105,7 @@ export default function GuestManagementPage() {
                 View and manage your guest database.
               </CardDescription>
             </div>
-            <Link href="/dashboard/guests/new" passHref>
+            <Link href="/dashboard/guests/new">
               <Button>
                 <PlusCircle className="mr-2" />
                 Add Guest
@@ -126,7 +119,7 @@ export default function GuestManagementPage() {
               <TableRow>
                 <TableHead>Guest</TableHead>
                 <TableHead>Contact</TableHead>
-                <TableHead>Last Stay</TableHead>
+                <TableHead>Date Joined</TableHead>
                 <TableHead className="text-center">Total Bookings</TableHead>
                 <TableHead>
                   <span className="sr-only">Actions</span>
@@ -154,21 +147,18 @@ export default function GuestManagementPage() {
                   <TableCell className="font-medium">
                      <div className="flex items-center gap-3">
                       <Avatar className="h-9 w-9">
-                        <AvatarImage src={guest.avatar} alt={guest.name} data-ai-hint="person face" />
-                        <AvatarFallback>{guest.name.charAt(0)}</AvatarFallback>
+                        <AvatarImage src={`https://picsum.photos/seed/${guest.email}/40/40`} alt={`${guest.first_name} ${guest.last_name}`} data-ai-hint="person face" />
+                        <AvatarFallback>{guest.first_name?.charAt(0)}{guest.last_name?.charAt(0)}</AvatarFallback>
                       </Avatar>
-                      {guest.name}
+                      {guest.first_name} {guest.last_name}
                     </div>
                   </TableCell>
                   <TableCell>
-                    <div className="flex flex-col">
-                      <span>{guest.email}</span>
-                      <span className="text-muted-foreground text-sm">{guest.phone}</span>
-                    </div>
+                    {guest.email}
                   </TableCell>
-                  <TableCell>{format(new Date(guest.lastStay), "PPP")}</TableCell>
+                  <TableCell>{format(new Date(guest.created_at), "PPP")}</TableCell>
                   <TableCell className="text-center">
-                    <Badge variant="secondary">{guest.totalBookings}</Badge>
+                    <Badge variant="secondary">{guest.bookings_count || 0}</Badge>
                   </TableCell>
                   <TableCell className="text-right">
                     <AlertDialog>

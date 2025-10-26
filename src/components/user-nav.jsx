@@ -14,7 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { LogOut, Settings, User } from "lucide-react"
-import { useAuth } from "@/contexts/auth-context"
+import { useAuth } from "@/contexts/auth-context.jsx"
 
 export function UserNav() {
   const { user, logout } = useAuth();
@@ -40,18 +40,18 @@ export function UserNav() {
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
-          <Link href="/dashboard/profile" passHref>
-            <DropdownMenuItem>
+          <DropdownMenuItem asChild>
+            <Link href="/dashboard/profile">
               <User className="mr-2 h-4 w-4" />
               <span>Profile</span>
-            </DropdownMenuItem>
-          </Link>
-          <Link href="/dashboard/settings" passHref>
-            <DropdownMenuItem>
+            </Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild>
+            <Link href="/dashboard/settings">
               <Settings className="mr-2 h-4 w-4" />
               <span>Settings</span>
-            </DropdownMenuItem>
-          </Link>
+            </Link>
+          </DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={logout}>

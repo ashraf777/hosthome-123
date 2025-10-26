@@ -58,29 +58,11 @@ export default function UserManagementPage() {
         }));
         setUsers(usersWithUiFields);
       } catch (error) {
-        const statusCode = error.status || 'N/A';
-        const errorMessage = error.message || "Could not fetch users.";
-
-        console.error("Error fetching users:", error);
-        console.error("HTTP Status Code:", statusCode); // Now you'll see the 403
-
-        let toastTitle = "Error";
-        let toastDescription = "Could not fetch users.";
-
-        // Check for 403 Forbidden
-        if (statusCode === 403) {
-          toastTitle = "Unauthorized Access";
-          toastDescription = "You don't have permission to view users.";
-        } else {
-          // Use the generic message for other errors
-          toastDescription = errorMessage; 
-        }
-        
         toast({
           variant: "destructive",
-          title: toastTitle,
-          description: toastDescription,
-        })
+          title: "Error",
+          description: "Could not fetch users.",
+        });
       } finally {
         setLoading(false);
       }

@@ -1,10 +1,11 @@
+
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
-import { Loader2, Home, BedDouble, DollarSign, List, Image as ImageIcon } from "lucide-react"
+import { Loader2, Home, PlusCircle } from "lucide-react"
 import { useRouter } from "next/navigation"
 
 import { Button } from "@/components/ui/button"
@@ -33,27 +34,31 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Switch } from "@/components/ui/switch"
-import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/hooks/use-toast"
 import { Separator } from "@/components/ui/separator"
+import { api } from "@/services/api"
+import { Skeleton } from "@/components/ui/skeleton"
+import { CreatePropertyOwnerDialog } from "./create-property-owner-dialog.jsx"
+
 
 const listingFormSchema = z.object({
   name: z.string().min(5, "Property name must be at least 5 characters."),
-  description: z.string().min(20, "Description must be at least 20 characters."),
-  status: z.string({ required_error: "Please select a status." }),
-  roomType: z.string({ required_error: "Please select a room type." }),
-  price: z.coerce.number().min(1, "Price must be greater than 0."),
-  instantBook: z.boolean().default(false),
-  address: z.string().min(10, "Please enter a full address."),
-  amenities: z.string().min(5, "List at least one amenity."),
-  imageUrl: z.string().url("Please enter a valid image URL.").optional(),
-  imageHint: z.string().optional(),
+  property_owner_id: z.coerce.number({ required_error: "Please select a property owner." }),
+  address_line_1: z.string().min(5, "Please enter a full address."),
+  city: z.string().min(2, "City is required."),
+  zip_code: z.string().min(4, "Zip code is required."),
+  timezone: z.string().optional(),
+  property_type_ref_id: z.coerce.number({ required_error: "Please select a property type." }),
+  listing_status: z.enum(['draft', 'active', 'archived'], { required_error: "Please select a status." }),
 })
 
 
 export function ListingForm({ isEditMode = false, listingId }) {
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [submitting, setSubmitting] = useState(false);
+  const [owners, setOwners] = useState([])
+  const [propertyTypes, setPropertyTypes] = useState([])
+  const [isCreateOwnerOpen, setCreateOwnerOpen] = useState(false)
   const { toast } = useToast()
   const router = useRouter()
 
@@ -61,58 +66,67 @@ export function ListingForm({ isEditMode = false, listingId }) {
     resolver: zodResolver(listingFormSchema),
     defaultValues: {
       name: "",
-      description: "",
-      status: "Listed",
-      roomType: "Entire Place",
-      price: 100,
-      instantBook: true,
-      address: "",
-      amenities: "Wi-Fi, Kitchen, Free Parking",
-      imageUrl: "https://picsum.photos/seed/prop-new/800/600",
-      imageHint: "apartment interior",
+      property_owner_id: undefined,
+      address_line_1: "",
+      city: "",
+      zip_code: "",
+      timezone: "utc-5",
+      listing_status: "draft",
+      property_type_ref_id: undefined,
     },
   })
 
-  useEffect(() => {
-    if (isEditMode && listingId) {
-      setLoading(true);
-      const fetchListing = async () => {
-        try {
-          const response = await fetch(`/api/listings/${listingId}`);
-          if (!response.ok) throw new Error("Failed to fetch listing");
-          const data = await response.json();
-          form.reset(data);
-        } catch (error) {
-          toast({ variant: "destructive", title: "Error", description: "Could not fetch listing data." });
-        } finally {
-          setLoading(false);
-        }
-      };
-      fetchListing();
+  const fetchOwners = useCallback(async () => {
+    try {
+        const ownersRes = await api.get('property-owners');
+        setOwners(ownersRes.data);
+    } catch (error) {
+         toast({ variant: "destructive", title: "Error", description: "Could not fetch property owners." });
     }
-  }, [isEditMode, listingId, form, toast]);
+  }, [toast]);
+
+
+  useEffect(() => {
+    async function fetchData() {
+      setLoading(true);
+      try {
+        await fetchOwners();
+        const propTypesRes = await api.get('property-references');
+        setPropertyTypes(propTypesRes.property_type || []);
+        
+        if (isEditMode && listingId) {
+          const response = await api.get(`properties/${listingId}`);
+          form.reset(response.data);
+        }
+      } catch (error) {
+        toast({ variant: "destructive", title: "Error", description: "Could not fetch required data for the form." });
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchData();
+  }, [isEditMode, listingId, form, toast, fetchOwners]);
+
+  const handleNewOwnerSuccess = (newOwner) => {
+    fetchOwners().then(() => {
+        form.setValue("property_owner_id", newOwner.id, { shouldValidate: true });
+    });
+  }
 
 
   async function onSubmit(values) {
-    setLoading(true)
+    setSubmitting(true)
     
-    const method = isEditMode ? 'PUT' : 'POST';
-    const url = isEditMode ? `/api/listings/${listingId}` : '/api/listings';
-
     try {
-      const response = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(values),
-      });
-
-      if (!response.ok) {
-        throw new Error(isEditMode ? 'Failed to update listing' : 'Failed to create listing');
+      if (isEditMode) {
+        await api.put(`properties/${listingId}`, values);
+      } else {
+        await api.post('properties', values);
       }
 
       toast({
-        title: isEditMode ? "Listing Updated" : "Listing Created",
-        description: `The property listing has been successfully ${isEditMode ? 'updated' : 'saved'}.`,
+        title: isEditMode ? "Property Updated" : "Property Created",
+        description: `The property has been successfully ${isEditMode ? 'updated' : 'saved'}.`,
       })
       router.push('/dashboard/listings');
       router.refresh();
@@ -123,34 +137,56 @@ export function ListingForm({ isEditMode = false, listingId }) {
         description: error.message || "Something went wrong.",
       })
     } finally {
-      setLoading(false)
+      setSubmitting(false)
     }
   }
 
+  if (loading) {
+      return (
+          <Card>
+              <CardHeader>
+                  <Skeleton className="h-8 w-48" />
+                  <Skeleton className="h-4 w-full max-w-sm" />
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-2">
+                    <Skeleton className="h-4 w-24" />
+                    <Skeleton className="h-10 w-full" />
+                </div>
+                 <div className="space-y-2">
+                    <Skeleton className="h-4 w-24" />
+                    <Skeleton className="h-10 w-full" />
+                </div>
+                 <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                        <Skeleton className="h-4 w-24" />
+                        <Skeleton className="h-10 w-full" />
+                    </div>
+                    <div className="space-y-2">
+                        <Skeleton className="h-4 w-24" />
+                        <Skeleton className="h-10 w-full" />
+                    </div>
+                 </div>
+              </CardContent>
+              <CardFooter>
+                 <Skeleton className="h-10 w-32" />
+              </CardFooter>
+          </Card>
+      )
+  }
+
   return (
+    <>
     <Card>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)}>
           <CardHeader>
             <CardTitle>Property Details</CardTitle>
             <CardDescription>
-              Fill out the information below to {isEditMode ? 'update your' : 'create a new'} listing.
+              Fill out the information below to {isEditMode ? 'update your' : 'create a new'} property.
             </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-6">
-             {loading && isEditMode ? (
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <div className="h-4 w-24 bg-muted rounded-md animate-pulse" />
-                  <div className="h-10 w-full bg-muted rounded-md animate-pulse" />
-                </div>
-                <div className="space-y-2">
-                  <div className="h-4 w-24 bg-muted rounded-md animate-pulse" />
-                  <div className="h-20 w-full bg-muted rounded-md animate-pulse" />
-                </div>
-              </div>
-            ) : (
-            <>
               <FormField
                 control={form.control}
                 name="name"
@@ -158,45 +194,93 @@ export function ListingForm({ isEditMode = false, listingId }) {
                   <FormItem>
                     <FormLabel>Property Name</FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g., Cozy Downtown Apartment" {...field} />
+                      <Input placeholder="e.g., The Grand Coral Hotel" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-              <FormField
-                control={form.control}
-                name="description"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Description</FormLabel>
-                    <FormControl>
-                      <Textarea placeholder="Describe your beautiful property to guests..." {...field} rows={5} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="address"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Full Address</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g., 123 Main St, Anytown, USA 12345" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+               <FormField
+                  control={form.control}
+                  name="property_owner_id"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Property Owner</FormLabel>
+                       <div className="flex gap-2">
+                         <Select onValueChange={(value) => field.onChange(Number(value))} value={field.value?.toString()}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select an owner" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {owners.map(owner => (
+                              <SelectItem key={owner.id} value={owner.id.toString()}>{owner.full_name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Button type="button" variant="outline" onClick={() => setCreateOwnerOpen(true)}>
+                            <PlusCircle className="mr-2 h-4 w-4" />
+                            New Owner
+                        </Button>
+                       </div>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               
               <Separator />
-              
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+              <h3 className="text-md font-medium">Location</h3>
+
+              <FormField
+                control={form.control}
+                name="address_line_1"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Address</FormLabel>
+                    <FormControl>
+                      <Input placeholder="e.g., 123 Main St" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                 <FormField
+                  control={form.control}
+                  name="city"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>City</FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g., Anytown" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
                 <FormField
                   control={form.control}
-                  name="status"
+                  name="zip_code"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>ZIP / Postal Code</FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g., 12345" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <Separator />
+               <h3 className="text-md font-medium">Listing Details</h3>
+              
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+                 <FormField
+                  control={form.control}
+                  name="listing_status"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Listing Status</FormLabel>
@@ -207,9 +291,9 @@ export function ListingForm({ isEditMode = false, listingId }) {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="Listed">Listed</SelectItem>
-                          <SelectItem value="Unlisted">Unlisted</SelectItem>
-                          <SelectItem value="In-progress">In-progress</SelectItem>
+                          <SelectItem value="draft">Draft</SelectItem>
+                          <SelectItem value="active">Active</SelectItem>
+                          <SelectItem value="archived">Archived</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -218,126 +302,70 @@ export function ListingForm({ isEditMode = false, listingId }) {
                 />
                 <FormField
                   control={form.control}
-                  name="roomType"
+                  name="property_type_ref_id"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Room Type</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
+                      <FormLabel>Property Type</FormLabel>
+                      <Select onValueChange={(value) => field.onChange(Number(value))} value={field.value?.toString()}>
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Select a room type" />
+                            <SelectValue placeholder="Select a property type" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="Entire Place">Entire Place</SelectItem>
-                          <SelectItem value="Private Room">Private Room</SelectItem>
-                          <SelectItem value="Shared Room">Shared Room</SelectItem>
+                           {propertyTypes.map(type => (
+                              <SelectItem key={type.id} value={type.id.toString()}>{type.value}</SelectItem>
+                           ))}
                         </SelectContent>
                       </Select>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-                <FormField
+                 <FormField
                   control={form.control}
-                  name="price"
+                  name="timezone"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Price (per night)</FormLabel>
-                      <FormControl>
-                        <div className="relative">
-                          <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                          <Input type="number" placeholder="100" className="pl-8" {...field} />
-                        </div>
-                      </FormControl>
-                      <FormMessage />
+                        <FormLabel>Timezone</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Select a timezone" />
+                                </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                                <SelectItem value="utc-8">Pacific Time (UTC-08:00)</SelectItem>
+                                <SelectItem value="utc-7">Mountain Time (UTC-07:00)</SelectItem>
+                                <SelectItem value="utc-6">Central Time (UTC-06:00)</SelectItem>
+                                <SelectItem value="utc-5">Eastern Time (UTC-05:00)</SelectItem>
+                            </SelectContent>
+                        </Select>
+                        <FormMessage />
                     </FormItem>
                   )}
                 />
               </div>
-
-              <Separator />
-
-              <div className="space-y-4">
-                  <FormField
-                      control={form.control}
-                      name="amenities"
-                      render={({ field }) => (
-                          <FormItem>
-                          <FormLabel>Amenities</FormLabel>
-                          <FormControl>
-                              <Input placeholder="e.g., Wi-Fi, Pool, Gym, Free Parking" {...field} />
-                          </FormControl>
-                          <FormDescription>
-                              Separate amenities with a comma.
-                          </FormDescription>
-                          <FormMessage />
-                          </FormItem>
-                      )}
-                  />
-                  <FormField
-                      control={form.control}
-                      name="instantBook"
-                      render={({ field }) => (
-                          <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                              <div className="space-y-0.5">
-                                  <FormLabel className="text-base">
-                                  Instant Booking
-                                  </FormLabel>
-                                  <FormDescription>
-                                  Allow guests to book without needing your approval.
-                                  </FormDescription>
-                              </div>
-                              <FormControl>
-                                  <Switch
-                                  checked={field.value}
-                                  onCheckedChange={field.onChange}
-                                  />
-                              </FormControl>
-                          </FormItem>
-                      )}
-                  />
-              </div>
-              
-              <Separator />
-              
-              <div>
-                  <h3 className="text-lg font-medium flex items-center gap-2 mb-4">
-                      <ImageIcon className="w-5 h-5" />
-                      Photos
-                  </h3>
-                   <FormField
-                      control={form.control}
-                      name="imageUrl"
-                      render={({ field }) => (
-                          <FormItem>
-                          <FormLabel>Image URL</FormLabel>
-                          <FormControl>
-                              <Input placeholder="https://picsum.photos/seed/prop1/800/600" {...field} />
-                          </FormControl>
-                          <FormDescription>
-                              Enter a URL for the property image.
-                          </FormDescription>
-                          <FormMessage />
-                          </FormItem>
-                      )}
-                  />
-              </div>
-            </>
-           )}
           </CardContent>
           <CardFooter>
-            <Button type="submit" disabled={loading}>
-              {loading ? (
+            <Button type="submit" disabled={submitting}>
+              {submitting ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : (
                 <Home className="mr-2 h-4 w-4" />
               )}
-              {isEditMode ? 'Update Listing' : 'Create Listing'}
+              {isEditMode ? 'Update Property' : 'Create Property'}
             </Button>
           </CardFooter>
         </form>
       </Form>
     </Card>
+    
+    <CreatePropertyOwnerDialog 
+        isOpen={isCreateOwnerOpen}
+        onClose={() => setCreateOwnerOpen(false)}
+        onSuccess={handleNewOwnerSuccess}
+    />
+    </>
   )
 }

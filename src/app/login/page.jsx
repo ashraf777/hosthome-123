@@ -6,7 +6,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/contexts/auth-context';
+import { useAuth } from '@/contexts/auth-context.jsx';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -94,7 +94,7 @@ export default function LoginPage() {
                     <FormControl>
                       <Input
                         type="email"
-                        placeholder="Email Please..."
+                        placeholder="email..."
                         {...field}
                       />
                     </FormControl>
@@ -109,7 +109,7 @@ export default function LoginPage() {
                   <FormItem>
                     <FormLabel>Password</FormLabel>
                     <FormControl>
-                      <Input type="password" placeholder="Password Please..." {...field} />
+                      <Input type="password" placeholder="password..." {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

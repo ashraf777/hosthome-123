@@ -1,14 +1,6 @@
 
 'use client';
-import {
-  SidebarProvider,
-  Sidebar,
-  SidebarHeader,
-  SidebarContent,
-  SidebarFooter,
-  SidebarTrigger,
-  SidebarInset,
-} from "@/components/ui/sidebar"
+import { SidebarProvider, Sidebar, SidebarHeader, SidebarContent, SidebarFooter, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar.jsx"
 import { DashboardNav } from "@/components/dashboard-nav.jsx"
 import { UserNav } from "@/components/user-nav.jsx"
 import { Logo } from "@/components/icons.jsx"
@@ -51,7 +43,7 @@ export default function DashboardLayout({
           >
             <Logo className="size-7 shrink-0 text-sidebar-primary" />
             <span className="text-lg font-semibold text-sidebar-foreground">
-              HostHome
+              HostBoost
             </span>
           </Link>
         </SidebarHeader>

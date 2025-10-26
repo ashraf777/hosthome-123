@@ -39,19 +39,19 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { useToast } from "@/hooks/use-toast"
 import { Skeleton } from "@/components/ui/skeleton"
+import { api } from "@/services/api"
 
 
 const getBadgeVariant = (status) => {
     switch (status) {
-      case 'Confirmed':
+      case 'confirmed':
+      case 'checked_in':
+      case 'checked_out':
         return 'default';
-      case 'Pending':
-        return 'secondary';
-      case 'Cancelled':
+      case 'cancelled':
         return 'destructive';
       default:
         return 'outline';
@@ -68,10 +68,8 @@ export function BookingList() {
     const fetchBookings = async () => {
       try {
         setLoading(true);
-        const response = await fetch('/api/bookings');
-        if (!response.ok) throw new Error("Failed to fetch");
-        const data = await response.json();
-        setBookings(data);
+        const response = await api.get('bookings');
+        setBookings(response.data);
       } catch (error) {
         toast({
           variant: "destructive",
@@ -91,13 +89,7 @@ export function BookingList() {
     setBookings(bookings.filter(b => b.id !== id));
     
     try {
-      const response = await fetch(`/api/bookings/${id}`, {
-        method: 'DELETE',
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to delete booking");
-      }
+      await api.delete(`bookings/${id}`);
 
       toast({
           title: "Booking Deleted",
@@ -108,7 +100,7 @@ export function BookingList() {
        toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to delete the booking. Please try again.",
+        description: error.message || "Failed to delete the booking. Please try again.",
       });
     }
   };
@@ -123,7 +115,7 @@ export function BookingList() {
                 Manage your bookings and view their details.
                 </CardDescription>
             </div>
-            <Link href="/dashboard/booking/new" passHref>
+            <Link href="/dashboard/booking/new">
                 <Button>
                     <PlusCircle className="mr-2" />
                     Create Booking
@@ -159,16 +151,16 @@ export function BookingList() {
               ))
             ) : bookings.map((booking) => (
               <TableRow key={booking.id}>
-                <TableCell className="font-medium">{booking.guestName}</TableCell>
-                <TableCell>{format(new Date(booking.checkIn), "PPP")}</TableCell>
-                <TableCell>{format(new Date(booking.checkOut), "PPP")}</TableCell>
+                <TableCell className="font-medium">{booking.guest.first_name} {booking.guest.last_name}</TableCell>
+                <TableCell>{format(new Date(booking.check_in_date), "PPP")}</TableCell>
+                <TableCell>{format(new Date(booking.check_out_date), "PPP")}</TableCell>
                 <TableCell>
-                  <Badge variant={getBadgeVariant(booking.status)}>
+                  <Badge variant={getBadgeVariant(booking.status)} className="capitalize">
                     {booking.status}
                   </Badge>
                 </TableCell>
                 <TableCell className="text-right">
-                  {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(booking.total)}
+                  {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(booking.total_price)}
                 </TableCell>
                 <TableCell className="text-right">
                   <AlertDialog>

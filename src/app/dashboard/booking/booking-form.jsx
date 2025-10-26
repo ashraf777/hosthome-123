@@ -1,10 +1,11 @@
+
 "use client"
 
 import { useEffect, useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
-import { CalendarIcon, Loader2, BedDouble, User, Check, ChevronsUpDown } from "lucide-react"
+import { CalendarIcon, Loader2, BedDouble } from "lucide-react"
 import { format } from "date-fns"
 import { useRouter } from "next/navigation"
 
@@ -21,7 +22,6 @@ import {
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -40,121 +40,86 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command"
 import { useToast } from "@/hooks/use-toast"
 import { cn } from "@/lib/utils"
-import { Separator } from "@/components/ui/separator"
+import { api } from "@/services/api"
+import { Skeleton } from "@/components/ui/skeleton"
 
 const bookingFormSchema = z.object({
-  status: z.string({ required_error: "Please select a status." }),
-  checkIn: z.date({ required_error: "Check-in date is required." }),
-  checkOut: z.date({ required_error: "Check-out date is required." }),
-  guestName: z.string().min(2, "Guest name is required."),
-  guestEmail: z.string().email("Invalid email address."),
-  guestPhone: z.string().optional(),
-  channel: z.string().optional(),
-  channelProperty: z.string().optional(),
-  roomType: z.string({ required_error: "Please select a room type." }),
-  unitListing: z.string({ required_error: "Please select a unit listing." }),
-  roomRate: z.coerce.number().min(0, "Room rate must be a positive number."),
-  otherCharges: z.coerce.number().min(0).optional(),
-  discount: z.coerce.number().min(0).optional(),
-  tax: z.coerce.number().min(0).optional(),
-  bookingType: z.string({ required_error: "Please select a booking type." }),
-  bookingSource: z.string(),
-  total: z.coerce.number().min(0),
+  property_unit_id: z.coerce.number({ required_error: "Please select a unit." }),
+  guest_id: z.coerce.number({ required_error: "Please select a guest." }),
+  check_in_date: z.date({ required_error: "Check-in date is required." }),
+  check_out_date: z.date({ required_error: "Check-out date is required." }),
+  total_price: z.coerce.number().min(0, "Total price must be a positive number."),
+  guest_count: z.coerce.number().min(1, "Guest count must be at least 1."),
+  status: z.enum(['confirmed', 'cancelled', 'checked_in', 'checked_out']),
+  channel_source: z.string().optional(),
 })
 
 
 export function BookingForm({ isEditMode = false, bookingId }) {
-  const [loading, setLoading] = useState(false)
-  const [openCombobox, setOpenCombobox] = useState(false)
-  const [existingGuests, setExistingGuests] = useState([]);
+  const [submitting, setSubmitting] = useState(false)
+  const [formLoading, setFormLoading] = useState(true);
+  const [units, setUnits] = useState([])
+  const [guests, setGuests] = useState([])
   const { toast } = useToast()
   const router = useRouter();
 
   const form = useForm({
     resolver: zodResolver(bookingFormSchema),
     defaultValues: {
-      status: "Confirmed",
-      bookingSource: "HostHome",
-      roomRate: 100,
-      otherCharges: 0,
-      discount: 0,
-      tax: 0,
-      total: 100,
+      status: "confirmed",
+      guest_count: 1,
+      total_price: 100,
+      channel_source: 'Direct'
     },
   })
 
-  useEffect(() => {
-    const fetchGuests = async () => {
+   useEffect(() => {
+    async function fetchFormData() {
+      setFormLoading(true);
       try {
-        const response = await fetch('/api/guests');
-        if (!response.ok) throw new Error("Failed to fetch guests");
-        const data = await response.json();
-        setExistingGuests(data);
-      } catch (error) {
-         toast({ variant: "destructive", title: "Error", description: "Could not fetch guests." });
-      }
-    };
-    fetchGuests();
-  }, [toast]);
+        const [unitsRes, guestsRes] = await Promise.all([
+          api.get('units'),
+          api.get('guests')
+        ]);
+        setUnits(unitsRes.data);
+        setGuests(guestsRes.data);
 
-  useEffect(() => {
-    if (isEditMode && bookingId) {
-      setLoading(true);
-      const fetchBooking = async () => {
-        try {
-          const response = await fetch(`/api/bookings/${bookingId}`);
-          if (!response.ok) throw new Error("Failed to fetch booking");
-          const data = await response.json();
-          // Convert date strings to Date objects
-          const bookingData = {
-            ...data,
-            checkIn: new Date(data.checkIn),
-            checkOut: new Date(data.checkOut),
+        if (isEditMode && bookingId) {
+          const { data: bookingData } = await api.get(`bookings/${bookingId}`);
+          const formattedBookingData = {
+            ...bookingData,
+            check_in_date: new Date(bookingData.check_in_date),
+            check_out_date: new Date(bookingData.check_out_date),
           };
-          form.reset(bookingData);
-        } catch (error) {
-          toast({ variant: "destructive", title: "Error", description: "Could not fetch booking data." });
-        } finally {
-          setLoading(false);
+          form.reset(formattedBookingData);
         }
-      };
-      fetchBooking();
+      } catch (error) {
+         toast({ variant: "destructive", title: "Error", description: "Could not fetch required data." });
+      } finally {
+        setFormLoading(false);
+      }
     }
+    fetchFormData();
   }, [isEditMode, bookingId, form, toast]);
 
 
   async function onSubmit(values) {
-    setLoading(true)
+    setSubmitting(true)
+    const formattedValues = {
+        ...values,
+        check_in_date: values.check_in_date.toISOString().split('T')[0],
+        check_out_date: values.check_out_date.toISOString().split('T')[0],
+    }
     
-    // Calculate total
-    const total = (values.roomRate || 0) + (values.otherCharges || 0) - (values.discount || 0);
-    const totalWithTax = total * (1 + (values.tax || 0) / 100);
-    const finalValues = {...values, total: totalWithTax};
-    
-    const method = isEditMode ? 'PUT' : 'POST';
-    const url = isEditMode ? `/api/bookings/${bookingId}` : '/api/bookings';
-
     try {
-      const response = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(finalValues),
-      });
-
-      if (!response.ok) {
-        throw new Error(isEditMode ? 'Failed to update booking' : 'Failed to create booking');
+      if (isEditMode) {
+        await api.put(`bookings/${bookingId}`, formattedValues);
+      } else {
+        await api.post('bookings', formattedValues);
       }
-
+      
       toast({
         title: isEditMode ? "Booking Updated" : "Booking Created",
         description: `The booking has been successfully ${isEditMode ? 'updated' : 'saved'}.`,
@@ -169,30 +134,36 @@ export function BookingForm({ isEditMode = false, bookingId }) {
         description: error.message || "Something went wrong.",
       })
     } finally {
-      setLoading(false)
+      setSubmitting(false)
     }
   }
 
-  const channels = [
-    "Airbnb",
-    "Booking.com",
-    "Agoda",
-    "Expedia",
-    "Google Vacation Rentals",
-  ]
-
-  const handleGuestSelect = (guestName) => {
-    const selectedGuest = existingGuests.find(guest => guest.name.toLowerCase() === guestName.toLowerCase());
-    if (selectedGuest) {
-      form.setValue("guestName", selectedGuest.name);
-      form.setValue("guestEmail", selectedGuest.email);
-      form.setValue("guestPhone", selectedGuest.phone);
-    } else {
-      form.setValue("guestName", guestName);
-      form.setValue("guestEmail", "");
-      form.setValue("guestPhone", "");
-    }
-    setOpenCombobox(false);
+  if (formLoading) {
+    return (
+      <Card>
+        <CardHeader>
+          <Skeleton className="h-8 w-48" />
+          <Skeleton className="h-4 w-full max-w-sm" />
+        </CardHeader>
+        <CardContent className="grid gap-6">
+          {Array.from({length: 4}).map((_, i) => (
+             <div key={i} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-10 w-full" />
+              </div>
+               <div className="space-y-2">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-10 w-full" />
+              </div>
+            </div>
+          ))}
+        </CardContent>
+        <CardFooter>
+          <Skeleton className="h-10 w-36" />
+        </CardFooter>
+      </Card>
+    )
   }
 
   return (
@@ -206,34 +177,48 @@ export function BookingForm({ isEditMode = false, bookingId }) {
             </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-6">
-            {loading && isEditMode ? (
-              <div className="space-y-4">
-                <div className="h-10 w-full bg-muted rounded-md animate-pulse" />
-                <div className="h-10 w-full bg-muted rounded-md animate-pulse" />
-                <div className="h-20 w-full bg-muted rounded-md animate-pulse" />
-              </div>
-            ) : (
-            <>
-             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <FormField
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+               <FormField
                 control={form.control}
                 name="status"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Status</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      value={field.value}
-                    >
+                    <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select a status" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="Confirmed">Confirmed</SelectItem>
-                        <SelectItem value="Pending">Pending</SelectItem>
-                        <SelectItem value="Cancelled">Cancelled</SelectItem>
+                        <SelectItem value="confirmed">Confirmed</SelectItem>
+                        <SelectItem value="cancelled">Cancelled</SelectItem>
+                        <SelectItem value="checked_in">Checked In</SelectItem>
+                        <SelectItem value="checked_out">Checked Out</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="channel_source"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Channel Source</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a source" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="Direct">Direct</SelectItem>
+                        <SelectItem value="Airbnb">Airbnb</SelectItem>
+                        <SelectItem value="Booking.com">Booking.com</SelectItem>
+                        <SelectItem value="Expedia">Expedia</SelectItem>
+                        <SelectItem value="Other">Other</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -241,11 +226,10 @@ export function BookingForm({ isEditMode = false, bookingId }) {
                 )}
               />
             </div>
-
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <FormField
                 control={form.control}
-                name="checkIn"
+                name="check_in_date"
                 render={({ field }) => (
                   <FormItem className="flex flex-col">
                     <FormLabel>Check-in Date</FormLabel>
@@ -283,7 +267,7 @@ export function BookingForm({ isEditMode = false, bookingId }) {
               />
               <FormField
                 control={form.control}
-                name="checkOut"
+                name="check_out_date"
                 render={({ field }) => (
                   <FormItem className="flex flex-col">
                     <FormLabel>Check-out Date</FormLabel>
@@ -320,245 +304,63 @@ export function BookingForm({ isEditMode = false, bookingId }) {
                 )}
               />
             </div>
-            
-            <Separator />
-
-            <div>
-              <h3 className="text-lg font-medium flex items-center gap-2 mb-4">
-                <User className="w-5 h-5" />
-                Guest Details
-              </h3>
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                 <FormField
+             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <FormField
                   control={form.control}
-                  name="guestName"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-col">
-                      <FormLabel>Guest Name</FormLabel>
-                      <Popover open={openCombobox} onOpenChange={setOpenCombobox}>
-                        <PopoverTrigger asChild>
-                          <FormControl>
-                            <Button
-                              variant="outline"
-                              role="combobox"
-                              className={cn(
-                                "w-full justify-between",
-                                !field.value && "text-muted-foreground"
-                              )}
-                            >
-                              {field.value
-                                ? existingGuests.find(
-                                    (guest) => guest.name.toLowerCase() === field.value.toLowerCase()
-                                  )?.name || field.value
-                                : "Select or type guest name"}
-                              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                            </Button>
-                          </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                          <Command
-                            filter={(value, search) => {
-                              if (value.toLowerCase().includes(search.toLowerCase())) return 1
-                              return 0
-                            }}
-                          >
-                            <CommandInput 
-                              placeholder="Search guest or add new..."
-                              onValueChange={(search) => {
-                                const isExisting = existingGuests.some(g => g.name.toLowerCase() === search.toLowerCase());
-                                if (!isExisting) {
-                                  form.setValue("guestName", search);
-                                }
-                              }}
-                            />
-                            <CommandList>
-                              <CommandEmpty>
-                                <CommandItem
-                                  onSelect={() => handleGuestSelect(form.getValues("guestName"))}
-                                >
-                                  Add new guest: "{form.getValues("guestName")}"
-                                </CommandItem>
-                              </CommandEmpty>
-                              <CommandGroup>
-                                {existingGuests.map((guest) => (
-                                  <CommandItem
-                                    value={guest.name}
-                                    key={guest.id}
-                                    onSelect={() => {
-                                      handleGuestSelect(guest.name)
-                                    }}
-                                  >
-                                    <Check
-                                      className={cn(
-                                        "mr-2 h-4 w-4",
-                                        field.value === guest.name ? "opacity-100" : "opacity-0"
-                                      )}
-                                    />
-                                    {guest.name}
-                                  </CommandItem>
-                                ))}
-                              </CommandGroup>
-                            </CommandList>
-                          </Command>
-                        </PopoverContent>
-                      </Popover>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                 <FormField
-                  control={form.control}
-                  name="guestEmail"
+                  name="guest_id"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Email</FormLabel>
-                      <FormControl>
-                        <Input type="email" placeholder="e.g., john@example.com" {...field} />
-                      </FormControl>
+                      <FormLabel>Guest</FormLabel>
+                       <Select onValueChange={(value) => field.onChange(Number(value))} value={field.value?.toString()}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select a guest" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {guests.map(guest => (
+                            <SelectItem key={guest.id} value={guest.id.toString()}>{guest.first_name} {guest.last_name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-              </div>
-               <div className="grid grid-cols-1 gap-4 md:grid-cols-2 mt-4">
                  <FormField
                   control={form.control}
-                  name="guestPhone"
+                  name="property_unit_id"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Phone (Optional)</FormLabel>
-                      <FormControl>
-                        <Input type="tel" placeholder="e.g., +1 234 567 890" {...field} value={field.value ?? ""} />
-                      </FormControl>
+                      <FormLabel>Property Unit</FormLabel>
+                       <Select onValueChange={(value) => field.onChange(Number(value))} value={field.value?.toString()}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select a unit" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {units.map(unit => (
+                            <SelectItem key={unit.id} value={unit.id.toString()}>
+                              {unit.unit_identifier} ({unit.room_type?.property?.name})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-              </div>
             </div>
-
-            <Separator />
-            
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <FormField
-                control={form.control}
-                name="channel"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Channel</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      value={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a channel" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="HostHome">None (Direct)</SelectItem>
-                        {channels.map((channel) => (
-                          <SelectItem key={channel} value={channel}>
-                            {channel}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="channelProperty"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Channel Property</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      value={field.value}
-                      disabled={!form.watch("channel") || form.watch("channel") === "HostHome"}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a property" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="prop1">Cozy Downtown Apartment</SelectItem>
-                        <SelectItem value="prop2">Beachside Villa</SelectItem>
-                        <SelectItem value="prop3">Mountain Cabin Retreat</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <FormField
-                control={form.control}
-                name="roomType"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Room Type</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      value={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a room type" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="entire">Entire Place</SelectItem>
-                        <SelectItem value="private">Private Room</SelectItem>
-                        <SelectItem value="shared">Shared Room</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="unitListing"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Unit Listing</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      value={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a unit" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="unit101">Unit 101</SelectItem>
-                        <SelectItem value="unit102">Unit 102 (Penthouse)</SelectItem>
-                        <SelectItem value="unit205">Unit 205</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            <Separator />
-            
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                <FormField
                   control={form.control}
-                  name="roomRate"
+                  name="total_price"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Room Rate ($)</FormLabel>
+                      <FormLabel>Total Price ($)</FormLabel>
                       <FormControl>
-                        <Input type="number" placeholder="e.g., 100" {...field} />
+                        <Input type="number" placeholder="e.g., 250" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -566,90 +368,22 @@ export function BookingForm({ isEditMode = false, bookingId }) {
                 />
                 <FormField
                   control={form.control}
-                  name="otherCharges"
+                  name="guest_count"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Other Charges ($)</FormLabel>
+                      <FormLabel>Guest Count</FormLabel>
                       <FormControl>
-                        <Input type="number" placeholder="e.g., 20" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="discount"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Discount ($)</FormLabel>
-                      <FormControl>
-                        <Input type="number" placeholder="e.g., 10" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="tax"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Tax (%)</FormLabel>
-                      <FormControl>
-                        <Input type="number" placeholder="e.g., 8.5" {...field} />
+                        <Input type="number" placeholder="e.g., 2" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
             </div>
-             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 mt-4">
-               <FormField
-                control={form.control}
-                name="bookingType"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Booking Type</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      value={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a booking type" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="nightly">Nightly</SelectItem>
-                        <SelectItem value="weekly">Weekly</SelectItem>
-                        <SelectItem value="monthly">Monthly</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                  control={form.control}
-                  name="bookingSource"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Booking Source</FormLabel>
-                      <FormControl>
-                        <Input disabled {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-             </div>
-            </>
-            )}
           </CardContent>
           <CardFooter>
-            <Button type="submit" disabled={loading}>
-              {loading ? (
+            <Button type="submit" disabled={submitting}>
+              {submitting ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : (
                 <BedDouble className="mr-2 h-4 w-4" />

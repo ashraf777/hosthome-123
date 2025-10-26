@@ -1,10 +1,12 @@
+
+
 "use client"
 
 import * as React from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
-import { MoreHorizontal, PlusCircle } from "lucide-react"
+import { MoreHorizontal, PlusCircle, Home, Bed } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -43,10 +45,21 @@ import {
 } from "@/components/ui/alert-dialog"
 import { useToast } from "@/hooks/use-toast"
 import { Skeleton } from "@/components/ui/skeleton"
+import { api } from "@/services/api"
+import { PlaceHolderImages } from "@/lib/placeholder-images.js"
 
 
 const getStatusBadgeVariant = (status) => {
-  return status === 'Listed' ? 'default' : 'secondary';
+  switch (status) {
+    case 'active':
+      return 'default';
+    case 'draft':
+      return 'secondary';
+    case 'archived':
+      return 'destructive';
+    default:
+      return 'outline';
+  }
 }
 
 export function ListingList() {
@@ -58,15 +71,13 @@ export function ListingList() {
   React.useEffect(() => {
     const fetchListings = async () => {
       try {
-        const response = await fetch('/api/listings');
-        if (!response.ok) throw new Error("Failed to fetch");
-        const data = await response.json();
-        setListings(data);
+        const response = await api.get('properties');
+        setListings(response.data); 
       } catch (error) {
         toast({
           variant: "destructive",
           title: "Error",
-          description: "Could not fetch listings.",
+          description: "Could not fetch properties.",
         });
       } finally {
         setLoading(false);
@@ -80,27 +91,36 @@ export function ListingList() {
     setListings(listings.filter(l => l.id !== id));
     
     try {
-      const response = await fetch(`/api/listings/${id}`, {
-        method: 'DELETE',
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to delete listing");
-      }
+      await api.delete(`properties/${id}`);
       
       toast({
-          title: "Listing Deleted",
-          description: "The property listing has been successfully deleted.",
+          title: "Property Deleted",
+          description: "The property has been successfully deleted.",
       })
     } catch (error) {
       setListings(originalListings);
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to delete the listing. Please try again.",
+        description: error.message || "Failed to delete the property. Please try again.",
       });
     }
   };
+
+  const getPlaceholder = (id) => {
+    const image = PlaceHolderImages.find(img => img.id === `property-${id}`);
+    if (image) {
+      return {
+        url: image.url,
+        hint: image.hint
+      };
+    }
+    // Fallback if no specific image is found
+    return {
+      url: `https://picsum.photos/seed/${id}/80/60`,
+      hint: 'property exterior'
+    }
+  }
 
   return (
     <Card>
@@ -112,10 +132,10 @@ export function ListingList() {
                 Manage your property listings and their details.
                 </CardDescription>
             </div>
-            <Link href="/dashboard/listings/new" passHref>
+            <Link href="/dashboard/listings/new">
                 <Button>
                     <PlusCircle className="mr-2" />
-                    Create Listing
+                    Create Property
                 </Button>
             </Link>
         </div>
@@ -125,10 +145,9 @@ export function ListingList() {
           <TableHeader>
             <TableRow>
               <TableHead>Property</TableHead>
-              <TableHead>Room Type</TableHead>
+              <TableHead>Owner</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead>Instant Book</TableHead>
-              <TableHead className="text-right">Price (per night)</TableHead>
+              <TableHead>City</TableHead>
               <TableHead>
                 <span className="sr-only">Actions</span>
               </TableHead>
@@ -144,91 +163,100 @@ export function ListingList() {
                        <Skeleton className="h-6 w-48" />
                      </div>
                   </TableCell>
-                  <TableCell><Skeleton className="h-6 w-24" /></TableCell>
+                  <TableCell><Skeleton className="h-6 w-32" /></TableCell>
                   <TableCell><Skeleton className="h-6 w-20" /></TableCell>
-                  <TableCell><Skeleton className="h-6 w-16" /></TableCell>
-                  <TableCell className="text-right"><Skeleton className="h-6 w-20 ml-auto" /></TableCell>
+                  <TableCell><Skeleton className="h-6 w-24" /></TableCell>
                   <TableCell className="text-right"><Skeleton className="h-8 w-8 ml-auto" /></TableCell>
                 </TableRow>
               ))
-            ) : listings.map((listing) => (
-              <TableRow key={listing.id}>
-                <TableCell className="font-medium">
-                  <div className="flex items-center gap-3">
-                    <Image
-                      src={listing.imageUrl}
-                      alt={listing.name}
-                      width={80}
-                      height={60}
-                      className="rounded-md object-cover"
-                      data-ai-hint={listing.imageHint}
-                    />
-                    <span>{listing.name}</span>
-                  </div>
-                </TableCell>
-                <TableCell>{listing.roomType}</TableCell>
-                <TableCell>
-                  <Badge variant={getStatusBadgeVariant(listing.status)}>
-                    {listing.status}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  <Badge variant={listing.instantBook ? 'secondary' : 'outline'}>
-                    {listing.instantBook ? 'On' : 'Off'}
-                  </Badge>
-                </TableCell>
-                <TableCell className="text-right">
-                  {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(listing.price)}
-                </TableCell>
-                <TableCell className="text-right">
-                  <AlertDialog>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button aria-haspopup="true" size="icon" variant="ghost">
-                          <MoreHorizontal className="h-4 w-4" />
-                          <span className="sr-only">Toggle menu</span>
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                        <DropdownMenuItem
-                          onSelect={() => router.push(`/dashboard/listings/${listing.id}/edit`)}
-                        >
-                          Edit
-                        </DropdownMenuItem>
-                         <AlertDialogTrigger asChild>
-                           <DropdownMenuItem className="text-destructive focus:text-destructive">
+            ) : listings.map((listing) => {
+                const placeholder = getPlaceholder(listing.id);
+                return (
+                  <TableRow key={listing.id}>
+                    <TableCell className="font-medium">
+                      <div className="flex items-center gap-3">
+                        <Image
+                          src={placeholder.url}
+                          alt={listing.name}
+                          width={80}
+                          height={60}
+                          className="rounded-md object-cover"
+                          data-ai-hint={placeholder.hint}
+                        />
+                        <span>{listing.name}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell>{listing.property_owner.full_name}</TableCell>
+                    <TableCell>
+                      <Badge variant={getStatusBadgeVariant(listing.listing_status)} className="capitalize">
+                        {listing.listing_status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>{listing.city}</TableCell>
+                    <TableCell className="text-right">
+                      <AlertDialog>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button aria-haspopup="true" size="icon" variant="ghost">
+                              <MoreHorizontal className="h-4 w-4" />
+                              <span className="sr-only">Toggle menu</span>
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                            <DropdownMenuItem
+                              onSelect={() => router.push(`/dashboard/listings/${listing.id}/edit`)}
+                            >
+                              <Home className="mr-2 h-4 w-4" />
+                              Edit Property
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onSelect={() => router.push(`/dashboard/listings/${listing.id}/room-types`)}
+                            >
+                                <Bed className="mr-2 h-4 w-4" />
+                                Manage Room Types
+                            </DropdownMenuItem>
+                             <AlertDialogTrigger asChild>
+                               <DropdownMenuItem className="text-destructive focus:text-destructive">
+                                  Delete
+                               </DropdownMenuItem>
+                            </AlertDialogTrigger>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              This action cannot be undone. This will permanently delete the property and all its related data.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction
+                              className="bg-destructive hover:bg-destructive/90"
+                              onClick={() => handleDelete(listing.id)}
+                            >
                               Delete
-                           </DropdownMenuItem>
-                        </AlertDialogTrigger>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          This action cannot be undone. This will permanently delete the listing.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction
-                          className="bg-destructive hover:bg-destructive/90"
-                          onClick={() => handleDelete(listing.id)}
-                        >
-                          Delete
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                </TableCell>
-              </TableRow>
-            ))}
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </TableCell>
+                  </TableRow>
+                )
+            })}
           </TableBody>
         </Table>
          {!loading && listings.length === 0 && (
-          <div className="text-center py-12 text-muted-foreground">
-            No listings found.
+          <div className="text-center py-12 text-muted-foreground flex flex-col items-center gap-4">
+            <Home className="w-12 h-12 text-muted-foreground/50" />
+            <p>No properties found.</p>
+            <Link href="/dashboard/listings/new">
+                <Button>
+                    <PlusCircle className="mr-2" />
+                    Create Your First Property
+                </Button>
+            </Link>
           </div>
         )}
       </CardContent>

@@ -36,28 +36,10 @@ export function RoleList() {
       const response = await api.get("roles")
       setRoles(response.data)
     } catch (error) {
-      const statusCode = error.status || 'N/A';
-      const errorMessage = error.message || "Could not fetch roles.";
-
-      console.error("Error fetching roles:", error);
-      console.error("HTTP Status Code:", statusCode); // Now you'll see the 403
-
-      let toastTitle = "Error";
-      let toastDescription = "Could not fetch roles.";
-
-      // Check for 403 Forbidden
-      if (statusCode === 403) {
-        toastTitle = "Unauthorized Access";
-        toastDescription = "You don't have permission to view roles.";
-      } else {
-        // Use the generic message for other errors
-        toastDescription = errorMessage; 
-      }
-      
       toast({
         variant: "destructive",
-        title: toastTitle,
-        description: toastDescription,
+        title: "Error",
+        description: "Could not fetch roles.",
       })
     } finally {
       setLoading(false)
@@ -110,7 +92,7 @@ export function RoleList() {
               ))
             ) : roles.map((role) => (
               <TableRow key={role.id}>
-                <TableCell className="font-medium p-4">{role.name}</TableCell>
+                <TableCell className="font-medium">{role.name}</TableCell>
                 <TableCell>
                   <Badge variant="secondary">{role.permissions.length}</Badge>
                 </TableCell>
