@@ -43,20 +43,25 @@ export function DashboardNav() {
       label: "Dashboard",
       icon: LayoutDashboard,
     },
-    // {
-    //   href: "/dashboard/booking",
-    //   label: "Booking",
-    //   icon: Book,
-    // },
-    // {
-    //   href: "/dashboard/calendar",
-    //   label: "Calendar",
-    //   icon: Calendar,
-    // },
+    {
+      href: "/dashboard/booking",
+      label: "Booking",
+      icon: Book,
+    },
+    {
+      href: "/dashboard/calendar",
+      label: "Calendar",
+      icon: Calendar,
+    },
     {
       href: "/dashboard/listings",
       label: "Listings",
       icon: Home,
+    },
+    {
+      href: "/dashboard/units",
+      label: "Units",
+      icon: KeyRound,
     },
     {
       href: "/dashboard/room-types",
@@ -64,53 +69,48 @@ export function DashboardNav() {
       icon: Bed,
     },
     {
-      href: "/dashboard/units",
-      label: "Units",
-      icon: KeyRound,
+      href: "/dashboard/pricing",
+      label: "Intelligent Pricing",
+      icon: DollarSign,
     },
-    // {
-    //   href: "/dashboard/pricing",
-    //   label: "Intelligent Pricing",
-    //   icon: DollarSign,
-    // },
-    // {
-    //   href: "/dashboard/channel-sync",
-    //   label: "Channel Sync",
-    //   icon: Cable,
-    // },
-    // {
-    //   href: "/dashboard/messaging",
-    //   label: "Messaging",
-    //   icon: MessageCircle,
-    // },
-    //  {
-    //   href: "/dashboard/guests",
-    //   label: "Guest",
-    //   icon: Users,
-    // },
-    // {
-    //   href: "/dashboard/reporting",
-    //   label: "Reporting",
-    //   icon: BarChart2,
-    // },
+    {
+      href: "/dashboard/channel-sync",
+      label: "Channel Sync",
+      icon: Cable,
+    },
+    {
+      href: "/dashboard/messaging",
+      label: "Messaging",
+      icon: MessageCircle,
+    },
+     {
+      href: "/dashboard/guests",
+      label: "Guest",
+      icon: Users,
+    },
+    {
+      href: "/dashboard/reporting",
+      label: "Reporting",
+      icon: BarChart2,
+    },
   ]
 
   const accountItems = [
-    // {
-    //   href: "/dashboard/accounts/invoice",
-    //   label: "Invoice",
-    //   icon: Receipt
-    // },
-    // {
-    //   href: "/dashboard/accounts/expenses",
-    //   label: "Expenses",
-    //   icon: Wallet
-    // },
-    // {
-    //   href: "/dashboard/accounts/payout",
-    //   label: "Payout",
-    //   icon: Banknote
-    // }
+    {
+      href: "/dashboard/accounts/invoice",
+      label: "Invoice",
+      icon: Receipt
+    },
+    {
+      href: "/dashboard/accounts/expenses",
+      label: "Expenses",
+      icon: Wallet
+    },
+    {
+      href: "/dashboard/accounts/payout",
+      label: "Payout",
+      icon: Banknote
+    }
   ]
 
   const isAccountsActive = pathname.startsWith("/dashboard/accounts")
@@ -133,7 +133,7 @@ export function DashboardNav() {
           </Link>
         </SidebarMenuItem>
       ))}
-      {/* <Collapsible defaultOpen={isAccountsActive}>
+      <Collapsible defaultOpen={isAccountsActive}>
         <CollapsibleTrigger asChild>
           <SidebarMenuItem>
               <SidebarMenuButton
@@ -174,7 +174,7 @@ export function DashboardNav() {
               <span>Settings</span>
             </SidebarMenuButton>
           </Link>
-        </SidebarMenuItem> */}
+        </SidebarMenuItem>
       <SidebarMenuItem>
           <Link href="/dashboard/users">
             <SidebarMenuButton

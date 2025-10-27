@@ -38,6 +38,7 @@ import { api } from "@/services/api"
 import { Skeleton } from "@/components/ui/skeleton"
 import { CreateRoomTypeDialog } from "./create-room-type-dialog"
 import { CreatePropertyDialog } from "../room-types/create-property-dialog"
+import { PhotoGallery } from "../room-types/[roomTypeId]/photo-gallery"
 
 const unitFormSchema = z.object({
   property_id: z.coerce.number({ required_error: "Please select a property." }),
@@ -54,6 +55,7 @@ export function GlobalUnitForm() {
   const [isRoomTypeLoading, setIsRoomTypeLoading] = useState(false);
   const [isCreateRoomTypeOpen, setCreateRoomTypeOpen] = useState(false);
   const [isCreatePropertyOpen, setCreatePropertyOpen] = useState(false);
+  const [createdUnit, setCreatedUnit] = useState(null);
   const { toast } = useToast()
   const router = useRouter();
 
@@ -135,17 +137,15 @@ export function GlobalUnitForm() {
 
   async function onSubmit(values) {
     setSubmitting(true)
-    // We don't need to send property_id to the units endpoint
     const { property_id, ...submissionValues } = values;
 
     try {
-      await api.post('units', submissionValues);
+      const response = await api.post('units', submissionValues);
       toast({
         title: "Unit Created",
-        description: `The unit has been successfully created.`,
+        description: `Now you can manage it.`,
       })
-      router.push(`/dashboard/units`);
-      router.refresh();
+      setCreatedUnit(response.data);
     } catch (error) {
        toast({
         variant: "destructive",
@@ -160,6 +160,27 @@ export function GlobalUnitForm() {
   if (loading) {
     return <Card><CardContent className="p-6"><Skeleton className="h-48 w-full" /></CardContent></Card>
   }
+  
+  if (createdUnit) {
+     return (
+        <Card>
+            <CardHeader>
+                <CardTitle>Unit Created: {createdUnit.unit_identifier}</CardTitle>
+                <CardDescription>
+                    This unit has been successfully created under the Room Type "{createdUnit.room_type.name}".
+                </CardDescription>
+            </CardHeader>
+            <CardContent>
+                <p>You can now manage this unit from the "Units" or "Listings" section of the dashboard.</p>
+            </CardContent>
+            <CardFooter>
+                <Button onClick={() => router.push(`/dashboard/units`)}>
+                    Done
+                </Button>
+            </CardFooter>
+        </Card>
+    );
+  }
 
   return (
     <>
@@ -167,7 +188,7 @@ export function GlobalUnitForm() {
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)}>
           <CardHeader>
-            <CardTitle>Unit Details</CardTitle>
+            <CardTitle>Create New Unit</CardTitle>
             <CardDescription>
               First select a property, then a room type to create a new unit.
             </CardDescription>
