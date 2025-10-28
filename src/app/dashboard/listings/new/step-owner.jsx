@@ -18,11 +18,11 @@ import { CreatePropertyOwnerDialog } from "../create-property-owner-dialog.jsx"
 import { CreateHostingCompanyDialog } from "./create-hosting-company-dialog.jsx"
 
 const formSchema = z.object({
-  hosting_company: z.any().optional(),
-  owner: z.any().optional(),
+  hosting_company_id: z.any().optional(),
+  property_owner_id: z.any().optional(),
 })
 
-export function StepOwner({ onNext, onBack, initialData }) {
+export function StepOwner({ onNext, initialData }) {
   const [hostingCompanies, setHostingCompanies] = React.useState([])
   const [owners, setOwners] = React.useState([])
   const [loading, setLoading] = React.useState(true)
@@ -33,56 +33,65 @@ export function StepOwner({ onNext, onBack, initialData }) {
   const form = useForm({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      hosting_company: initialData?.hosting_company || undefined,
-      owner: initialData?.owner || undefined,
+      hosting_company_id: initialData?.hosting_company?.id || undefined,
+      property_owner_id: initialData?.owner?.id || undefined,
     },
   })
 
-  // Mock fetching hosting companies
-  React.useEffect(() => {
-    setHostingCompanies([
-        {id: 1, name: "Default Hosting Co."},
-        {id: 2, name: "Vacation Rentals Inc."}
-    ]);
-  }, []);
+  const fetchHostingCompanies = React.useCallback(async () => {
+    try {
+      const response = await api.get('hosting-companies');
+      setHostingCompanies(response.data);
+    } catch (error) {
+       toast({ variant: "destructive", title: "Error", description: "Could not fetch hosting companies." });
+    }
+  }, [toast]);
+  
 
   const fetchOwners = React.useCallback(async () => {
-    setLoading(true)
     try {
       const ownersRes = await api.get('property-owners')
       setOwners(ownersRes.data)
     } catch (error) {
       toast({ variant: "destructive", title: "Error", description: "Could not fetch property owners." })
-    } finally {
-      setLoading(false)
     }
   }, [toast])
 
   React.useEffect(() => {
-    fetchOwners()
-  }, [fetchOwners])
+    async function fetchData() {
+        setLoading(true);
+        await Promise.all([
+            fetchHostingCompanies(),
+            fetchOwners()
+        ]);
+        setLoading(false);
+    }
+    fetchData();
+  }, [fetchHostingCompanies, fetchOwners])
   
   React.useEffect(() => {
       if (initialData) {
-          form.setValue("hosting_company", initialData.hosting_company?.id)
-          form.setValue("owner", initialData.owner?.id)
+          form.setValue("hosting_company_id", initialData.hosting_company?.id)
+          form.setValue("property_owner_id", initialData.owner?.id)
       }
   }, [initialData, form])
 
   const handleNewCompanySuccess = (newCompany) => {
-    setHostingCompanies(prev => [...prev, newCompany])
-    form.setValue("hosting_company", newCompany.id, { shouldValidate: true })
+    const company = newCompany.data || newCompany;
+    setHostingCompanies(prev => [...prev, company])
+    form.setValue("hosting_company_id", company.id, { shouldValidate: true })
   }
 
   const handleNewOwnerSuccess = (newOwner) => {
-    setOwners(prev => [...prev, newOwner])
-    form.setValue("owner", newOwner.id, { shouldValidate: true })
+    const owner = newOwner.data || newOwner;
+    setOwners(prev => [...prev, owner])
+    form.setValue("property_owner_id", owner.id, { shouldValidate: true })
   }
 
   const onSubmit = (data) => {
-    const selectedCompany = data.hosting_company ? hostingCompanies.find(c => c.id === data.hosting_company) : null
-    const selectedOwner = data.owner ? owners.find(o => o.id === data.owner) : null
-    onNext({ hosting_company: selectedCompany, owner: selectedOwner })
+    const selectedCompany = data.hosting_company_id ? hostingCompanies.find(c => c.id === data.hosting_company_id) : null
+    const selectedOwner = data.property_owner_id ? owners.find(o => o.id === data.property_owner_id) : null
+    onNext({ owner: { hosting_company: selectedCompany, owner: selectedOwner } });
   }
 
   return (
@@ -90,13 +99,19 @@ export function StepOwner({ onNext, onBack, initialData }) {
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           <CardHeader className="p-0 mb-6">
-            <CardTitle>Step 2: Ownership</CardTitle>
-            <CardDescription>Select the hosting company and owner. Both are optional for now.</CardDescription>
+            <CardTitle>Step 1: Ownership</CardTitle>
+            <CardDescription>Select the hosting company and owner. Both are optional.</CardDescription>
           </CardHeader>
           
-           <FormField
+           {loading ? (
+             <div className="space-y-2">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-10 w-full" />
+             </div>
+           ) : (
+            <FormField
               control={form.control}
-              name="hosting_company"
+              name="hosting_company_id"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Hosting Company</FormLabel>
@@ -104,7 +119,7 @@ export function StepOwner({ onNext, onBack, initialData }) {
                     <Select onValueChange={(value) => field.onChange(Number(value))} value={field.value?.toString()}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select a company (optional)" />
+                          <SelectValue placeholder="Select a company" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
@@ -122,13 +137,17 @@ export function StepOwner({ onNext, onBack, initialData }) {
                 </FormItem>
               )}
             />
+           )}
 
           {loading ? (
-            <Skeleton className="h-10 w-full" />
+            <div className="space-y-2">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-10 w-full" />
+            </div>
           ) : (
             <FormField
               control={form.control}
-              name="owner"
+              name="property_owner_id"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Property Owner</FormLabel>
@@ -156,8 +175,7 @@ export function StepOwner({ onNext, onBack, initialData }) {
             />
           )}
 
-          <div className="flex justify-between">
-            <Button type="button" variant="outline" onClick={onBack}>Back</Button>
+          <div className="flex justify-end">
             <Button type="submit">Next</Button>
           </div>
         </form>

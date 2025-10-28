@@ -59,14 +59,14 @@ export function DashboardNav() {
       icon: Home,
     },
     {
-      href: "/dashboard/room-types",
-      label: "Room Types",
-      icon: Bed,
-    },
-    {
       href: "/dashboard/units",
       label: "Units",
       icon: KeyRound,
+    },
+    {
+      href: "/dashboard/room-types",
+      label: "Room Types",
+      icon: Bed,
     },
     // {
     //   href: "/dashboard/pricing",

@@ -156,7 +156,7 @@ export function UserForm({ isEditMode = false, userId }) {
                   <FormItem>
                     <FormLabel>Email</FormLabel>
                     <FormControl>
-                      <Input type="email" placeholder="email..." {...field} disabled={isEditMode || loading} />
+                      <Input type="email" placeholder="e.g., john.doe@example.com" {...field} disabled={isEditMode || loading} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -171,7 +171,7 @@ export function UserForm({ isEditMode = false, userId }) {
                     <FormItem>
                         <FormLabel>Password</FormLabel>
                         <FormControl>
-                        <Input type="password" placeholder="password..." {...field} disabled={loading} />
+                        <Input type="password" placeholder="••••••••" {...field} disabled={loading} />
                         </FormControl>
                         <FormMessage />
                     </FormItem>

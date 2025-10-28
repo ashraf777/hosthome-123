@@ -4,52 +4,73 @@
 import * as React from "react"
 import { useRouter } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
-import { api } from "@/services/api"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Loader2 } from "lucide-react"
 
-import { StepPropertyDetails } from "./step-property-details"
 import { StepOwner } from "./step-owner"
-import { StepUnits } from "./step-units"
+import { StepPropertyDetails } from "./step-property-details"
 import { StepRoomTypes } from "./step-room-types"
+import { StepUnits } from "./step-units"
+import { api } from "@/services/api"
 
 const steps = [
-  { id: "details", title: "Property Details" },
   { id: "owner", title: "Property Owner" },
+  { id: "details", title: "Property Details" },
+  { id: "rooms", title: "Room Types" },
   { id: "units", title: "Property Units" },
-  { id: "rooms", title: "Room Types & Photos" },
 ]
 
 export function CreateListingWizard() {
   const [currentStep, setCurrentStep] = React.useState(0)
   const [formData, setFormData] = React.useState({
-    propertyDetails: null,
     owner: null,
-    units: [],
-    roomTypes: {}, // Object to hold room types for each unit
+    propertyDetails: null,
+    propertyId: null, // To hold the ID of the created/selected property
+    roomTypes: [],
+    units: {},
   })
   const [isLoading, setIsLoading] = React.useState(false)
-  const [owners, setOwners] = React.useState([])
   const router = useRouter()
   const { toast } = useToast()
 
-  React.useEffect(() => {
-    const fetchOwners = async () => {
-        try {
-            const ownersRes = await api.get('property-owners');
-            setOwners(ownersRes.data);
-        } catch (error) {
-            toast({ variant: "destructive", title: "Error", description: "Could not pre-fetch property owners." });
-        }
-    };
-    fetchOwners();
-  }, [toast]);
+  const handleNext = async (data) => {
+    let newFormData = { ...formData, ...data };
 
-  const handleNext = (data) => {
-    setFormData((prev) => ({ ...prev, ...data }))
+    // In Step 2, "save" the property and get an ID for the next steps
+    if (currentStep === 1) {
+        setIsLoading(true);
+        try {
+            if (data.propertyDetails.create_new) {
+                const payload = {
+                    ...data.propertyDetails,
+                    property_owner_id: newFormData.owner.owner?.id, 
+                    listing_status: 'draft',
+                };
+                
+                // Using a mock ID as requested for now
+                const mockNewPropertyId = Date.now();
+                newFormData.propertyId = mockNewPropertyId;
+                
+                console.log("Simulating property creation with payload:", payload);
+                await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API delay
+                toast({ title: "Property Saved (Mock)", description: `Generated mock ID: ${mockNewPropertyId}`});
+
+            } else {
+                newFormData.propertyId = data.propertyDetails.property_id;
+            }
+        } catch (error) {
+            toast({ variant: "destructive", title: "Error", description: "Could not save property details." });
+            setIsLoading(false);
+            return; // Stop advancement if there's an error
+        } finally {
+            setIsLoading(false);
+        }
+    }
+
+    setFormData(newFormData);
     if (currentStep < steps.length - 1) {
-      setCurrentStep(currentStep + 1)
+      setCurrentStep(currentStep + 1);
     }
   }
 
@@ -58,63 +79,59 @@ export function CreateListingWizard() {
       setCurrentStep(currentStep - 1)
     }
   }
-
-  const handleSubmit = async () => {
+  
+  const handleSubmit = async (data) => {
+    const finalData = {...formData, ...data};
     setIsLoading(true)
-    toast({ title: "Submitting...", description: "This is a placeholder for the final API calls." });
-    console.log("Final Form Data:", formData);
     
-    // Placeholder for future API logic
-    // You will replace this with your actual API calls
+    console.log("Final Form Data for API:", finalData)
+    toast({ title: "Submitting final data...", description: "Check console for payload." });
+
+    // Simulate final API call
+    await new Promise(resolve => setTimeout(resolve, 2000));
     
-    // Example logic:
-    // 1. Create Property
-    // 2. Create Units for the Property
-    // 3. Create Room Types for each Unit
-    // 4. Upload photos for each Room Type
-    
-    setTimeout(() => {
-        setIsLoading(false);
-        toast({
-            title: "Wizard Complete (Placeholder)",
-            description: "Check the console for the final form data structure.",
-        });
-        router.push("/dashboard/listings");
-    }, 2000);
+    setIsLoading(false)
+    toast({
+        title: "Wizard Complete!",
+        description: "Property, room types, and units have been created (simulated).",
+    });
+    router.push("/dashboard/listings");
   }
+
 
   const renderStep = () => {
     switch (currentStep) {
       case 0:
         return (
-          <StepPropertyDetails
+          <StepOwner
             onNext={handleNext}
-            initialData={formData.propertyDetails}
+            initialData={formData.owner}
           />
         )
       case 1:
         return (
-          <StepOwner
+          <StepPropertyDetails
             onNext={handleNext}
             onBack={handleBack}
-            initialData={formData.owner}
+            initialData={formData.propertyDetails}
           />
         )
       case 2:
         return (
-            <StepUnits
+            <StepRoomTypes
                 onNext={handleNext}
                 onBack={handleBack}
-                initialData={formData.units}
+                initialData={formData.roomTypes}
+                propertyId={formData.propertyId}
             />
         )
       case 3:
         return (
-          <StepRoomTypes
+          <StepUnits
             onBack={handleBack}
-            onFinish={handleNext}
-            units={formData.units}
-            initialData={formData.roomTypes}
+            onFinish={handleSubmit}
+            roomTypes={formData.roomTypes}
+            initialData={formData.units}
           />
         )
       default:
@@ -140,7 +157,7 @@ export function CreateListingWizard() {
                   index <= currentStep ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
                 }`}
               >
-                {index + 1}
+                {isLoading && index === currentStep ? <Loader2 className="animate-spin" /> : index + 1}
               </span>
             </li>
           ))}
@@ -151,14 +168,6 @@ export function CreateListingWizard() {
         <CardContent className="p-6">{renderStep()}</CardContent>
       </Card>
       
-      {currentStep === steps.length - 1 && (
-         <div className="flex justify-end">
-            <Button onClick={handleSubmit} disabled={isLoading} size="lg">
-                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {isLoading ? "Saving..." : "Save Property"}
-            </Button>
-         </div>
-      )}
     </div>
   )
 }

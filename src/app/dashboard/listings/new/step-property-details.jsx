@@ -15,18 +15,57 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { useToast } from "@/hooks/use-toast"
 import { api } from "@/services/api"
 import { Separator } from "@/components/ui/separator"
-import { PlusCircle } from "lucide-react"
+import { PlusCircle, X } from "lucide-react"
 import { CreatePropertyTypeDialog } from "./create-property-type-dialog"
+import { Switch } from "@/components/ui/switch"
+import { Label } from "@/components/ui/label"
 
 const formSchema = z.object({
-  name: z.string().min(5, "Property name must be at least 5 characters."),
-  address_line_1: z.string().min(5, "Please enter a full address."),
-  city: z.string().min(2, "City is required."),
-  zip_code: z.string().min(4, "Zip code is required."),
-  property_type_ref_id: z.coerce.number().optional(),
-})
+  property_id: z.any().optional(),
+  create_new: z.boolean().default(false),
+  name: z.string().optional(),
+  address_line_1: z.string().optional(),
+  city: z.string().optional(),
+  state: z.string().optional(),
+  country: z.string().optional(),
+  zip_code: z.string().optional(),
+  property_type_ref_id: z.any().optional(),
+  check_in_time: z.string().optional(),
+  check_out_time: z.string().optional(),
+  min_nights: z.coerce.number().optional(),
+  max_nights: z.coerce.number().optional(),
+}).superRefine((data, ctx) => {
+    if (data.create_new) {
+        if (!data.name || data.name.length < 5) {
+            ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Property name must be at least 5 characters.", path: ['name']});
+        }
+         if (!data.address_line_1 || data.address_line_1.length < 5) {
+            ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Please enter a full address.", path: ['address_line_1']});
+        }
+         if (!data.city || data.city.length < 2) {
+            ctx.addIssue({ code: z.ZodIssueCode.custom, message: "City is required.", path: ['city']});
+        }
+         if (!data.zip_code || data.zip_code.length < 4) {
+            ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Zip code is required.", path: ['zip_code']});
+        }
+        if (!data.property_type_ref_id) {
+            ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Please select a property type.", path: ['property_type_ref_id']});
+        }
+    } else {
+        if (!data.property_id) {
+             ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Please select a property or create a new one.", path: ['property_id']});
+        }
+    }
+});
 
-export function StepPropertyDetails({ onNext, initialData }) {
+const mockProperties = [
+    { id: 101, name: "Sunset Villa" },
+    { id: 102, name: "Downtown Loft" },
+    { id: 103, name: "The Mountain Cabin" },
+];
+
+export function StepPropertyDetails({ onNext, onBack, initialData }) {
+  const [properties, setProperties] = React.useState([]);
   const [propertyTypes, setPropertyTypes] = React.useState([])
   const [loading, setLoading] = React.useState(true)
   const [isCreateTypeOpen, setCreateTypeOpen] = React.useState(false)
@@ -35,29 +74,46 @@ export function StepPropertyDetails({ onNext, initialData }) {
   const form = useForm({
     resolver: zodResolver(formSchema),
     defaultValues: initialData || {
+      property_id: undefined,
+      create_new: false,
       name: "",
       address_line_1: "",
       city: "",
+      state: "",
+      country: "",
       zip_code: "",
       property_type_ref_id: undefined,
+      check_in_time: "14:00",
+      check_out_time: "12:00",
+      min_nights: 1,
+      max_nights: 0,
     },
   })
+  
+  const createNew = form.watch("create_new");
 
   React.useEffect(() => {
-    async function fetchPropTypes() {
+    async function fetchData() {
+      setLoading(true)
       try {
-        const propTypesRes = await api.get('property-references')
+        const [propsRes, propTypesRes] = await Promise.all([
+             api.get('properties'),
+             api.get('property-references')
+        ]);
+        setProperties(propsRes.data?.length > 0 ? propsRes.data : mockProperties);
         setPropertyTypes(propTypesRes.property_type || [])
       } catch (error) {
-        toast({ variant: "destructive", title: "Error", description: "Could not fetch property types." })
+        toast({ variant: "destructive", title: "Error", description: "Could not fetch properties or types. Using mock data." })
+        setProperties(mockProperties);
       } finally {
         setLoading(false)
       }
     }
-    fetchPropTypes()
-  }, [toast])
+    fetchData()
+  }, [toast]);
   
-  const handleNewTypeSuccess = (newType) => {
+  const handleNewTypeSuccess = (newTypeResponse) => {
+    const newType = newTypeResponse.data || newTypeResponse;
     setPropertyTypes(prev => [...prev, newType]);
     form.setValue("property_type_ref_id", newType.id, { shouldValidate: true });
   };
@@ -84,89 +140,192 @@ export function StepPropertyDetails({ onNext, initialData }) {
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         <CardHeader className="p-0">
-          <CardTitle>Step 1: Property Details</CardTitle>
-          <CardDescription>Start by entering the basic details of your property.</CardDescription>
+          <CardTitle>Step 2: Property Details</CardTitle>
+          <CardDescription>Select an existing property, or create a new one.</CardDescription>
         </CardHeader>
         
-        <FormField
-          control={form.control}
-          name="name"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Property Name</FormLabel>
-              <FormControl><Input placeholder="e.g., The Grand Coral Hotel" {...field} /></FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        
-        <FormField
-          control={form.control}
-          name="property_type_ref_id"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Property Type</FormLabel>
-              <div className="flex gap-2">
-                <Select onValueChange={(value) => field.onChange(Number(value))} value={field.value?.toString()}>
-                  <FormControl>
-                    <SelectTrigger><SelectValue placeholder="Select a property type" /></SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {propertyTypes.map(type => (
-                      <SelectItem key={type.id} value={type.id.toString()}>{type.value}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Button type="button" variant="outline" onClick={() => setCreateTypeOpen(true)}>
-                    <PlusCircle className="mr-2 h-4 w-4" />
-                    New
-                </Button>
-              </div>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <Separator />
-        <h3 className="text-md font-medium text-foreground">Location</h3>
-
-        <FormField
-          control={form.control}
-          name="address_line_1"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Address</FormLabel>
-              <FormControl><Input placeholder="e.g., 123 Main St" {...field} /></FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <FormField
-            control={form.control}
-            name="city"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>City</FormLabel>
-                <FormControl><Input placeholder="e.g., Anytown" {...field} /></FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="zip_code"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>ZIP / Postal Code</FormLabel>
-                <FormControl><Input placeholder="e.g., 12345" {...field} /></FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+        <div className="flex items-center space-x-2">
+            <Switch id="create-new-switch" checked={createNew} onCheckedChange={(checked) => form.setValue("create_new", checked)} />
+            <Label htmlFor="create-new-switch">Create a new property</Label>
         </div>
 
-        <div className="flex justify-end">
+        {createNew ? (
+            <div className="space-y-6 p-4 border rounded-lg">
+                <h3 className="text-lg font-medium text-foreground">Basic Information</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                    control={form.control}
+                    name="name"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>New Property Name</FormLabel>
+                        <FormControl><Input placeholder="e.g., The Grand Coral Hotel" {...field} /></FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                    />
+                    <FormField
+                    control={form.control}
+                    name="property_type_ref_id"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Property Type</FormLabel>
+                        <div className="flex gap-2">
+                            <Select key={propertyTypes.length} onValueChange={(value) => field.onChange(Number(value))} value={field.value?.toString()}>
+                            <FormControl>
+                                <SelectTrigger><SelectValue placeholder="Select a property type" /></SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                                {propertyTypes.map(type => (
+                                <SelectItem key={type.id} value={type.id.toString()}>{type.value}</SelectItem>
+                                ))}
+                            </SelectContent>
+                            </Select>
+                            <Button type="button" variant="outline" onClick={() => setCreateTypeOpen(true)}>
+                                <PlusCircle className="mr-2 h-4 w-4" />
+                                New
+                            </Button>
+                        </div>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                    />
+                </div>
+                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <FormField
+                    control={form.control}
+                    name="check_in_time"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Check in time</FormLabel>
+                        <FormControl><Input placeholder="e.g., 14:00" {...field} /></FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                    />
+                     <FormField
+                    control={form.control}
+                    name="check_out_time"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Check out time</FormLabel>
+                        <FormControl><Input placeholder="e.g., 12:00" {...field} /></FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                    />
+                    <FormField
+                    control={form.control}
+                    name="min_nights"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Min. night(s)</FormLabel>
+                        <FormControl><Input type="number" placeholder="e.g., 1" {...field} /></FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                    />
+                    <FormField
+                    control={form.control}
+                    name="max_nights"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Max. night(s)</FormLabel>
+                        <FormControl><Input type="number" placeholder="e.g., 30" {...field} /></FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                    />
+                 </div>
+                <Separator />
+                <h3 className="text-lg font-medium text-foreground">Location</h3>
+
+                <FormField
+                control={form.control}
+                name="address_line_1"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Street Address</FormLabel>
+                    <FormControl><Input placeholder="e.g., 123 Main St" {...field} /></FormControl>
+                    <FormMessage />
+                    </FormItem>
+                )}
+                />
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+                <FormField
+                    control={form.control}
+                    name="city"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>City</FormLabel>
+                        <FormControl><Input placeholder="e.g., Anytown" {...field} /></FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+                <FormField
+                    control={form.control}
+                    name="state"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>State</FormLabel>
+                        <FormControl><Input placeholder="e.g., California" {...field} /></FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+                <FormField
+                    control={form.control}
+                    name="zip_code"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>ZIP / Postal Code</FormLabel>
+                        <FormControl><Input placeholder="e.g., 12345" {...field} /></FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+                 <FormField
+                    control={form.control}
+                    name="country"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Country</FormLabel>
+                        <FormControl><Input placeholder="e.g., USA" {...field} /></FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+                </div>
+            </div>
+        ) : (
+             <FormField
+                control={form.control}
+                name="property_id"
+                render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Select Property</FormLabel>
+                        <Select onValueChange={(value) => field.onChange(Number(value))} value={field.value?.toString()}>
+                            <FormControl>
+                                <SelectTrigger>
+                                <SelectValue placeholder="Select an existing property" />
+                                </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                                {properties.map(prop => (
+                                <SelectItem key={prop.id} value={prop.id.toString()}>{prop.name}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                        <FormMessage />
+                    </FormItem>
+                )}
+            />
+        )}
+        
+
+        <div className="flex justify-between">
+          <Button type="button" variant="outline" onClick={onBack}>Back</Button>
           <Button type="submit">Next</Button>
         </div>
       </form>

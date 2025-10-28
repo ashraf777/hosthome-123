@@ -23,7 +23,9 @@ import {
 } from "@/components/ui/form"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Loader2 } from "lucide-react"
+import { Loader2, X } from "lucide-react"
+import { useToast } from "@/hooks/use-toast"
+import { api } from "@/services/api"
 
 const typeSchema = z.object({
   name: z.string().min(2, "Type name is required."),
@@ -31,6 +33,7 @@ const typeSchema = z.object({
 
 export function CreatePropertyTypeDialog({ isOpen, onClose, onSuccess }) {
   const [isSubmitting, setIsSubmitting] = React.useState(false)
+  const { toast } = useToast()
 
   const form = useForm({
     resolver: zodResolver(typeSchema),
@@ -39,26 +42,39 @@ export function CreatePropertyTypeDialog({ isOpen, onClose, onSuccess }) {
     },
   })
 
+  const nameValue = form.watch("name");
+
+  React.useEffect(() => {
+    if (!isOpen) {
+      form.reset();
+    }
+  }, [isOpen, form]);
+
   const handleCreateType = async (values) => {
     setIsSubmitting(true)
-    
-    // This is a placeholder as per user instruction.
-    // In a real app, you would make an API call here.
-    console.log("Creating new property type:", values.name)
-    
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    // For UI demonstration, we'll create a new object with a temporary ID and the correct `value` field.
-    const newType = {
-        id: Date.now(),
+    try {
+      const response = await api.post("property-references", {
+        key: "property_type",
         value: values.name,
-    };
+      })
+      
+      toast({
+        title: "Property Type Created",
+        description: `The type "${values.name}" has been successfully added.`,
+      })
 
-    onSuccess(newType)
-    form.reset()
-    onClose()
-    setIsSubmitting(false)
+      onSuccess(response.data)
+      form.reset()
+      onClose()
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error Creating Type",
+        description: error.message || "An unknown error occurred.",
+      })
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -78,9 +94,23 @@ export function CreatePropertyTypeDialog({ isOpen, onClose, onSuccess }) {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Property Type Name</FormLabel>
-                  <FormControl>
-                    <Input placeholder="e.g., Bungalow, Cabin" {...field} />
-                  </FormControl>
+                  <div className="relative">
+                    <FormControl>
+                      <Input placeholder="e.g., Bungalow, Cabin" {...field} />
+                    </FormControl>
+                    {nameValue && (
+                       <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="absolute right-1 top-1/2 h-6 w-6 -translate-y-1/2 text-muted-foreground"
+                        onClick={() => form.setValue("name", "")}
+                      >
+                        <X className="h-4 w-4" />
+                        <span className="sr-only">Clear</span>
+                      </Button>
+                    )}
+                  </div>
                   <FormMessage />
                 </FormItem>
               )}
