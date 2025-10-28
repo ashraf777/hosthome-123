@@ -58,16 +58,16 @@ export function DashboardNav() {
       label: "Listings",
       icon: Home,
     },
-    {
-      href: "/dashboard/units",
-      label: "Units",
-      icon: KeyRound,
-    },
-    {
-      href: "/dashboard/room-types",
-      label: "Room Types",
-      icon: Bed,
-    },
+    // {
+    //   href: "/dashboard/room-types",
+    //   label: "Room Types",
+    //   icon: Bed,
+    // },
+    // {
+    //   href: "/dashboard/units",
+    //   label: "Units",
+    //   icon: KeyRound,
+    // },
     // {
     //   href: "/dashboard/pricing",
     //   label: "Intelligent Pricing",
