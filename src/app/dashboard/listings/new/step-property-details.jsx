@@ -19,6 +19,13 @@ import { PlusCircle, X } from "lucide-react"
 import { CreatePropertyTypeDialog } from "./create-property-type-dialog"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
+import { Checkbox } from "@/components/ui/checkbox"
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion"
 
 const formSchema = z.object({
   property_id: z.any().optional(),
@@ -34,6 +41,7 @@ const formSchema = z.object({
   check_out_time: z.string().optional(),
   min_nights: z.coerce.number().optional(),
   max_nights: z.coerce.number().optional(),
+  amenities: z.array(z.number()).optional(),
 }).superRefine((data, ctx) => {
     if (data.create_new) {
         if (!data.name || data.name.length < 5) {
@@ -58,15 +66,10 @@ const formSchema = z.object({
     }
 });
 
-const mockProperties = [
-    { id: 101, name: "Sunset Villa" },
-    { id: 102, name: "Downtown Loft" },
-    { id: 103, name: "The Mountain Cabin" },
-];
-
 export function StepPropertyDetails({ onNext, onBack, initialData }) {
   const [properties, setProperties] = React.useState([]);
   const [propertyTypes, setPropertyTypes] = React.useState([])
+  const [amenities, setAmenities] = React.useState({});
   const [loading, setLoading] = React.useState(true)
   const [isCreateTypeOpen, setCreateTypeOpen] = React.useState(false)
   const { toast } = useToast()
@@ -83,34 +86,53 @@ export function StepPropertyDetails({ onNext, onBack, initialData }) {
       country: "",
       zip_code: "",
       property_type_ref_id: undefined,
-      check_in_time: "14:00",
+      check_in_time: "11:00",
       check_out_time: "12:00",
       min_nights: 1,
       max_nights: 0,
+      amenities: [],
     },
   })
   
   const createNew = form.watch("create_new");
 
-  React.useEffect(() => {
-    async function fetchData() {
-      setLoading(true)
-      try {
-        const [propsRes, propTypesRes] = await Promise.all([
-             api.get('properties'),
-             api.get('property-references')
-        ]);
-        setProperties(propsRes.data?.length > 0 ? propsRes.data : mockProperties);
-        setPropertyTypes(propTypesRes.property_type || [])
-      } catch (error) {
-        toast({ variant: "destructive", title: "Error", description: "Could not fetch properties or types. Using mock data." })
-        setProperties(mockProperties);
-      } finally {
-        setLoading(false)
+  const fetchData = React.useCallback(async () => {
+    setLoading(true);
+    try {
+      const [propsRes, propTypesRes, amenitiesRes] = await Promise.all([
+        api.get('properties'),
+        api.get('property-references'),
+        api.get('amenities')
+      ]);
+
+      setProperties(propsRes.data || []);
+      setPropertyTypes(propTypesRes.property_type || []);
+
+      const allAmenities = amenitiesRes.data || amenitiesRes;
+      if (Array.isArray(allAmenities)) {
+        const groupedAmenities = allAmenities.reduce((acc, amenity) => {
+          const category = amenity.amenity_reference?.name || 'General';
+          if (!acc[category]) {
+            acc[category] = [];
+          }
+          acc[category].push({ id: amenity.id, name: amenity.specific_name });
+          return acc;
+        }, {});
+        setAmenities(groupedAmenities);
+      } else {
+        setAmenities({});
       }
+
+    } catch (error) {
+      toast({ variant: "destructive", title: "Error", description: "Could not fetch required data." });
+    } finally {
+      setLoading(false);
     }
-    fetchData()
   }, [toast]);
+
+  React.useEffect(() => {
+    fetchData();
+  }, [fetchData]);
   
   const handleNewTypeSuccess = (newTypeResponse) => {
     const newType = newTypeResponse.data || newTypeResponse;
@@ -140,13 +162,13 @@ export function StepPropertyDetails({ onNext, onBack, initialData }) {
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         <CardHeader className="p-0">
-          <CardTitle>Step 2: Property Details</CardTitle>
-          <CardDescription>Select an existing property, or create a new one.</CardDescription>
+          <CardTitle>Step 2: Property</CardTitle>
+          <CardDescription>Select an existing property, or add a new property.</CardDescription>
         </CardHeader>
         
         <div className="flex items-center space-x-2">
             <Switch id="create-new-switch" checked={createNew} onCheckedChange={(checked) => form.setValue("create_new", checked)} />
-            <Label htmlFor="create-new-switch">Create a new property</Label>
+            <Label htmlFor="create-new-switch">Add new property</Label>
         </div>
 
         {createNew ? (
@@ -198,7 +220,7 @@ export function StepPropertyDetails({ onNext, onBack, initialData }) {
                     render={({ field }) => (
                         <FormItem>
                         <FormLabel>Check in time</FormLabel>
-                        <FormControl><Input placeholder="e.g., 14:00" {...field} /></FormControl>
+                        <FormControl><Input placeholder="e.g., 11:00" {...field} /></FormControl>
                         <FormMessage />
                         </FormItem>
                     )}
@@ -297,6 +319,68 @@ export function StepPropertyDetails({ onNext, onBack, initialData }) {
                     )}
                 />
                 </div>
+
+                <Separator />
+                 <FormField
+                  control={form.control}
+                  name="amenities"
+                  render={() => (
+                    <FormItem>
+                      <Accordion type="single" collapsible>
+                        <AccordionItem value="amenities">
+                          <AccordionTrigger>
+                            <FormLabel className="text-lg font-medium text-foreground">Amenities</FormLabel>
+                          </AccordionTrigger>
+                          <AccordionContent>
+                            <FormMessage className="mb-4" />
+                            <div className="space-y-6">
+                              {Object.entries(amenities).map(([category, items]) => (
+                                <div key={category}>
+                                  <h4 className="font-medium text-md mb-2">{category}</h4>
+                                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                                    {items.map((item) => (
+                                      <FormField
+                                        key={item.id}
+                                        control={form.control}
+                                        name="amenities"
+                                        render={({ field }) => {
+                                          return (
+                                            <FormItem
+                                              key={item.id}
+                                              className="flex flex-row items-start space-x-3 space-y-0"
+                                            >
+                                              <FormControl>
+                                                <Checkbox
+                                                  checked={field.value?.includes(item.id)}
+                                                  onCheckedChange={(checked) => {
+                                                    return checked
+                                                      ? field.onChange([...(field.value || []), item.id])
+                                                      : field.onChange(
+                                                        field.value?.filter(
+                                                          (value) => value !== item.id
+                                                        )
+                                                      )
+                                                  }}
+                                                />
+                                              </FormControl>
+                                              <FormLabel className="font-normal">
+                                                {item.name}
+                                              </FormLabel>
+                                            </FormItem>
+                                          )
+                                        }}
+                                      />
+                                    ))}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </AccordionContent>
+                        </AccordionItem>
+                      </Accordion>
+                    </FormItem>
+                  )}
+                />
             </div>
         ) : (
              <FormField
@@ -338,3 +422,7 @@ export function StepPropertyDetails({ onNext, onBack, initialData }) {
     </>
   )
 }
+
+    
+
+    

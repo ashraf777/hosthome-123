@@ -32,7 +32,7 @@ const ownerSchema = z.object({
   email: z.string().email("Invalid email address."),
 })
 
-export function CreatePropertyOwnerDialog({ isOpen, onClose, onSuccess }) {
+export function CreatePropertyOwnerDialog({ isOpen, onClose, onSuccess, hostingCompanyId }) {
   const [isSubmitting, setIsSubmitting] = React.useState(false)
   const { toast } = useToast()
 
@@ -44,10 +44,30 @@ export function CreatePropertyOwnerDialog({ isOpen, onClose, onSuccess }) {
     },
   })
 
+  React.useEffect(() => {
+    if(!isOpen) {
+      form.reset();
+    }
+  }, [isOpen, form]);
+
   const handleCreateOwner = async (values) => {
+    if (!hostingCompanyId) {
+       toast({
+        variant: "destructive",
+        title: "Error",
+        description: "A hosting company must be selected first.",
+      });
+      return;
+    }
+    
     setIsSubmitting(true)
     try {
-      const response = await api.post("property-owners", { ...values, status: 1 })
+      const payload = { 
+        ...values, 
+        status: 1,
+        hosting_company_id: hostingCompanyId
+      };
+      const response = await api.post("property-owners", payload)
       toast({
         title: "Owner Created",
         description: `The owner "${values.full_name}" has been created.`,

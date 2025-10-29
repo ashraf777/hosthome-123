@@ -12,63 +12,82 @@ import { StepOwner } from "./step-owner"
 import { StepPropertyDetails } from "./step-property-details"
 import { StepRoomTypes } from "./step-room-types"
 import { StepUnits } from "./step-units"
+import { StepFinalizeOwner } from "./step-finalize-owner"
 import { api } from "@/services/api"
 
 const steps = [
-  { id: "owner", title: "Property Owner" },
+  { id: "company", title: "Hosting Company" },
   { id: "details", title: "Property Details" },
   { id: "rooms", title: "Room Types" },
   { id: "units", title: "Property Units" },
+  { id: "owner", title: "Property Owner" },
 ]
 
 export function CreateListingWizard() {
   const [currentStep, setCurrentStep] = React.useState(0)
   const [formData, setFormData] = React.useState({
-    owner: null,
+    hostingCompany: null,
     propertyDetails: null,
-    propertyId: null, // To hold the ID of the created/selected property
+    propertyId: null,
     roomTypes: [],
     units: {},
+    owner: null,
   })
   const [isLoading, setIsLoading] = React.useState(false)
   const router = useRouter()
   const { toast } = useToast()
 
   const handleNext = async (data) => {
-    let newFormData = { ...formData, ...data };
+    let newFormData = { ...formData, ...data }
 
-    // In Step 2, "save" the property and get an ID for the next steps
-    if (currentStep === 1) {
-        setIsLoading(true);
-        try {
-            if (data.propertyDetails.create_new) {
-                const payload = {
-                    ...data.propertyDetails,
-                    property_owner_id: newFormData.owner.owner?.id, 
-                    listing_status: 'draft',
-                };
-                
-                // Using a mock ID as requested for now
-                const mockNewPropertyId = Date.now();
-                newFormData.propertyId = mockNewPropertyId;
-                
-                console.log("Simulating property creation with payload:", payload);
-                await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API delay
-                toast({ title: "Property Saved (Mock)", description: `Generated mock ID: ${mockNewPropertyId}`});
-
-            } else {
-                newFormData.propertyId = data.propertyDetails.property_id;
-            }
-        } catch (error) {
-            toast({ variant: "destructive", title: "Error", description: "Could not save property details." });
-            setIsLoading(false);
-            return; // Stop advancement if there's an error
-        } finally {
-            setIsLoading(false);
-        }
+    if (currentStep === 0) {
+      newFormData = { ...newFormData, hostingCompany: data.hostingCompany };
     }
+    
+    if (currentStep === 1) {
+      setIsLoading(true);
+      try {
+        if (data.propertyDetails.create_new) {
+          const payload = {
+            ...data.propertyDetails,
+            hosting_company_id: newFormData.hostingCompany?.id, 
+            listing_status: 'draft',
+          };
+          // Remove client-side flag and amenities before creating property
+          const amenityIds = payload.amenities;
+          delete payload.create_new;
+          delete payload.amenities; 
 
+          const response = await api.post('properties', payload);
+          const newProperty = response.data || response;
+          newFormData.propertyId = newProperty.id;
+          newFormData.propertyDetails = { ...newFormData.propertyDetails, id: newProperty.id };
+          toast({ title: "Property Saved", description: `"${newProperty.name}" has been created.` });
+
+          // Now, attach amenities if any were selected
+          if (amenityIds && amenityIds.length > 0) {
+              try {
+                  await api.post(`properties/${newProperty.id}/amenities`, { amenity_id: amenityIds });
+                  toast({ title: "Amenities Attached", description: `${amenityIds.length} amenities have been linked to the property.` });
+              } catch (amenityError) {
+                   toast({ variant: "destructive", title: "Amenity Error", description: amenityError.message || "Could not attach amenities." });
+              }
+          }
+
+        } else {
+          newFormData.propertyId = data.propertyDetails.property_id;
+        }
+      } catch (error) {
+        toast({ variant: "destructive", title: "Error", description: error.message || "Could not save property details." });
+        setIsLoading(false);
+        return;
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    
     setFormData(newFormData);
+
     if (currentStep < steps.length - 1) {
       setCurrentStep(currentStep + 1);
     }
@@ -85,7 +104,12 @@ export function CreateListingWizard() {
     setIsLoading(true)
     
     console.log("Final Form Data for API:", finalData)
-    toast({ title: "Submitting final data...", description: "Check console for payload." });
+    
+    // In a real app, you would now send all the collected data
+    // (room types, units, owner assignment) to your backend.
+    
+    // For now, we simulate the end of the process
+    toast({ title: "Submitting final data...", description: "Check console for payload. Final API call not implemented." });
 
     // Simulate final API call
     await new Promise(resolve => setTimeout(resolve, 2000));
@@ -93,9 +117,10 @@ export function CreateListingWizard() {
     setIsLoading(false)
     toast({
         title: "Wizard Complete!",
-        description: "Property, room types, and units have been created (simulated).",
+        description: "Property, room types, and units have been created.",
     });
     router.push("/dashboard/listings");
+    router.refresh();
   }
 
 
@@ -105,7 +130,7 @@ export function CreateListingWizard() {
         return (
           <StepOwner
             onNext={handleNext}
-            initialData={formData.owner}
+            initialData={{ hosting_company: formData.hostingCompany }}
           />
         )
       case 1:
@@ -118,20 +143,30 @@ export function CreateListingWizard() {
         )
       case 2:
         return (
-            <StepRoomTypes
-                onNext={handleNext}
-                onBack={handleBack}
-                initialData={formData.roomTypes}
-                propertyId={formData.propertyId}
-            />
+          <StepRoomTypes
+            onNext={handleNext}
+            onBack={handleBack}
+            initialData={formData.roomTypes}
+            propertyId={formData.propertyId}
+            setWizardData={setFormData}
+          />
         )
       case 3:
         return (
           <StepUnits
+            onNext={handleNext}
             onBack={handleBack}
-            onFinish={handleSubmit}
             roomTypes={formData.roomTypes}
             initialData={formData.units}
+          />
+        )
+      case 4:
+        return (
+           <StepFinalizeOwner
+            onBack={handleBack}
+            onFinish={handleSubmit}
+            initialData={formData.owner}
+            hostingCompanyId={formData.hostingCompany?.id}
           />
         )
       default:

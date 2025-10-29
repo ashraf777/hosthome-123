@@ -59,14 +59,14 @@ export function DashboardNav() {
       icon: Home,
     },
     // {
-    //   href: "/dashboard/room-types",
-    //   label: "Room Types",
-    //   icon: Bed,
-    // },
-    // {
     //   href: "/dashboard/units",
     //   label: "Units",
     //   icon: KeyRound,
+    // },
+    // {
+    //   href: "/dashboard/room-types",
+    //   label: "Room Types",
+    //   icon: Bed,
     // },
     // {
     //   href: "/dashboard/pricing",
@@ -96,21 +96,21 @@ export function DashboardNav() {
   ]
 
   const accountItems = [
-    // {
-    //   href: "/dashboard/accounts/invoice",
-    //   label: "Invoice",
-    //   icon: Receipt
-    // },
-    // {
-    //   href: "/dashboard/accounts/expenses",
-    //   label: "Expenses",
-    //   icon: Wallet
-    // },
-    // {
-    //   href: "/dashboard/accounts/payout",
-    //   label: "Payout",
-    //   icon: Banknote
-    // }
+    {
+      href: "/dashboard/accounts/invoice",
+      label: "Invoice",
+      icon: Receipt
+    },
+    {
+      href: "/dashboard/accounts/expenses",
+      label: "Expenses",
+      icon: Wallet
+    },
+    {
+      href: "/dashboard/accounts/payout",
+      label: "Payout",
+      icon: Banknote
+    }
   ]
 
   const isAccountsActive = pathname.startsWith("/dashboard/accounts")

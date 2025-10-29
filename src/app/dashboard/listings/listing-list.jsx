@@ -18,13 +18,6 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import {
   Table,
   TableBody,
   TableCell,
@@ -32,6 +25,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -77,7 +77,7 @@ export function ListingList() {
         toast({
           variant: "destructive",
           title: "Error",
-          description: "Could not fetch properties.",
+          description: "Could not fetch listings.",
         });
       } finally {
         setLoading(false);
@@ -94,15 +94,15 @@ export function ListingList() {
       await api.delete(`properties/${id}`);
       
       toast({
-          title: "Property Deleted",
-          description: "The property has been successfully deleted.",
+          title: "Listing Deleted",
+          description: "The listing has been successfully deleted.",
       })
     } catch (error) {
       setListings(originalListings);
       toast({
         variant: "destructive",
         title: "Error",
-        description: error.message || "Failed to delete the property. Please try again.",
+        description: error.message || "Failed to delete the listing. Please try again.",
       });
     }
   };
@@ -127,15 +127,15 @@ export function ListingList() {
       <CardHeader>
         <div className="flex items-center justify-between">
             <div>
-                <CardTitle>Properties</CardTitle>
+                <CardTitle>Listings</CardTitle>
                 <CardDescription>
-                Manage your property listings and their details.
+                Manage your listings and their details.
                 </CardDescription>
             </div>
             <Link href="/dashboard/listings/new">
                 <Button>
                     <PlusCircle className="mr-2" />
-                    Create Property
+                    Add Listings
                 </Button>
             </Link>
         </div>
@@ -144,7 +144,7 @@ export function ListingList() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Property</TableHead>
+              <TableHead>Listing</TableHead>
               <TableHead>Owner</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>City</TableHead>
@@ -186,7 +186,7 @@ export function ListingList() {
                         <span>{listing.name}</span>
                       </div>
                     </TableCell>
-                    <TableCell>{listing.property_owner.full_name}</TableCell>
+                    <TableCell>{listing.property_owner?.full_name || "N/A"}</TableCell>
                     <TableCell>
                       <Badge variant={getStatusBadgeVariant(listing.listing_status)} className="capitalize">
                         {listing.listing_status}
@@ -208,7 +208,7 @@ export function ListingList() {
                               onSelect={() => router.push(`/dashboard/listings/${listing.id}/edit`)}
                             >
                               <Home className="mr-2 h-4 w-4" />
-                              Edit Property
+                              Edit Listing
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               onSelect={() => router.push(`/dashboard/listings/${listing.id}/room-types`)}
@@ -227,7 +227,7 @@ export function ListingList() {
                           <AlertDialogHeader>
                             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                             <AlertDialogDescription>
-                              This action cannot be undone. This will permanently delete the property and all its related data.
+                              This action cannot be undone. This will permanently delete the listing and all its related data.
                             </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>
@@ -250,11 +250,11 @@ export function ListingList() {
          {!loading && listings.length === 0 && (
           <div className="text-center py-12 text-muted-foreground flex flex-col items-center gap-4">
             <Home className="w-12 h-12 text-muted-foreground/50" />
-            <p>No properties found.</p>
+            <p>No Listing Found.</p>
             <Link href="/dashboard/listings/new">
                 <Button>
                     <PlusCircle className="mr-2" />
-                    Create Your First Property
+                    Add Your Listings
                 </Button>
             </Link>
           </div>

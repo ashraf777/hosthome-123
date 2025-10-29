@@ -92,7 +92,7 @@ export function RoleList() {
               ))
             ) : roles.map((role) => (
               <TableRow key={role.id}>
-                <TableCell className="font-medium">{role.name}</TableCell>
+                <TableCell className="font-medium p-4">{role.name}</TableCell>
                 <TableCell>
                   <Badge variant="secondary">{role.permissions.length}</Badge>
                 </TableCell>

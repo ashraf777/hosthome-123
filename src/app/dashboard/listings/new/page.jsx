@@ -14,8 +14,8 @@ export default function NewListingPage() {
           </Button>
         </Link>
         <div>
-            <h1 className="text-3xl font-bold tracking-tight">Create New Listing</h1>
-            <p className="text-muted-foreground">Follow the steps to add a new property to your portfolio.</p>
+            <h1 className="text-3xl font-bold tracking-tight">Add New Listing</h1>
+            <p className="text-muted-foreground">Follow the steps to add a new listing to your portfolio.</p>
         </div>
       </div>
       <CreateListingWizard />

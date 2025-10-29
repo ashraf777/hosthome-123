@@ -28,7 +28,7 @@ const formSchema = z.object({
   units: z.record(z.array(unitSchema)),
 });
 
-export function StepUnits({ onBack, onFinish, initialData, roomTypes }) {
+export function StepUnits({ onNext, onBack, initialData, roomTypes }) {
   const form = useForm({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -39,7 +39,7 @@ export function StepUnits({ onBack, onFinish, initialData, roomTypes }) {
   const { control, handleSubmit } = form;
 
   const onSubmit = (data) => {
-    onFinish(data); 
+    onNext(data); 
   }
 
   const hasRoomTypes = roomTypes && roomTypes.length > 0;
@@ -187,7 +187,7 @@ export function StepUnits({ onBack, onFinish, initialData, roomTypes }) {
 
         <div className="flex justify-between pt-4">
           <Button type="button" variant="outline" onClick={onBack}>Back</Button>
-          <Button type="submit">Finish & Save Property</Button>
+          <Button type="submit">Next</Button>
         </div>
       </form>
     </Form>

@@ -39,17 +39,25 @@ import { Separator } from "@/components/ui/separator"
 import { api } from "@/services/api"
 import { Skeleton } from "@/components/ui/skeleton"
 import { CreatePropertyOwnerDialog } from "./create-property-owner-dialog.jsx"
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion"
+import { Checkbox } from "@/components/ui/checkbox"
 
 
 const listingFormSchema = z.object({
   name: z.string().min(5, "Property name must be at least 5 characters."),
-  property_owner_id: z.coerce.number({ required_error: "Please select a property owner." }),
+  property_owner_id: z.coerce.number({ required_error: "Please select a property owner." }).optional().nullable(),
   address_line_1: z.string().min(5, "Please enter a full address."),
   city: z.string().min(2, "City is required."),
   zip_code: z.string().min(4, "Zip code is required."),
   timezone: z.string().optional(),
   property_type_ref_id: z.coerce.number({ required_error: "Please select a property type." }),
   listing_status: z.enum(['draft', 'active', 'archived'], { required_error: "Please select a status." }),
+  amenities: z.array(z.number()).optional(),
 })
 
 
@@ -58,6 +66,7 @@ export function ListingForm({ isEditMode = false, listingId }) {
   const [submitting, setSubmitting] = useState(false);
   const [owners, setOwners] = useState([])
   const [propertyTypes, setPropertyTypes] = useState([])
+  const [amenities, setAmenities] = useState({});
   const [isCreateOwnerOpen, setCreateOwnerOpen] = useState(false)
   const { toast } = useToast()
   const router = useRouter()
@@ -73,13 +82,14 @@ export function ListingForm({ isEditMode = false, listingId }) {
       timezone: "utc-5",
       listing_status: "draft",
       property_type_ref_id: undefined,
+      amenities: [],
     },
   })
 
   const fetchOwners = useCallback(async () => {
     try {
         const ownersRes = await api.get('property-owners');
-        setOwners(ownersRes.data);
+        setOwners(ownersRes.data || []);
     } catch (error) {
          toast({ variant: "destructive", title: "Error", description: "Could not fetch property owners." });
     }
@@ -87,25 +97,55 @@ export function ListingForm({ isEditMode = false, listingId }) {
 
 
   useEffect(() => {
-    async function fetchData() {
+    const fetchData = async () => {
       setLoading(true);
       try {
-        await fetchOwners();
-        const propTypesRes = await api.get('property-references');
+        const [ownersRes, propTypesRes, allAmenitiesRes] = await Promise.all([
+          api.get('property-owners'),
+          api.get('property-references'),
+          api.get('amenities'),
+        ]);
+
+        setOwners(ownersRes.data || []);
         setPropertyTypes(propTypesRes.property_type || []);
         
+        const amenitiesList = allAmenitiesRes.data || allAmenitiesRes;
+        if (Array.isArray(amenitiesList)) {
+          const groupedAmenities = amenitiesList.reduce((acc, amenity) => {
+            const category = amenity.amenity_reference?.name || 'General';
+            if (!acc[category]) {
+              acc[category] = [];
+            }
+            acc[category].push({ id: amenity.id, name: amenity.specific_name });
+            return acc;
+          }, {});
+          setAmenities(groupedAmenities);
+        }
+
         if (isEditMode && listingId) {
-          const response = await api.get(`properties/${listingId}`);
-          form.reset(response.data);
+          const propertyData = await api.get(`properties/${listingId}`);
+          const property = propertyData.data || propertyData;
+          
+          let currentAmenities = [];
+          if (property?.amenities && Array.isArray(property.amenities)) {
+            currentAmenities = property.amenities.map(a => a.id);
+          }
+
+          form.reset({
+            ...property,
+            property_type_ref_id: property.type_reference?.id,
+            property_owner_id: property.property_owner_id,
+            amenities: currentAmenities,
+          });
         }
       } catch (error) {
-        toast({ variant: "destructive", title: "Error", description: "Could not fetch required data for the form." });
+        toast({ variant: "destructive", title: "Error", description: `Could not fetch required data for the form. ${error.message}` });
       } finally {
         setLoading(false);
       }
     }
     fetchData();
-  }, [isEditMode, listingId, form, toast, fetchOwners]);
+  }, [isEditMode, listingId, form, toast]);
 
   const handleNewOwnerSuccess = (newOwner) => {
     fetchOwners().then(() => {
@@ -120,8 +160,12 @@ export function ListingForm({ isEditMode = false, listingId }) {
     try {
       if (isEditMode) {
         await api.put(`properties/${listingId}`, values);
+        await api.post(`properties/${listingId}/amenities`, { amenity_id: values.amenities || [] });
       } else {
-        await api.post('properties', values);
+        const response = await api.post('properties', values);
+         if (values.amenities && values.amenities.length > 0) {
+            await api.post(`properties/${response.data.id}/amenities`, { amenity_id: values.amenities });
+        }
       }
 
       toast({
@@ -346,6 +390,70 @@ export function ListingForm({ isEditMode = false, listingId }) {
                   )}
                 />
               </div>
+
+               <Separator />
+
+                <FormField
+                  control={form.control}
+                  name="amenities"
+                  render={() => (
+                    <FormItem>
+                      <Accordion type="single" collapsible className="w-full">
+                        <AccordionItem value="amenities">
+                          <AccordionTrigger>
+                             <h3 className="text-md font-medium">Amenities</h3>
+                          </AccordionTrigger>
+                          <AccordionContent>
+                            <FormMessage className="mb-4" />
+                            <div className="space-y-6">
+                              {Object.entries(amenities).map(([category, items]) => (
+                                <div key={category}>
+                                  <h4 className="font-medium text-md mb-2">{category}</h4>
+                                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                                    {items.map((item) => (
+                                      <FormField
+                                        key={item.id}
+                                        control={form.control}
+                                        name="amenities"
+                                        render={({ field }) => {
+                                          return (
+                                            <FormItem
+                                              key={item.id}
+                                              className="flex flex-row items-start space-x-3 space-y-0"
+                                            >
+                                              <FormControl>
+                                                <Checkbox
+                                                  checked={field.value?.includes(item.id)}
+                                                  onCheckedChange={(checked) => {
+                                                    return checked
+                                                      ? field.onChange([...(field.value || []), item.id])
+                                                      : field.onChange(
+                                                        field.value?.filter(
+                                                          (value) => value !== item.id
+                                                        )
+                                                      )
+                                                  }}
+                                                />
+                                              </FormControl>
+                                              <FormLabel className="font-normal">
+                                                {item.name}
+                                              </FormLabel>
+                                            </FormItem>
+                                          )
+                                        }}
+                                      />
+                                    ))}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </AccordionContent>
+                        </AccordionItem>
+                      </Accordion>
+                    </FormItem>
+                  )}
+                />
+
           </CardContent>
           <CardFooter>
             <Button type="submit" disabled={submitting}>
