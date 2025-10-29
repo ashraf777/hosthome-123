@@ -1,6 +1,6 @@
 
 import Link from "next/link";
-import { GlobalPropertyForm } from "../../properties/property-form";
+import { GlobalPropertyForm } from "../../../properties/property-form";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 
