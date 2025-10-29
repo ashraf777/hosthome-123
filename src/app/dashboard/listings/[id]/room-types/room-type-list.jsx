@@ -16,13 +16,12 @@ import {
 } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { MoreHorizontal, Edit, Trash2, BedDouble } from "lucide-react"
+import { MoreHorizontal, Edit, BedDouble, Trash2 } from "lucide-react"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -38,49 +37,23 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 
-export function RoomTypeList({ propertyId }) {
-  const [roomTypes, setRoomTypes] = React.useState([])
-  const [loading, setLoading] = React.useState(true)
+export function RoomTypeList({ propertyId, assignedRoomTypes, loading, onUpdate }) {
   const router = useRouter();
-  const { toast } = useToast()
+  const { toast } = useToast();
 
-  const fetchRoomTypes = React.useCallback(async () => {
-    setLoading(true)
+  const handleRemove = async (roomTypeId) => {
     try {
-      const response = await api.get(`room-types?property_id=${propertyId}`)
-      setRoomTypes(response.data)
+      await api.delete(`properties/${propertyId}/room-types/${roomTypeId}`);
+      toast({
+          title: "Room Type Unassigned",
+          description: "The room type has been removed from this property.",
+      });
+      onUpdate(); // Trigger a re-fetch in the parent component
     } catch (error) {
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Could not fetch room types for this property.",
-      })
-    } finally {
-      setLoading(false)
-    }
-  }, [propertyId, toast])
-
-  React.useEffect(() => {
-    fetchRoomTypes()
-  }, [fetchRoomTypes])
-  
-  const handleDelete = async (roomTypeId) => {
-    const originalRoomTypes = [...roomTypes];
-    setRoomTypes(roomTypes.filter(rt => rt.id !== roomTypeId));
-    
-    try {
-      await api.delete(`room-types/${roomTypeId}`);
-      
-      toast({
-          title: "Room Type Deleted",
-          description: "The room type has been successfully deleted.",
-      })
-    } catch (error) {
-      setRoomTypes(originalRoomTypes);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: error.message || "Failed to delete the room type. Please try again.",
+        description: error.message || "Failed to unassign the room type.",
       });
     }
   };
@@ -117,7 +90,7 @@ export function RoomTypeList({ propertyId }) {
                 </TableCell>
               </TableRow>
             ))
-          ) : roomTypes.map((roomType) => (
+          ) : assignedRoomTypes.map((roomType) => (
             <TableRow key={roomType.id} className="hover:bg-muted/50">
               <TableCell className="font-medium">
                  <Link href={`/dashboard/room-types/${roomType.id}`} className="hover:underline">
@@ -125,10 +98,10 @@ export function RoomTypeList({ propertyId }) {
                 </Link>
               </TableCell>
               <TableCell>
-                <Badge variant="secondary">{roomType.max_guests}</Badge>
+                <Badge variant="secondary">{roomType.max_guests || (roomType.max_adults || 0) + (roomType.max_children || 0)}</Badge>
               </TableCell>
                <TableCell>
-                <Badge variant="outline">{roomType.units_count}</Badge>
+                <Badge variant="outline">{roomType.units_count || 0}</Badge>
               </TableCell>
               <TableCell className="text-right">
                  <AlertDialog>
@@ -143,35 +116,34 @@ export function RoomTypeList({ propertyId }) {
                       <DropdownMenuLabel>Actions</DropdownMenuLabel>
                        <DropdownMenuItem onSelect={() => router.push(`/dashboard/room-types/${roomType.id}`)}>
                         <Edit className="mr-2 h-4 w-4" />
-                        View & Edit Details
+                        View/Edit Details
                       </DropdownMenuItem>
                        <DropdownMenuItem onSelect={() => router.push(`/dashboard/listings/${propertyId}/room-types/${roomType.id}/units`)}>
                         <BedDouble className="mr-2 h-4 w-4" />
                         Manage Units
                       </DropdownMenuItem>
-                      <DropdownMenuSeparator />
                        <AlertDialogTrigger asChild>
                           <DropdownMenuItem className="text-destructive focus:text-destructive">
                               <Trash2 className="mr-2 h-4 w-4" />
-                              Delete
+                              Unassign
                           </DropdownMenuItem>
                         </AlertDialogTrigger>
                     </DropdownMenuContent>
                   </DropdownMenu>
                    <AlertDialogContent>
                       <AlertDialogHeader>
-                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                        <AlertDialogTitle>Unassign Room Type?</AlertDialogTitle>
                         <AlertDialogDescription>
-                          This action cannot be undone. This will permanently delete the room type and all its associated units and photos.
+                          This will remove "{roomType.name}" from this property. It will not delete the room type itself.
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
                         <AlertDialogCancel>Cancel</AlertDialogCancel>
                         <AlertDialogAction
                           className="bg-destructive hover:bg-destructive/90"
-                          onClick={() => handleDelete(roomType.id)}
+                          onClick={() => handleRemove(roomType.id)}
                         >
-                          Delete
+                          Unassign
                         </AlertDialogAction>
                       </AlertDialogFooter>
                     </AlertDialogContent>
@@ -181,9 +153,9 @@ export function RoomTypeList({ propertyId }) {
           ))}
         </TableBody>
       </Table>
-       {!loading && roomTypes.length === 0 && (
+       {!loading && assignedRoomTypes.length === 0 && (
           <div className="text-center py-12 text-muted-foreground">
-            No room types found for this property.
+            No room types assigned to this property.
           </div>
         )}
     </div>

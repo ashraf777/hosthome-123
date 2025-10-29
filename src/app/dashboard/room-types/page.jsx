@@ -36,13 +36,15 @@ export default function AllRoomTypesPage() {
       setLoading(true)
       try {
         const response = await api.get("room-types")
-        setRoomTypes(response.data)
+        const roomTypesData = response.data?.data || response.data || response || [];
+        setRoomTypes(Array.isArray(roomTypesData) ? roomTypesData : []);
       } catch (error) {
         toast({
           variant: "destructive",
           title: "Error",
           description: "Could not fetch room types.",
         })
+        setRoomTypes([]);
       } finally {
         setLoading(false)
       }
@@ -89,7 +91,7 @@ export default function AllRoomTypesPage() {
                 {loading ? (
                   Array.from({ length: 5 }).map((_, i) => (
                     <TableRow key={i}>
-                      <TableCell><Skeleton className="h-6 w-40" /></TableCell>
+                      <TableCell className="pl-6"><Skeleton className="h-6 w-40" /></TableCell>
                       <TableCell><Skeleton className="h-6 w-48" /></TableCell>
                       <TableCell><Skeleton className="h-6 w-12 mx-auto" /></TableCell>
                       <TableCell><Skeleton className="h-6 w-12 mx-auto" /></TableCell>
@@ -97,12 +99,12 @@ export default function AllRoomTypesPage() {
                   ))
                 ) : roomTypes.map((roomType) => (
                   <TableRow key={roomType.id} className="hover:bg-muted/50">
-                    <TableCell className="font-medium">
+                    <TableCell className="font-medium pl-6">
                       <Link href={`/dashboard/room-types/${roomType.id}`} className="hover:underline">
                         {roomType.name}
                       </Link>
                     </TableCell>
-                    <TableCell>{roomType.property.name}</TableCell>
+                    <TableCell>{roomType.properties && roomType.properties[0]?.name}</TableCell>
                     <TableCell className="text-center">
                       <Badge variant="secondary">{roomType.max_guests}</Badge>
                     </TableCell>

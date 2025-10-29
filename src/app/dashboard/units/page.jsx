@@ -35,14 +35,11 @@ export default function AllUnitsPage() {
       setLoading(true)
       try {
         const response = await api.get("units")
-        // Ensure that we have an array to prevent .map errors
-        if (Array.isArray(response)) {
-            setUnits(response);
-        } else if (response && Array.isArray(response.data)) {
+        if (response && Array.isArray(response.data)) {
             setUnits(response.data);
         } else {
             console.error("API response for units is not an array:", response);
-            setUnits([]); // Set to empty array on unexpected format
+            setUnits([]);
         }
       } catch (error) {
         toast({
@@ -50,7 +47,7 @@ export default function AllUnitsPage() {
           title: "Error",
           description: "Could not fetch units.",
         })
-        setUnits([]); // Set to empty array on error
+        setUnits([]);
       } finally {
         setLoading(false)
       }
@@ -89,7 +86,7 @@ export default function AllUnitsPage() {
             <Link href="/dashboard/units/new" passHref>
               <Button>
                 <PlusCircle className="mr-2" />
-                Create Unit
+                Add New Unit
               </Button>
             </Link>
           </div>
@@ -109,7 +106,7 @@ export default function AllUnitsPage() {
                 {loading ? (
                   Array.from({ length: 5 }).map((_, i) => (
                     <TableRow key={i}>
-                      <TableCell><Skeleton className="h-6 w-24" /></TableCell>
+                      <TableCell className="pl-6"><Skeleton className="h-6 w-24" /></TableCell>
                       <TableCell><Skeleton className="h-6 w-32" /></TableCell>
                       <TableCell><Skeleton className="h-6 w-48" /></TableCell>
                       <TableCell><Skeleton className="h-6 w-20" /></TableCell>
@@ -117,9 +114,9 @@ export default function AllUnitsPage() {
                   ))
                 ) : units.map((unit) => (
                   <TableRow key={unit.id}>
-                    <TableCell className="font-medium">{unit.unit_identifier}</TableCell>
-                    <TableCell>{unit.room_type.name}</TableCell>
-                    <TableCell>{unit.room_type.property.name}</TableCell>
+                    <TableCell className="font-medium pl-6">{unit.unit_identifier}</TableCell>
+                    <TableCell>{unit.room_type?.name}</TableCell>
+                    <TableCell>{unit?.property?.name}</TableCell>
                     <TableCell>
                       <Badge variant={getStatusBadgeVariant(unit.status)} className="capitalize">
                         {unit.status.replace('_', ' ')}

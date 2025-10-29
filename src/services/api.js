@@ -50,9 +50,17 @@ async function request(endpoint, options = {}) {
 export const api = {
     post: (endpoint, body) => {
         const isFormData = body instanceof FormData;
+        const config = {
+            method: 'POST',
+            body: isFormData ? body : (body ? JSON.stringify(body) : null)
+        };
+        // If there's no body, we should not send the Content-Type header.
+        if (!body || isFormData) {
+             return request(endpoint, { method: 'POST', body: isFormData ? body : undefined });
+        }
         return request(endpoint, { 
             method: 'POST', 
-            body: isFormData ? body : JSON.stringify(body) 
+            body: JSON.stringify(body)
         });
     },
     get: (endpoint) => request(endpoint, { method: 'GET' }),

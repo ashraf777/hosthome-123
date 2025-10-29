@@ -20,7 +20,7 @@ const steps = [
   { id: "details", title: "Property Details" },
   { id: "rooms", title: "Room Types" },
   { id: "units", title: "Property Units" },
-  { id: "owner", title: "Property Owner" },
+  { id: "owner", title: "Unit Owner" },
 ]
 
 export function CreateListingWizard() {
@@ -31,6 +31,7 @@ export function CreateListingWizard() {
     propertyId: null,
     roomTypes: [],
     units: {},
+    createdUnitIds: [], // To store IDs of units created in step 4
     owner: null,
   })
   const [isLoading, setIsLoading] = React.useState(false)
@@ -52,6 +53,7 @@ export function CreateListingWizard() {
             ...data.propertyDetails,
             hosting_company_id: newFormData.hostingCompany?.id, 
             listing_status: 'draft',
+            status: 0, // Keep status as draft/inactive initially
           };
           // Remove client-side flag and amenities before creating property
           const amenityIds = payload.amenities;
@@ -67,7 +69,7 @@ export function CreateListingWizard() {
           // Now, attach amenities if any were selected
           if (amenityIds && amenityIds.length > 0) {
               try {
-                  await api.post(`properties/${newProperty.id}/amenities`, { amenity_id: amenityIds });
+                  await api.post(`properties/${newProperty.id}/amenities`, { amenity_ids: amenityIds });
                   toast({ title: "Amenities Attached", description: `${amenityIds.length} amenities have been linked to the property.` });
               } catch (amenityError) {
                    toast({ variant: "destructive", title: "Amenity Error", description: amenityError.message || "Could not attach amenities." });
@@ -86,6 +88,11 @@ export function CreateListingWizard() {
       }
     }
     
+    // Store created unit IDs from step 4
+    if (currentStep === 3) {
+      newFormData.createdUnitIds = data.createdUnitIds || [];
+    }
+    
     setFormData(newFormData);
 
     if (currentStep < steps.length - 1) {
@@ -99,28 +106,9 @@ export function CreateListingWizard() {
     }
   }
   
-  const handleSubmit = async (data) => {
-    const finalData = {...formData, ...data};
-    setIsLoading(true)
-    
-    console.log("Final Form Data for API:", finalData)
-    
-    // In a real app, you would now send all the collected data
-    // (room types, units, owner assignment) to your backend.
-    
-    // For now, we simulate the end of the process
-    toast({ title: "Submitting final data...", description: "Check console for payload. Final API call not implemented." });
-
-    // Simulate final API call
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    setIsLoading(false)
-    toast({
-        title: "Wizard Complete!",
-        description: "Property, room types, and units have been created.",
-    });
-    router.push("/dashboard/listings");
-    router.refresh();
+  // The final submission is now handled inside StepFinalizeOwner
+  const handleSubmit = (data) => {
+    console.log("This handler is deprecated. Final submission logic is in Step 5.");
   }
 
 
@@ -158,15 +146,17 @@ export function CreateListingWizard() {
             onBack={handleBack}
             roomTypes={formData.roomTypes}
             initialData={formData.units}
+            propertyId={formData.propertyId}
           />
         )
       case 4:
         return (
            <StepFinalizeOwner
             onBack={handleBack}
-            onFinish={handleSubmit}
+            onFinish={handleSubmit} // This is now handled internally by StepFinalizeOwner
             initialData={formData.owner}
-            hostingCompanyId={formData.hostingCompany?.id}
+            propertyId={formData.propertyId}
+            createdUnitIds={formData.createdUnitIds}
           />
         )
       default:

@@ -5,7 +5,7 @@ import * as React from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
-import { PlusCircle } from "lucide-react"
+import { Loader2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
@@ -14,50 +14,72 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton"
 import { useToast } from "@/hooks/use-toast"
 import { api } from "@/services/api"
-import { CreatePropertyOwnerDialog } from "../create-property-owner-dialog.jsx"
+import { useRouter } from "next/navigation"
 
 const formSchema = z.object({
-  property_owner_id: z.any().optional(),
+  owner_user_id: z.any().optional(),
 })
 
-export function StepFinalizeOwner({ onBack, onFinish, initialData, hostingCompanyId }) {
-  const [owners, setOwners] = React.useState([])
+export function StepFinalizeOwner({ onBack, onFinish, initialData, propertyId, createdUnitIds }) {
+  const [users, setUsers] = React.useState([])
   const [loading, setLoading] = React.useState(true)
-  const [isCreateOwnerOpen, setCreateOwnerOpen] = React.useState(false)
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
   const { toast } = useToast()
+  const router = useRouter();
 
   const form = useForm({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      property_owner_id: initialData?.id || undefined,
+      owner_user_id: initialData?.id || undefined,
     },
   })
 
-  const fetchOwners = React.useCallback(async () => {
+  const fetchUsers = React.useCallback(async () => {
     setLoading(true);
     try {
-      const ownersRes = await api.get('property-owners')
-      setOwners(ownersRes.data)
+      const usersRes = await api.get('users')
+      setUsers(usersRes.data)
     } catch (error) {
-      toast({ variant: "destructive", title: "Error", description: "Could not fetch property owners." })
+      toast({ variant: "destructive", title: "Error", description: "Could not fetch system users." })
     } finally {
         setLoading(false);
     }
   }, [toast])
 
   React.useEffect(() => {
-    fetchOwners()
-  }, [fetchOwners])
+    fetchUsers()
+  }, [fetchUsers])
 
-  const handleNewOwnerSuccess = (newOwnerResponse) => {
-    const newOwner = newOwnerResponse.data || newOwnerResponse;
-    setOwners(prev => [...prev, newOwner]);
-    form.setValue("property_owner_id", newOwner.id, { shouldValidate: true });
-  }
+  const onSubmit = async (data) => {
+    setIsSubmitting(true);
+    const ownerId = data.owner_user_id ? Number(data.owner_user_id) : null;
 
-  const onSubmit = (data) => {
-    const selectedOwner = data.property_owner_id ? owners.find(o => o.id === data.property_owner_id) : null;
-    onFinish({ owner: selectedOwner });
+    try {
+        // 1. Update owner for all newly created units
+        if (ownerId && createdUnitIds && createdUnitIds.length > 0) {
+            const unitUpdatePromises = createdUnitIds.map(unitId => 
+                api.put(`units/${unitId}`, { owner_user_id: ownerId })
+            );
+            await Promise.all(unitUpdatePromises);
+            toast({ title: "Unit Owners Assigned", description: `${createdUnitIds.length} units have been assigned an owner.` });
+        }
+
+        // 2. Update property status to active (1)
+        if (propertyId) {
+            await api.put(`properties/${propertyId}`, { status: 1 });
+            toast({ title: "Property Activated", description: "The property is now active." });
+        }
+        
+        // 3. Finalize and redirect
+        router.push("/dashboard/listings");
+        router.refresh();
+        toast({ title: "Wizard Complete!", description: "The new listing has been successfully created and activated." });
+
+    } catch (error) {
+        toast({ variant: "destructive", title: "Finalization Failed", description: error.message || "An error occurred during the final step." });
+    } finally {
+        setIsSubmitting(false);
+    }
   }
 
   return (
@@ -65,8 +87,8 @@ export function StepFinalizeOwner({ onBack, onFinish, initialData, hostingCompan
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           <CardHeader className="p-0 mb-6">
-            <CardTitle>Step 5: Assign Owner</CardTitle>
-            <CardDescription>Select the property owner. This is optional.</CardDescription>
+            <CardTitle>Step 5: Assign Unit Owner</CardTitle>
+            <CardDescription>Select a system user to be the owner of the units you created. This is optional.</CardDescription>
           </CardHeader>
           
           {loading ? (
@@ -77,27 +99,23 @@ export function StepFinalizeOwner({ onBack, onFinish, initialData, hostingCompan
           ) : (
             <FormField
               control={form.control}
-              name="property_owner_id"
+              name="owner_user_id"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Property Owner</FormLabel>
+                  <FormLabel>Unit Owner</FormLabel>
                   <div className="flex gap-2">
                     <Select onValueChange={(value) => field.onChange(Number(value))} value={field.value?.toString()}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select an owner (optional)" />
+                          <SelectValue placeholder="Select a user (optional)" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {owners.map(owner => (
-                          <SelectItem key={owner.id} value={owner.id.toString()}>{owner.full_name}</SelectItem>
+                        {users.map(user => (
+                          <SelectItem key={user.id} value={user.id.toString()}>{user.name} ({user.email})</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
-                    <Button type="button" variant="outline" onClick={() => setCreateOwnerOpen(true)}>
-                      <PlusCircle className="mr-2 h-4 w-4" />
-                      New Owner
-                    </Button>
                   </div>
                   <FormMessage />
                 </FormItem>
@@ -106,18 +124,14 @@ export function StepFinalizeOwner({ onBack, onFinish, initialData, hostingCompan
           )}
 
           <div className="flex justify-between">
-            <Button type="button" variant="outline" onClick={onBack}>Back</Button>
-            <Button type="submit">Finish & Save Property</Button>
+            <Button type="button" variant="outline" onClick={onBack} disabled={isSubmitting}>Back</Button>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Finish & Activate Property
+            </Button>
           </div>
         </form>
       </Form>
-      
-      <CreatePropertyOwnerDialog
-        isOpen={isCreateOwnerOpen}
-        onClose={() => setCreateOwnerOpen(false)}
-        onSuccess={handleNewOwnerSuccess}
-        hostingCompanyId={hostingCompanyId}
-      />
     </>
   )
 }

@@ -20,7 +20,8 @@ import {
   Settings,
   ShieldCheck,
   KeyRound,
-  Bed
+  Bed,
+  PlusCircle
 } from "lucide-react"
 import {
   Collapsible,
@@ -43,80 +44,30 @@ export function DashboardNav() {
       label: "Dashboard",
       icon: LayoutDashboard,
     },
-    // {
-    //   href: "/dashboard/booking",
-    //   label: "Booking",
-    //   icon: Book,
-    // },
-    // {
-    //   href: "/dashboard/calendar",
-    //   label: "Calendar",
-    //   icon: Calendar,
-    // },
     {
       href: "/dashboard/listings",
       label: "Listings",
       icon: Home,
     },
-    // {
-    //   href: "/dashboard/units",
-    //   label: "Units",
-    //   icon: KeyRound,
-    // },
-    // {
-    //   href: "/dashboard/room-types",
-    //   label: "Room Types",
-    //   icon: Bed,
-    // },
-    // {
-    //   href: "/dashboard/pricing",
-    //   label: "Intelligent Pricing",
-    //   icon: DollarSign,
-    // },
-    // {
-    //   href: "/dashboard/channel-sync",
-    //   label: "Channel Sync",
-    //   icon: Cable,
-    // },
-    // {
-    //   href: "/dashboard/messaging",
-    //   label: "Messaging",
-    //   icon: MessageCircle,
-    // },
-    //  {
-    //   href: "/dashboard/guests",
-    //   label: "Guest",
-    //   icon: Users,
-    // },
-    // {
-    //   href: "/dashboard/reporting",
-    //   label: "Reporting",
-    //   icon: BarChart2,
-    // },
-  ]
-
-  const accountItems = [
     {
-      href: "/dashboard/accounts/invoice",
-      label: "Invoice",
-      icon: Receipt
+      href: "/dashboard/properties",
+      label: "Properties",
+      icon: Home,
     },
     {
-      href: "/dashboard/accounts/expenses",
-      label: "Expenses",
-      icon: Wallet
+      href: "/dashboard/room-types",
+      label: "Room Types",
+      icon: Bed,
     },
     {
-      href: "/dashboard/accounts/payout",
-      label: "Payout",
-      icon: Banknote
-    }
+      href: "/dashboard/units",
+      label: "Units",
+      icon: KeyRound,
+    },
   ]
 
-  const isAccountsActive = pathname.startsWith("/dashboard/accounts")
   const isUserActive = pathname.startsWith("/dashboard/users")
   const isAccessControlActive = pathname.startsWith("/dashboard/access-control")
-  const isSettingsActive = pathname.startsWith("/dashboard/settings")
 
   return (
     <SidebarMenu>
@@ -133,48 +84,6 @@ export function DashboardNav() {
           </Link>
         </SidebarMenuItem>
       ))}
-      {/* <Collapsible defaultOpen={isAccountsActive}>
-        <CollapsibleTrigger asChild>
-          <SidebarMenuItem>
-              <SidebarMenuButton
-                className="w-full justify-start"
-                isActive={isAccountsActive}
-                tooltip="Accounts"
-              >
-                <Banknote className="text-sidebar-primary" />
-                <span>Accounts</span>
-              </SidebarMenuButton>
-          </SidebarMenuItem>
-        </CollapsibleTrigger>
-        <CollapsibleContent>
-           <ul className="ml-7 my-2 flex flex-col gap-1 border-l border-muted-foreground/30">
-            {accountItems.map((item) => (
-              <li key={item.href} className="pl-4">
-                 <Link href={item.href} className={cn(
-                    "flex items-center gap-2 py-1 text-sm rounded-md",
-                    pathname === item.href
-                      ? "text-sidebar-primary-foreground font-semibold"
-                      : "text-sidebar-foreground/70 hover:text-sidebar-primary-foreground"
-                  )}>
-                    <item.icon className="h-4 w-4" />
-                    <span>{item.label}</span>
-                 </Link>
-              </li>
-            ))}
-           </ul>
-        </CollapsibleContent>
-      </Collapsible>
-        <SidebarMenuItem>
-          <Link href="/dashboard/settings">
-            <SidebarMenuButton
-              isActive={isSettingsActive}
-              tooltip="Settings"
-            >
-              <Settings className="text-sidebar-primary" />
-              <span>Settings</span>
-            </SidebarMenuButton>
-          </Link>
-        </SidebarMenuItem> */}
       <SidebarMenuItem>
           <Link href="/dashboard/users">
             <SidebarMenuButton

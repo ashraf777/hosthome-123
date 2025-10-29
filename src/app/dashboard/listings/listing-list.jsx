@@ -72,13 +72,15 @@ export function ListingList() {
     const fetchListings = async () => {
       try {
         const response = await api.get('properties');
-        setListings(response.data); 
+        const listingsData = response?.data || response || [];
+        setListings(Array.isArray(listingsData) ? listingsData : []);
       } catch (error) {
         toast({
           variant: "destructive",
           title: "Error",
           description: "Could not fetch listings.",
         });
+        setListings([]); // Ensure listings is an array on error
       } finally {
         setLoading(false);
       }
@@ -127,15 +129,15 @@ export function ListingList() {
       <CardHeader>
         <div className="flex items-center justify-between">
             <div>
-                <CardTitle>Listings</CardTitle>
+                <CardTitle>Properties</CardTitle>
                 <CardDescription>
-                Manage your listings and their details.
+                Manage your properties and their details.
                 </CardDescription>
             </div>
-            <Link href="/dashboard/listings/new">
+            <Link href="/dashboard/properties/new">
                 <Button>
                     <PlusCircle className="mr-2" />
-                    Add Listings
+                    Add New Property
                 </Button>
             </Link>
         </div>
@@ -144,7 +146,7 @@ export function ListingList() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Listing</TableHead>
+              <TableHead>Property</TableHead>
               <TableHead>Owner</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>City</TableHead>
