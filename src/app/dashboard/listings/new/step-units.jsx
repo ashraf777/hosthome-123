@@ -268,8 +268,8 @@ export function StepUnits({ onNext, onBack, initialData, roomTypes, propertyId }
           </div>
         )}
 
-        <div className="flex justify-between pt-4">
-          <Button type="button" variant="outline" onClick={onBack} disabled={isSubmitting}>Back</Button>
+        <div className="flex justify-end pt-4">
+          {/* <Button type="button" variant="outline" onClick={onBack} disabled={isSubmitting}>Back</Button> */}
           <Button type="submit" disabled={isSubmitting}>
              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Next

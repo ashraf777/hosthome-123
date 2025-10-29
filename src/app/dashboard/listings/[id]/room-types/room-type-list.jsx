@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { MoreHorizontal, Edit, BedDouble, Trash2 } from "lucide-react"
+import { MoreHorizontal, Edit, BedDouble, Trash2, XCircle } from "lucide-react"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -41,12 +41,12 @@ export function RoomTypeList({ propertyId, assignedRoomTypes, loading, onUpdate 
   const router = useRouter();
   const { toast } = useToast();
 
-  const handleRemove = async (roomTypeId) => {
+  const handleUnassign = async (roomTypeId) => {
     try {
       await api.delete(`properties/${propertyId}/room-types/${roomTypeId}`);
       toast({
           title: "Room Type Unassigned",
-          description: "The room type has been removed from this property.",
+          description: "The room type has been unassigned from this property.",
       });
       onUpdate(); // Trigger a re-fetch in the parent component
     } catch (error) {
@@ -124,7 +124,7 @@ export function RoomTypeList({ propertyId, assignedRoomTypes, loading, onUpdate 
                       </DropdownMenuItem>
                        <AlertDialogTrigger asChild>
                           <DropdownMenuItem className="text-destructive focus:text-destructive">
-                              <Trash2 className="mr-2 h-4 w-4" />
+                              <XCircle className="mr-2 h-4 w-4" />
                               Unassign
                           </DropdownMenuItem>
                         </AlertDialogTrigger>
@@ -134,14 +134,14 @@ export function RoomTypeList({ propertyId, assignedRoomTypes, loading, onUpdate 
                       <AlertDialogHeader>
                         <AlertDialogTitle>Unassign Room Type?</AlertDialogTitle>
                         <AlertDialogDescription>
-                          This will remove "{roomType.name}" from this property. It will not delete the room type itself.
+                          This will unassign "{roomType.name}" from this property. It will not delete the room type itself.
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
                         <AlertDialogCancel>Cancel</AlertDialogCancel>
                         <AlertDialogAction
                           className="bg-destructive hover:bg-destructive/90"
-                          onClick={() => handleRemove(roomType.id)}
+                          onClick={() => handleUnassign(roomType.id)}
                         >
                           Unassign
                         </AlertDialogAction>
@@ -155,7 +155,7 @@ export function RoomTypeList({ propertyId, assignedRoomTypes, loading, onUpdate 
       </Table>
        {!loading && assignedRoomTypes.length === 0 && (
           <div className="text-center py-12 text-muted-foreground">
-            No room types assigned to this property.
+            No room types assigned to this property yet.
           </div>
         )}
     </div>

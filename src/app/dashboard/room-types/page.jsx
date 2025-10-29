@@ -84,7 +84,6 @@ export default function AllRoomTypesPage() {
                   <TableHead>Room Type</TableHead>
                   <TableHead>Property</TableHead>
                   <TableHead className="text-center">Max Guests</TableHead>
-                  <TableHead className="text-center">Units</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -106,10 +105,7 @@ export default function AllRoomTypesPage() {
                     </TableCell>
                     <TableCell>{roomType.properties && roomType.properties[0]?.name}</TableCell>
                     <TableCell className="text-center">
-                      <Badge variant="secondary">{roomType.max_guests}</Badge>
-                    </TableCell>
-                     <TableCell className="text-center">
-                      <Badge variant="outline">{roomType.units_count}</Badge>
+                      <Badge variant="secondary">{roomType.max_adults}</Badge>
                     </TableCell>
                   </TableRow>
                 ))}

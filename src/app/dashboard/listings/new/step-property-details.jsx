@@ -86,8 +86,8 @@ export function StepPropertyDetails({ onNext, onBack, initialData }) {
       country: "",
       zip_code: "",
       property_type_ref_id: undefined,
-      check_in_time: "11:00",
-      check_out_time: "12:00",
+      check_in_time: "12:00",
+      check_out_time: "11:00",
       min_nights: 1,
       max_nights: 0,
       amenities: [],
@@ -141,7 +141,12 @@ export function StepPropertyDetails({ onNext, onBack, initialData }) {
   };
 
   const onSubmit = (data) => {
-    onNext({ propertyDetails: data })
+    if (data.create_new) {
+        onNext({ propertyDetails: data })
+    } else {
+        const selectedProperty = properties.find(p => p.id === data.property_id);
+        onNext({ propertyDetails: selectedProperty })
+    }
   }
 
   if (loading) {
@@ -203,10 +208,10 @@ export function StepPropertyDetails({ onNext, onBack, initialData }) {
                                 ))}
                             </SelectContent>
                             </Select>
-                            <Button type="button" variant="outline" onClick={() => setCreateTypeOpen(true)}>
+                            {/* <Button type="button" variant="outline" onClick={() => setCreateTypeOpen(true)}>
                                 <PlusCircle className="mr-2 h-4 w-4" />
                                 New
-                            </Button>
+                            </Button> */}
                         </div>
                         <FormMessage />
                         </FormItem>
@@ -220,7 +225,7 @@ export function StepPropertyDetails({ onNext, onBack, initialData }) {
                     render={({ field }) => (
                         <FormItem>
                         <FormLabel>Check in time</FormLabel>
-                        <FormControl><Input placeholder="e.g., 11:00" {...field} /></FormControl>
+                        <FormControl><Input placeholder="e.g., 12:00" {...field} /></FormControl>
                         <FormMessage />
                         </FormItem>
                     )}
@@ -231,7 +236,7 @@ export function StepPropertyDetails({ onNext, onBack, initialData }) {
                     render={({ field }) => (
                         <FormItem>
                         <FormLabel>Check out time</FormLabel>
-                        <FormControl><Input placeholder="e.g., 12:00" {...field} /></FormControl>
+                        <FormControl><Input placeholder="e.g., 11:00" {...field} /></FormControl>
                         <FormMessage />
                         </FormItem>
                     )}
@@ -422,7 +427,3 @@ export function StepPropertyDetails({ onNext, onBack, initialData }) {
     </>
   )
 }
-
-    
-
-    

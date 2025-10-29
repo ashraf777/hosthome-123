@@ -2,15 +2,6 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
-import { CreatePropertyDialog } from "../../room-types/create-property-dialog";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
 import { GlobalPropertyForm } from "../property-form";
 
 
@@ -28,7 +19,7 @@ export default function NewPropertyPage() {
             <p className="text-muted-foreground">Create a new property in your portfolio.</p>
         </div>
       </div>
-      <GlobalPropertyForm />
+      <GlobalPropertyForm isEditMode={false} />
     </div>
   )
 }

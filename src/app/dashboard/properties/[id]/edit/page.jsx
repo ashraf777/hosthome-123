@@ -1,10 +1,10 @@
 
 import Link from "next/link";
-import { GlobalPropertyForm } from "@/app/dashboard/properties/property-form";
+import { GlobalPropertyForm } from "../../properties/property-form";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 
-export default function EditListingPage({ params }) {
+export default function EditPropertyPage({ params }) {
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center gap-4">

@@ -89,13 +89,19 @@ export function GlobalRoomTypeForm() {
 
   async function onSubmit(values) {
     setSubmitting(true)
+    const payload = {
+      name: values.name,
+      max_guests: values.max_guests,
+      property_id: values.property_id,
+      property_ids: [values.property_id]
+    };
     try {
-      const response = await api.post('room-types', values);
+      const response = await api.post('room-types', payload);
       toast({
         title: "Room Type Created",
         description: `Now you can add photos to your new room type.`,
       })
-      setCreatedRoomType(response.data); // Set the created room type to switch to step 2
+      setCreatedRoomType(response.data.data || response.data); // Set the created room type to switch to step 2
     } catch (error) {
        toast({
         variant: "destructive",
@@ -125,7 +131,7 @@ export function GlobalRoomTypeForm() {
                 <PhotoGallery roomTypeId={createdRoomType.id} />
             </CardContent>
             <CardFooter>
-                <Button onClick={() => router.push(`/dashboard/listings/${createdRoomType.property_id}/room-types`)}>
+                <Button onClick={() => router.push(`/dashboard/room-types`)}>
                     Done
                 </Button>
             </CardFooter>
@@ -224,3 +230,5 @@ export function GlobalRoomTypeForm() {
     </>
   )
 }
+
+    

@@ -63,7 +63,7 @@ export function CreateListingWizard() {
           const response = await api.post('properties', payload);
           const newProperty = response.data || response;
           newFormData.propertyId = newProperty.id;
-          newFormData.propertyDetails = { ...newFormData.propertyDetails, id: newProperty.id };
+          newFormData.propertyDetails = { ...newFormData.propertyDetails, id: newProperty.id, room_types: [] };
           toast({ title: "Property Saved", description: `"${newProperty.name}" has been created.` });
 
           // Now, attach amenities if any were selected
@@ -77,7 +77,8 @@ export function CreateListingWizard() {
           }
 
         } else {
-          newFormData.propertyId = data.propertyDetails.property_id;
+          newFormData.propertyId = data.propertyDetails.id;
+          newFormData.propertyDetails = data.propertyDetails;
         }
       } catch (error) {
         toast({ variant: "destructive", title: "Error", description: error.message || "Could not save property details." });
@@ -136,6 +137,7 @@ export function CreateListingWizard() {
             onBack={handleBack}
             initialData={formData.roomTypes}
             propertyId={formData.propertyId}
+            propertyDetails={formData.propertyDetails}
             setWizardData={setFormData}
           />
         )

@@ -101,10 +101,10 @@ export function StepOwner({ onNext, initialData }) {
                         ))}
                       </SelectContent>
                     </Select>
-                    <Button type="button" variant="outline" onClick={() => setCreateCompanyOpen(true)} disabled>
+                    {/* <Button type="button" variant="outline" onClick={() => setCreateCompanyOpen(true)} disabled>
                       <PlusCircle className="mr-2 h-4 w-4" />
                       New Company
-                    </Button>
+                    </Button> */}
                   </div>
                   <FormMessage />
                 </FormItem>

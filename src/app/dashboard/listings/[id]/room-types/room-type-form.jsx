@@ -33,7 +33,6 @@ import { Skeleton } from "@/components/ui/skeleton"
 const roomTypeSchema = z.object({
   name: z.string().min(3, "Room type name is required."),
   max_guests: z.coerce.number().min(1, "Max guests must be at least 1."),
-  property_id: z.coerce.number(),
 })
 
 export function RoomTypeForm({ isEditMode = false, propertyId, roomTypeId }) {
@@ -47,7 +46,6 @@ export function RoomTypeForm({ isEditMode = false, propertyId, roomTypeId }) {
     defaultValues: {
       name: "",
       max_guests: 2,
-      property_id: Number(propertyId),
     },
   })
   
@@ -81,7 +79,12 @@ export function RoomTypeForm({ isEditMode = false, propertyId, roomTypeId }) {
         router.push(`/dashboard/listings/${propertyId}/room-types`);
         router.refresh();
       } else {
-        const response = await api.post('room-types', values);
+        const payload = {
+          ...values,
+          property_id: Number(propertyId),
+          property_ids: [Number(propertyId)]
+        };
+        const response = await api.post('room-types', payload);
         toast({
           title: "Room Type Created",
           description: `Now you can add photos to your new room type.`,
@@ -175,3 +178,5 @@ export function RoomTypeForm({ isEditMode = false, propertyId, roomTypeId }) {
     </Card>
   )
 }
+
+    

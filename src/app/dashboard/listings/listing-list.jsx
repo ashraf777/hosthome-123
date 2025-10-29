@@ -1,5 +1,4 @@
 
-
 "use client"
 
 import * as React from "react"
@@ -68,43 +67,41 @@ export function ListingList() {
   const router = useRouter()
   const { toast } = useToast()
 
-  React.useEffect(() => {
-    const fetchListings = async () => {
-      try {
-        const response = await api.get('properties');
-        const listingsData = response?.data || response || [];
-        setListings(Array.isArray(listingsData) ? listingsData : []);
-      } catch (error) {
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: "Could not fetch listings.",
-        });
-        setListings([]); // Ensure listings is an array on error
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchListings();
-  }, [toast]);
-
-  const handleDelete = async (id) => {
-    const originalListings = [...listings];
-    setListings(listings.filter(l => l.id !== id));
-    
+  const fetchListings = React.useCallback(async () => {
     try {
-      await api.delete(`properties/${id}`);
-      
-      toast({
-          title: "Listing Deleted",
-          description: "The listing has been successfully deleted.",
-      })
+      setLoading(true);
+      const response = await api.get('properties');
+      const listingsData = response?.data || response || [];
+      setListings(Array.isArray(listingsData) ? listingsData : []);
     } catch (error) {
-      setListings(originalListings);
       toast({
         variant: "destructive",
         title: "Error",
-        description: error.message || "Failed to delete the listing. Please try again.",
+        description: "Could not fetch listings.",
+      });
+      setListings([]); // Ensure listings is an array on error
+    } finally {
+      setLoading(false);
+    }
+  }, [toast]);
+  
+  React.useEffect(() => {
+    fetchListings();
+  }, [fetchListings]);
+
+  const handleDelete = async (id) => {
+    try {
+      await api.delete(`properties/${id}`);
+      toast({
+          title: "Property Deleted",
+          description: "The property has been successfully deleted.",
+      })
+      fetchListings(); // Re-fetch to update the list
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message || "Failed to delete the property. Please try again.",
       });
     }
   };
@@ -207,10 +204,10 @@ export function ListingList() {
                           <DropdownMenuContent align="end">
                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
                             <DropdownMenuItem
-                              onSelect={() => router.push(`/dashboard/listings/${listing.id}/edit`)}
+                              onSelect={() => router.push(`/dashboard/properties/${listing.id}/edit`)}
                             >
                               <Home className="mr-2 h-4 w-4" />
-                              Edit Listing
+                              Edit Property
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               onSelect={() => router.push(`/dashboard/listings/${listing.id}/room-types`)}
@@ -229,7 +226,7 @@ export function ListingList() {
                           <AlertDialogHeader>
                             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                             <AlertDialogDescription>
-                              This action cannot be undone. This will permanently delete the listing and all its related data.
+                              This action cannot be undone. This will permanently delete the property and all its related data.
                             </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>
@@ -252,11 +249,11 @@ export function ListingList() {
          {!loading && listings.length === 0 && (
           <div className="text-center py-12 text-muted-foreground flex flex-col items-center gap-4">
             <Home className="w-12 h-12 text-muted-foreground/50" />
-            <p>No Listing Found.</p>
-            <Link href="/dashboard/listings/new">
+            <p>No Properties Found.</p>
+            <Link href="/dashboard/properties/new">
                 <Button>
                     <PlusCircle className="mr-2" />
-                    Add Your Listings
+                    Add Your First Property
                 </Button>
             </Link>
           </div>

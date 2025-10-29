@@ -48,7 +48,7 @@ const propertySchema = z.object({
   listing_status: z.enum(['draft', 'active', 'archived']).default('draft'),
 });
 
-export function GlobalPropertyForm() {
+export function GlobalPropertyForm({ isEditMode = false, propertyId }) {
   const [submitting, setSubmitting] = useState(false);
   const [loading, setLoading] = useState(true);
   const [owners, setOwners] = useState([]);
@@ -74,7 +74,7 @@ export function GlobalPropertyForm() {
         api.get('property-owners'),
         api.get('property-references')
       ]);
-      setOwners(ownersRes.data);
+      setOwners(ownersRes.data || []);
       setPropertyTypes(propTypesRes.property_type || []);
     } catch (error) {
       toast({ variant: "destructive", title: "Error", description: "Could not fetch required data." });
@@ -82,9 +82,28 @@ export function GlobalPropertyForm() {
   }, [toast]);
 
   useEffect(() => {
-    setLoading(true);
-    fetchDropdownData().finally(() => setLoading(false));
-  }, [fetchDropdownData]);
+    async function fetchData() {
+        setLoading(true);
+        await fetchDropdownData();
+
+        if (isEditMode && propertyId) {
+            try {
+                const propertyData = await api.get(`properties/${propertyId}`);
+                const property = propertyData.data || propertyData;
+                 form.reset({
+                    ...property,
+                    property_type_ref_id: property.type_reference?.id,
+                    property_owner_id: property.property_owner_id,
+                });
+            } catch (error) {
+                toast({ variant: "destructive", title: "Error", description: `Could not fetch property data. ${error.message}` });
+            }
+        }
+
+        setLoading(false);
+    }
+    fetchData();
+  }, [isEditMode, propertyId, fetchDropdownData, form, toast]);
 
   const handleNewOwnerSuccess = (newOwner) => {
     fetchDropdownData().then(() => {
@@ -95,18 +114,26 @@ export function GlobalPropertyForm() {
   async function onSubmit(values) {
     setSubmitting(true);
     try {
-      await api.post("properties", values);
-      toast({
-        title: "Property Created",
-        description: `The property "${values.name}" has been created.`,
-      });
+      if (isEditMode) {
+        await api.put(`properties/${propertyId}`, values);
+        toast({
+            title: "Property Updated",
+            description: `The property "${values.name}" has been updated.`,
+        });
+      } else {
+        await api.post("properties", values);
+        toast({
+            title: "Property Created",
+            description: `The property "${values.name}" has been created.`,
+        });
+      }
       router.push("/dashboard/properties");
       router.refresh();
     } catch (error) {
       toast({
         variant: "destructive",
         title: "Error",
-        description: error.message || "Failed to create property.",
+        description: error.message || "Failed to save property.",
       });
     } finally {
       setSubmitting(false);
@@ -133,9 +160,9 @@ export function GlobalPropertyForm() {
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)}>
             <CardHeader>
-              <CardTitle>New Property Details</CardTitle>
+              <CardTitle>{isEditMode ? "Edit Property" : "New Property Details"}</CardTitle>
               <CardDescription>
-                Enter the details for the new property.
+                {isEditMode ? "Update the details for your property." : "Enter the details for the new property."}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -218,11 +245,33 @@ export function GlobalPropertyForm() {
                   )}
                 />
               </div>
+               <FormField
+                  control={form.control}
+                  name="listing_status"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Listing Status</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select a status" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="draft">Draft</SelectItem>
+                          <SelectItem value="active">Active</SelectItem>
+                          <SelectItem value="archived">Archived</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
             </CardContent>
             <CardFooter>
               <Button type="submit" disabled={submitting}>
                 {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Create Property
+                {isEditMode ? "Update Property" : "Create Property"}
               </Button>
             </CardFooter>
           </form>

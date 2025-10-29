@@ -36,8 +36,9 @@ export function AssignRoomTypeDialog({ isOpen, onClose, propertyId, assignedRoom
         setLoading(true)
         try {
           const response = await api.get("room-types")
-          // Ensure response.data or response is an array before filtering
-          const roomTypesData = response.data?.data || response.data || response;
+          // This logic assumes a room type is "unassigned" if its property_id is null.
+          // It also filters out room types already assigned to the current property.
+          const roomTypesData = response.data?.data || response.data || [];
           if (Array.isArray(roomTypesData)) {
             const availableRoomTypes = roomTypesData.filter(rt => !assignedRoomTypeIds.includes(rt.id));
             setAllRoomTypes(availableRoomTypes);
@@ -71,6 +72,7 @@ export function AssignRoomTypeDialog({ isOpen, onClose, propertyId, assignedRoom
 
     setIsSubmitting(true)
     try {
+      // This API call should now handle associating the room type with the property.
       await api.post(`properties/${propertyId}/room-types/${selectedRoomTypeId}`)
       toast({
         title: "Room Type Assigned",
@@ -86,16 +88,17 @@ export function AssignRoomTypeDialog({ isOpen, onClose, propertyId, assignedRoom
       })
     } finally {
       setIsSubmitting(false)
+      setSelectedRoomTypeId(null);
     }
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) { onClose(); setSelectedRoomTypeId(null); } }}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Assign Room Type</DialogTitle>
           <DialogDescription>
-            Select an existing room type to assign to this property.
+            Select an unassigned room type to link to this property.
           </DialogDescription>
         </DialogHeader>
         <div className="py-4">
