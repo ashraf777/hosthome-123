@@ -185,7 +185,7 @@ export function ListingList() {
                         <span>{listing.name}</span>
                       </div>
                     </TableCell>
-                    <TableCell>{listing.property_owner?.full_name || "N/A"}</TableCell>
+                    <TableCell>{listing.owner?.full_name || "N/A"}</TableCell>
                     <TableCell>
                       <Badge variant={getStatusBadgeVariant(listing.listing_status)} className="capitalize">
                         {listing.listing_status}

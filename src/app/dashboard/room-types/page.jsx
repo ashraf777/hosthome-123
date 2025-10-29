@@ -37,6 +37,7 @@ export default function AllRoomTypesPage() {
       try {
         const response = await api.get("room-types")
         const roomTypesData = response.data?.data || response.data || response || [];
+        console.log("Fetched room types data:", roomTypesData);
         setRoomTypes(Array.isArray(roomTypesData) ? roomTypesData : []);
       } catch (error) {
         toast({
@@ -83,6 +84,7 @@ export default function AllRoomTypesPage() {
                 <TableRow>
                   <TableHead>Room Type</TableHead>
                   <TableHead>Property</TableHead>
+                  <TableHead>Size</TableHead>
                   <TableHead className="text-center">Max Guests</TableHead>
                 </TableRow>
               </TableHeader>
@@ -103,9 +105,10 @@ export default function AllRoomTypesPage() {
                         {roomType.name}
                       </Link>
                     </TableCell>
-                    <TableCell>{roomType.properties && roomType.properties[0]?.name}</TableCell>
+                    <TableCell>{roomType.property && roomType.property?.name}</TableCell>
+                    <TableCell>{roomType?.size}</TableCell>
                     <TableCell className="text-center">
-                      <Badge variant="secondary">{roomType.max_adults}</Badge>
+                      <Badge variant="secondary">{roomType?.max_adults}</Badge>
                     </TableCell>
                   </TableRow>
                 ))}
