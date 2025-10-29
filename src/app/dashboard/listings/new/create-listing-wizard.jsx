@@ -63,7 +63,7 @@ export function CreateListingWizard() {
           const response = await api.post('properties', payload);
           const newProperty = response.data || response;
           newFormData.propertyId = newProperty.id;
-          newFormData.propertyDetails = { ...newFormData.propertyDetails, id: newProperty.id, room_types: [] };
+          newFormData.propertyDetails = { ...newProperty, room_types: [] }; // Initialize with server response
           toast({ title: "Property Saved", description: `"${newProperty.name}" has been created.` });
 
           // Now, attach amenities if any were selected

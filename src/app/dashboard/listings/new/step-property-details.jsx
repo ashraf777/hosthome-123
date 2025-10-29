@@ -96,6 +96,30 @@ export function StepPropertyDetails({ onNext, onBack, initialData }) {
   
   const createNew = form.watch("create_new");
 
+  React.useEffect(() => {
+    if (initialData) {
+        const resetData = {
+            create_new: initialData.create_new,
+            property_id: initialData.create_new ? undefined : initialData.id,
+            name: initialData.name || "",
+            address_line_1: initialData.address_line_1 || "",
+            city: initialData.city || "",
+            state: initialData.state || "",
+            country: initialData.country || "",
+            zip_code: initialData.zip_code || "",
+            property_type_ref_id: initialData.property_type_ref_id || initialData.type_reference?.id,
+            check_in_time: initialData.check_in_time || "12:00",
+            check_out_time: initialData.check_out_time || "11:00",
+            min_nights: initialData.min_nights || 1,
+            max_nights: initialData.max_nights || 0,
+            amenities: initialData.amenities || [],
+        };
+        form.reset(resetData);
+        // Manually trigger validation after reset to update button state
+        form.trigger();
+    }
+}, [initialData, form]);
+
   const fetchData = React.useCallback(async () => {
     setLoading(true);
     try {

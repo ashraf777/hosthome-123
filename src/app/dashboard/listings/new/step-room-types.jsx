@@ -1,4 +1,3 @@
-
 "use client"
 
 import * as React from "react"
@@ -6,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
-import { PlusCircle, Trash2, Loader2, Bed } from "lucide-react"
+import { PlusCircle, Trash2, Loader2, Bed, X } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { Separator } from "@/components/ui/separator"
 import { api } from "@/services/api"
@@ -24,6 +23,7 @@ import {
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
+import { Badge } from "@/components/ui/badge"
 
 
 const newRoomTypeSchema = z.object({
@@ -45,7 +45,6 @@ export function StepRoomTypes({ onNext, onBack, propertyId, propertyDetails, set
   const [isSubmittingNew, setIsSubmittingNew] = React.useState(false);
   const [loading, setLoading] = React.useState(true);
   const [createdRoomType, setCreatedRoomType] = React.useState(null)
-  const [selectedExistingRoomTypeId, setSelectedExistingRoomTypeId] = React.useState(null);
   
   const { toast } = useToast()
 
@@ -67,7 +66,7 @@ export function StepRoomTypes({ onNext, onBack, propertyId, propertyDetails, set
      if (!propertyId) return;
      try {
         const response = await api.get(`properties/${propertyId}/room-types`);
-        const roomTypesData = response.data || response;
+        const roomTypesData = response.data?.data || response.data || [];
         if (Array.isArray(roomTypesData)) {
             setAvailableRoomTypes(roomTypesData);
         }
@@ -82,10 +81,16 @@ export function StepRoomTypes({ onNext, onBack, propertyId, propertyDetails, set
         const propertyRes = await api.get(`properties/${propertyId}`);
         const currentPropertyDetails = propertyRes.data || propertyRes;
         setAssignedRoomTypes(currentPropertyDetails.room_types || []);
+        // Update wizard state
+        setWizardData(prev => ({
+          ...prev,
+          propertyDetails: currentPropertyDetails,
+          roomTypes: (currentPropertyDetails.room_types || []).map(rt => ({ roomTypeId: rt.id, name: rt.name }))
+        }));
     } catch (error) {
          toast({ variant: "destructive", title: "Error", description: `Could not fetch assigned room types. ${error.message}` });
     }
-  }, [propertyId, toast]);
+  }, [propertyId, toast, setWizardData]);
 
 
   React.useEffect(() => {
@@ -93,15 +98,10 @@ export function StepRoomTypes({ onNext, onBack, propertyId, propertyDetails, set
       if (!propertyId) return;
       setLoading(true);
 
-      // Initialize assigned room types from the propertyDetails passed down from Step 2
-      if (propertyDetails?.room_types) {
-          setAssignedRoomTypes(propertyDetails.room_types);
-      } else {
-        // If not available, fetch them
-        await fetchCurrentPropertyDetails();
-      }
+      // Initialize assigned room types from the property details passed down
+      setAssignedRoomTypes(propertyDetails?.room_types || []);
 
-      // Fetch other necessary data
+      // Fetch other necessary data for the forms and dropdowns
       await Promise.all([
         fetchAvailableRoomTypesForDropdown(),
         api.get('amenities').then(amenitiesRes => {
@@ -120,15 +120,16 @@ export function StepRoomTypes({ onNext, onBack, propertyId, propertyDetails, set
       setLoading(false);
     }
     initialFetch();
-  }, [propertyId, fetchAvailableRoomTypesForDropdown, fetchCurrentPropertyDetails, propertyDetails]);
+  }, [propertyId, propertyDetails, fetchAvailableRoomTypesForDropdown]);
 
 
   const handleCreateAndAssignNew = React.useCallback(async (values) => {
     setIsSubmittingNew(true);
     const creationPayload = {
         ...values,
-        status: values.status ? 1 : 0,
         property_id: Number(propertyId),
+        status: values.status ? 1 : 0,
+        property_ids: [Number(propertyId)],
         amenity_ids: values.amenities,
     };
     delete creationPayload.amenities;
@@ -138,12 +139,12 @@ export function StepRoomTypes({ onNext, onBack, propertyId, propertyDetails, set
       const response = await api.post('room-types', creationPayload);
       const newRoomType = response.data?.data || response.data || response;
       
-      toast({ title: "Room Type Created", description: `"${newRoomType.name}" created. Now assigning...` });
+      toast({ title: "Room Type Added", description: `"${newRoomType.name}" created. Now assigning...` });
       
       // Step 2: Assign the newly created room type to the property (pivot table)
       await api.post(`properties/${propertyId}/room-types/${newRoomType.id}`);
 
-      toast({ title: "Room Type Assigned", description: `"${newRoomType.name}" has been assigned to the property.` });
+      toast({ title: "Room Type Added", description: `"${newRoomType.name}" has been added to the property.` });
 
       // Step 3: Refresh UI state
       await fetchCurrentPropertyDetails();
@@ -154,7 +155,7 @@ export function StepRoomTypes({ onNext, onBack, propertyId, propertyDetails, set
       setShowCreateForm(false);
       
     } catch (error) {
-      toast({ variant: "destructive", title: "Error", description: error.message || "Failed to create or assign room type." });
+      toast({ variant: "destructive", title: "Error", description: error.message || "Failed to create or add room type." });
     } finally {
       setIsSubmittingNew(false);
     }
@@ -164,10 +165,10 @@ export function StepRoomTypes({ onNext, onBack, propertyId, propertyDetails, set
   const handleRemoveFromProperty = async (roomTypeIdToRemove) => {
     try {
       await api.delete(`properties/${propertyId}/room-types/${roomTypeIdToRemove}`);
-      toast({ title: "Room Type Unassigned", description: "The room type has been removed from this property." });
+      toast({ title: "Room Type Removed", description: "The room type has been removed." });
       await fetchCurrentPropertyDetails();
     } catch (error) {
-      toast({ variant: "destructive", title: "Error", description: error.message || "Could not unassign room type." });
+      toast({ variant: "destructive", title: "Error", description: error.message || "Could not remove room type." });
     }
   }
 
@@ -176,18 +177,16 @@ export function StepRoomTypes({ onNext, onBack, propertyId, propertyDetails, set
       setCreatedRoomType(null);
   }
   
-  const handleAssignExisting = async () => {
-    if (!selectedExistingRoomTypeId) {
-        toast({ variant: "destructive", title: "No Selection", description: "Please select a room type to add." });
+  const handleAssignExisting = async (roomTypeId) => {
+    if (!roomTypeId) {
         return;
     }
+    const selectedRoomTypeId = Number(roomTypeId);
     try {
-        await api.post(`properties/${propertyId}/room-types/${selectedExistingRoomTypeId}`);
-        toast({ title: "Room Type Assigned", description: "Successfully assigned to the property." });
+        await api.post(`properties/${propertyId}/room-types/${selectedRoomTypeId}`);
+        toast({ title: "Room Type Added", description: "Successfully added to the property." });
         
         await fetchCurrentPropertyDetails();
-
-        setSelectedExistingRoomTypeId(null);
     } catch (error) {
         toast({ variant: "destructive", title: "Error", description: error.message || "Could not assign room type." });
     }
@@ -199,7 +198,7 @@ export function StepRoomTypes({ onNext, onBack, propertyId, propertyDetails, set
 
   const handleSubmit = (data) => {
     if (assignedRoomTypes.length === 0) {
-        toast({ variant: 'destructive', title: 'Validation Error', description: 'You must have at least one room type assigned to proceed.' });
+        toast({ variant: 'destructive', title: 'Validation Error', description: 'You must have at least one room type added to proceed.' });
         return;
     }
     const finalRoomTypesForNextStep = assignedRoomTypes.map(rt => ({ roomTypeId: rt.id, name: rt.name }));
@@ -238,37 +237,49 @@ export function StepRoomTypes({ onNext, onBack, propertyId, propertyDetails, set
         <div className="flex justify-between items-start">
           <div>
             <CardTitle>Step 3: Define Room Types</CardTitle>
-            <CardDescription>Create or assign existing room types for this property.</CardDescription>
+            <CardDescription>Add or create new room types for this property.</CardDescription>
           </div>
         </div>
       </CardHeader>
       
       <div className="p-4 border rounded-lg bg-muted/20 space-y-4">
-        <h3 className="text-lg font-medium">Assign an Existing Room Type</h3>
-        <p className="text-sm text-muted-foreground">Select from available room types to assign to this property.</p>
-        <div className="flex items-center gap-2">
-            <Select onValueChange={(value) => setSelectedExistingRoomTypeId(value)} value={selectedExistingRoomTypeId || ''}>
-                <SelectTrigger>
-                    <SelectValue placeholder="Select a room type to assign..." />
-                </SelectTrigger>
-                <SelectContent>
-                    {dropdownOptions.length > 0 ? (
-                        dropdownOptions.map(rt => (
-                            <SelectItem key={rt.id} value={rt.id.toString()}>
-                            {rt.name}
-                            </SelectItem>
-                        ))
-                    ) : (
-                        <div className="p-4 text-center text-sm text-muted-foreground">
-                            No unassigned room types for this property.
-                        </div>
-                    )}
-                </SelectContent>
-            </Select>
-            <Button type="button" onClick={handleAssignExisting} disabled={!selectedExistingRoomTypeId}>
-                <PlusCircle className="mr-2 h-4 w-4" /> Add
-            </Button>
-        </div>
+        <h3 className="text-lg font-medium">Add a Room Type to the Property</h3>
+        <p className="text-sm text-muted-foreground">Select from available room types to add to this property.</p>
+        <Select onValueChange={handleAssignExisting}>
+            <SelectTrigger>
+                <SelectValue placeholder="Select a room type to add..." />
+            </SelectTrigger>
+            <SelectContent>
+                {dropdownOptions.length > 0 ? (
+                    dropdownOptions.map(rt => (
+                        <SelectItem key={rt.id} value={rt.id.toString()}>
+                        {rt.name}
+                        </SelectItem>
+                    ))
+                ) : (
+                    <div className="p-4 text-center text-sm text-muted-foreground">
+                        No unassigned room types available.
+                    </div>
+                )}
+            </SelectContent>
+        </Select>
+        {assignedRoomTypes.length > 0 && (
+          <div className="flex flex-wrap gap-2 pt-2">
+            {assignedRoomTypes.map(rt => (
+              <Badge key={rt.id} variant="secondary" className="flex items-center gap-1">
+                {rt.name}
+                <button
+                  type="button"
+                  onClick={() => handleRemoveFromProperty(rt.id)}
+                  className="rounded-full hover:bg-muted-foreground/20 p-0.5"
+                  aria-label={`Remove ${rt.name}`}
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </Badge>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="flex items-center gap-4">
@@ -279,9 +290,9 @@ export function StepRoomTypes({ onNext, onBack, propertyId, propertyDetails, set
 
        <div className="p-4 border rounded-lg bg-muted/20 space-y-6">
            <div className="flex justify-between items-center">
-             <h3 className="text-lg font-medium">Create a New Room Type</h3>
+             <h3 className="text-lg font-medium">Add a New Room Type</h3>
               <Button type="button" variant="outline" size="sm" onClick={() => setShowCreateForm(prev => !prev)}>
-                {showCreateForm ? 'Cancel Creation' : 'Create New'}
+                {showCreateForm ? 'Cancel Creation' : 'Add New'}
             </Button>
            </div>
 
@@ -417,34 +428,11 @@ export function StepRoomTypes({ onNext, onBack, propertyId, propertyDetails, set
             </Form>
           )}
       </div>
-      
-        <div className="space-y-4 max-h-96 overflow-y-auto pr-2 border rounded-lg p-4">
-        <h3 className="font-medium text-foreground">Room Types Assigned to This Property</h3>
-        {assignedRoomTypes.length > 0 ? (
-            <div className="space-y-2">
-                {assignedRoomTypes.map((roomType, index) => (
-                    <div key={roomType.id} className="flex items-center justify-between gap-2 p-3 border rounded-lg bg-muted/30">
-                        <div className="flex items-center gap-2">
-                        <Bed className="h-4 w-4 text-muted-foreground" />
-                        <p className="font-semibold">{roomType.name}</p>
-                        </div>
-                        <Button type="button" variant="ghost" size="icon" onClick={() => handleRemoveFromProperty(roomType.id)} className="text-destructive hover:bg-destructive/10 hover:text-destructive shrink-0">
-                            <Trash2 className="h-4 w-4" />
-                        </Button>
-                    </div>
-                ))}
-            </div>
-        ) : (
-            <p className="text-sm text-muted-foreground text-center py-4">No room types assigned to this property yet.</p>
-        )}
-        </div>
 
-        <div className="flex justify-end">
-        {/* <Button type="button" variant="outline" onClick={onBack}>Back</Button> */}
+        <div className="flex justify-between">
+        <Button type="button" variant="outline" onClick={onBack}>Back</Button>
         <Button type="button" onClick={handleSubmit}>Next</Button>
         </div>
     </div>
   )
 }
-
-    
