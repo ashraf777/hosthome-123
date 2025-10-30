@@ -95,10 +95,10 @@ export function GlobalUnitForm({ isEditMode = false, unitId }) {
     }
     setIsRoomTypeLoading(true);
     try {
-      const response = await api.get(`room-types?property_id=${propertyId}`);
-      setRoomTypes(response.data);
+      const response = await api.get(`properties/${propertyId}/room-types`);
+      setRoomTypes(response.data || []);
     } catch (error) {
-      toast({ variant: "destructive", title: "Error", description: "Could not fetch room types." });
+      toast({ variant: "destructive", title: "Error", description: "Could not fetch room types for the selected property." });
       setRoomTypes([]);
     } finally {
       setIsRoomTypeLoading(false);
@@ -129,8 +129,10 @@ export function GlobalUnitForm({ isEditMode = false, unitId }) {
   }, [isEditMode, unitId, fetchProperties, fetchRoomTypes, form, toast]);
 
   useEffect(() => {
-    if (!isEditMode) {
-        form.setValue("room_type_id", undefined);
+    if (selectedPropertyId) {
+        if (!isEditMode) {
+            form.setValue("room_type_id", undefined);
+        }
         fetchRoomTypes(selectedPropertyId);
     }
   }, [selectedPropertyId, fetchRoomTypes, form, isEditMode]);
