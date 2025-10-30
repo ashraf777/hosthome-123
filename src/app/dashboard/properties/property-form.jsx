@@ -93,6 +93,7 @@ export function GlobalPropertyForm({ isEditMode = false, propertyId, onSuccess }
         api.get('property-references'),
         api.get('amenities'),
       ]);
+      console.log("Fetched property type:", propTypesRes);
       setOwners(ownersRes.data || []);
       setPropertyTypes(propTypesRes.property_type || []);
       
@@ -120,6 +121,7 @@ export function GlobalPropertyForm({ isEditMode = false, propertyId, onSuccess }
         if (isEditMode && propertyId) {
             try {
                 const propertyDataRes = await api.get(`properties/${propertyId}`);
+                console.log("Fetched property data:", propertyDataRes);
                 const property = propertyDataRes.data || propertyDataRes;
                 setPropertyData(property);
                  
@@ -130,7 +132,7 @@ export function GlobalPropertyForm({ isEditMode = false, propertyId, onSuccess }
 
                  form.reset({
                     ...property,
-                    property_type_ref_id: property.type_reference?.id,
+                    property_type_ref_id: property.property_type?.id,
                     property_owner_id: property.property_owner_id,
                     amenities: currentAmenities,
                     check_in_time: property.check_in_time || "12:00",
