@@ -222,7 +222,7 @@ export function GlobalRoomTypeForm({ isEditMode = false, roomTypeId }) {
                     <FormItem>
                         <FormLabel>Property</FormLabel>
                         <div className="flex gap-2">
-                        <Select onValueChange={(value) => field.onChange(Number(value))} value={field.value?.toString()}>
+                        <Select onValueChange={(value) => field.onChange(Number(value))} value={field.value?.toString()} disabled={isEditMode}>
                             <FormControl>
                             <SelectTrigger>
                                 <SelectValue placeholder="Select a property" />
