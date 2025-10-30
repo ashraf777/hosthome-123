@@ -21,7 +21,8 @@ import {
   ShieldCheck,
   KeyRound,
   Bed,
-  PlusCircle
+  PlusCircle,
+  Building
 } from "lucide-react"
 import {
   Collapsible,
@@ -32,45 +33,117 @@ import {
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
+  SidebarMenuSub,
+  SidebarMenuSubItem,
+  SidebarMenuSubButton,
 } from "@/components/ui/sidebar.jsx"
 import { cn } from "@/lib/utils"
 
 export function DashboardNav() {
   const pathname = usePathname()
 
-  const navItems = [
-    {
-      href: "/dashboard",
-      label: "Dashboard",
-      icon: LayoutDashboard,
-    },
-    {
-      href: "/dashboard/listings",
-      label: "Listings",
-      icon: Home,
-    },
-    {
-      href: "/dashboard/properties",
-      label: "Properties",
-      icon: Home,
-    },
-    {
-      href: "/dashboard/room-types",
-      label: "Room Types",
-      icon: Bed,
-    },
-    {
-      href: "/dashboard/units",
-      label: "Units",
-      icon: KeyRound,
-    },
-  ]
-
-  const isUserActive = pathname.startsWith("/dashboard/users")
-  const isAccessControlActive = pathname.startsWith("/dashboard/access-control")
+  const isListingsActive = pathname.startsWith("/dashboard/listings");
+  const isPropertiesActive = pathname.startsWith("/dashboard/properties");
+  const isRoomTypesActive = pathname.startsWith("/dashboard/room-types");
+  const isUnitsActive = pathname.startsWith("/dashboard/units");
+  const isUserManagementActive = pathname.startsWith("/dashboard/users");
+  const isAccessControlActive = pathname.startsWith("/dashboard/access-control");
 
   return (
     <SidebarMenu>
+        <SidebarMenuItem>
+          <Link href="/dashboard">
+            <SidebarMenuButton
+              isActive={pathname === "/dashboard"}
+              tooltip="Dashboard"
+            >
+              <LayoutDashboard className="text-sidebar-primary" />
+              <span>Dashboard</span>
+            </SidebarMenuButton>
+          </Link>
+        </SidebarMenuItem>
+
+        <SidebarMenuItem>
+            <Link href="/dashboard/listings">
+                <SidebarMenuButton isActive={isListingsActive} tooltip="Listings">
+                    <Home className="text-sidebar-primary" />
+                    <span>Listings</span>
+                </SidebarMenuButton>
+            </Link>
+        </SidebarMenuItem>
+        
+        <SidebarMenuItem>
+            <Link href="/dashboard/properties">
+                <SidebarMenuButton isActive={isPropertiesActive} tooltip="Properties">
+                    <Building className="text-sidebar-primary" />
+                    <span>Properties</span>
+                </SidebarMenuButton>
+            </Link>
+        </SidebarMenuItem>
+
+        <SidebarMenuItem>
+            <Link href="/dashboard/room-types">
+                <SidebarMenuButton isActive={isRoomTypesActive} tooltip="Room Types">
+                    <Bed className="text-sidebar-primary" />
+                    <span>Room Types</span>
+                </SidebarMenuButton>
+            </Link>
+        </SidebarMenuItem>
+
+        <SidebarMenuItem>
+            <Link href="/dashboard/units">
+                <SidebarMenuButton isActive={isUnitsActive} tooltip="Units">
+                    <KeyRound className="text-sidebar-primary" />
+                    <span>Units</span>
+                </SidebarMenuButton>
+            </Link>
+        </SidebarMenuItem>
+
+        <SidebarMenuItem>
+            <Link href="/dashboard/users">
+                <SidebarMenuButton isActive={isUserManagementActive} tooltip="User Management">
+                    <UserCog className="text-sidebar-primary" />
+                    <span>User Management</span>
+                </SidebarMenuButton>
+            </Link>
+        </SidebarMenuItem>
+
+        <SidebarMenuItem>
+            <Link href="/dashboard/access-control">
+                <SidebarMenuButton isActive={isAccessControlActive} tooltip="Access Control">
+                    <ShieldCheck className="text-sidebar-primary" />
+                    <span>Access Control</span>
+                </SidebarMenuButton>
+            </Link>
+        </SidebarMenuItem>
+
+      {/* 
+      const navItems = [
+        {
+          href: "/dashboard",
+          label: "Dashboard",
+          icon: LayoutDashboard,
+        },
+        {
+          href: "/dashboard/calendar",
+          label: "Calendar",
+          icon: Calendar,
+        },
+        {
+          href: "/dashboard/booking",
+          label: "Bookings",
+          icon: Book,
+        },
+        {
+          href: "/dashboard/guests",
+          label: "Guests",
+          icon: Users,
+        },
+      ]
+
+      const isSettingsActive = pathname.startsWith("/dashboard/settings") || pathname.startsWith("/dashboard/users") || pathname.startsWith("/dashboard/access-control");
+      const isAccountsActive = pathname.startsWith("/dashboard/accounts");
+
       {navItems.map((item) => (
         <SidebarMenuItem key={item.href}>
           <Link href={item.href}>
@@ -84,28 +157,164 @@ export function DashboardNav() {
           </Link>
         </SidebarMenuItem>
       ))}
+      <Collapsible asChild>
+        <>
+          <SidebarMenuItem>
+            <CollapsibleTrigger asChild>
+                <SidebarMenuButton
+                isActive={isListingsActive || isPropertiesActive || isRoomTypesActive || isUnitsActive}
+                isSubmenu
+                >
+                <Home className="text-sidebar-primary" />
+                <span>Property</span>
+                </SidebarMenuButton>
+            </CollapsibleTrigger>
+          </SidebarMenuItem>
+
+          <CollapsibleContent asChild>
+            <SidebarMenuSub>
+              <SidebarMenuSubItem>
+                 <Link href="/dashboard/listings">
+                    <SidebarMenuSubButton isActive={isListingsActive}>
+                        Listings
+                    </SidebarMenuSubButton>
+                </Link>
+              </SidebarMenuSubItem>
+               <SidebarMenuSubItem>
+                 <Link href="/dashboard/properties">
+                    <SidebarMenuSubButton isActive={isPropertiesActive}>
+                        Properties
+                    </SidebarMenuSubButton>
+                </Link>
+              </SidebarMenuSubItem>
+              <SidebarMenuSubItem>
+                 <Link href="/dashboard/room-types">
+                    <SidebarMenuSubButton isActive={isRoomTypesActive}>
+                        Room Types
+                    </SidebarMenuSubButton>
+                </Link>
+              </SidebarMenuSubItem>
+              <SidebarMenuSubItem>
+                 <Link href="/dashboard/units">
+                    <SidebarMenuSubButton isActive={isUnitsActive}>
+                        Units
+                    </SidebarMenuSubButton>
+                </Link>
+              </SidebarMenuSubItem>
+            </SidebarMenuSub>
+          </CollapsibleContent>
+        </>
+      </Collapsible>
+      <Collapsible asChild>
+        <>
+          <SidebarMenuItem>
+            <CollapsibleTrigger asChild>
+                <SidebarMenuButton
+                isActive={isAccountsActive}
+                isSubmenu
+                >
+                <DollarSign className="text-sidebar-primary" />
+                <span>Accounts</span>
+                </SidebarMenuButton>
+            </CollapsibleTrigger>
+          </SidebarMenuItem>
+
+          <CollapsibleContent asChild>
+            <SidebarMenuSub>
+              <SidebarMenuSubItem>
+                 <Link href="/dashboard/accounts/invoice">
+                    <SidebarMenuSubButton isActive={pathname.startsWith('/dashboard/accounts/invoice')}>
+                        Invoice
+                    </SidebarMenuSubButton>
+                </Link>
+              </SidebarMenuSubItem>
+               <SidebarMenuSubItem>
+                 <Link href="/dashboard/accounts/expenses">
+                    <SidebarMenuSubButton isActive={pathname.startsWith('/dashboard/accounts/expenses')}>
+                        Expenses
+                    </SidebarMenuSubButton>
+                </Link>
+              </SidebarMenuSubItem>
+               <SidebarMenuSubItem>
+                 <Link href="/dashboard/accounts/payout">
+                    <SidebarMenuSubButton isActive={pathname.startsWith('/dashboard/accounts/payout')}>
+                        Payout
+                    </SidebarMenuSubButton>
+                </Link>
+              </SidebarMenuSubItem>
+            </SidebarMenuSub>
+          </CollapsibleContent>
+        </>
+      </Collapsible>
+       <SidebarMenuItem>
+          <Link href="/dashboard/pricing">
+            <SidebarMenuButton
+              isActive={pathname.startsWith('/dashboard/pricing')}
+              tooltip="Intelligent Pricing"
+            >
+              <BarChart2 className="text-sidebar-primary" />
+              <span>Intelligent Pricing</span>
+            </SidebarMenuButton>
+          </Link>
+      </SidebarMenuItem>
       <SidebarMenuItem>
-          <Link href="/dashboard/users">
+          <Link href="/dashboard/channel-sync">
             <SidebarMenuButton
-              isActive={isUserActive}
-              tooltip="User"
+              isActive={pathname.startsWith('/dashboard/channel-sync')}
+              tooltip="Channel Sync"
             >
-              <UserCog className="text-sidebar-primary" />
-              <span>User Management</span>
+              <Cable className="text-sidebar-primary" />
+              <span>Channel Sync</span>
             </SidebarMenuButton>
           </Link>
-        </SidebarMenuItem>
-        <SidebarMenuItem>
-          <Link href="/dashboard/access-control">
+      </SidebarMenuItem>
+       <SidebarMenuItem>
+          <Link href="/dashboard/messaging">
             <SidebarMenuButton
-              isActive={isAccessControlActive}
-              tooltip="Access Control"
+              isActive={pathname.startsWith('/dashboard/messaging')}
+              tooltip="Messaging"
             >
-              <ShieldCheck className="text-sidebar-primary" />
-              <span>Access Control</span>
+              <MessageCircle className="text-sidebar-primary" />
+              <span>Messaging</span>
             </SidebarMenuButton>
           </Link>
-        </SidebarMenuItem>
+      </SidebarMenuItem>
+
+       <Collapsible asChild>
+        <>
+          <SidebarMenuItem>
+            <CollapsibleTrigger asChild>
+                <SidebarMenuButton
+                isActive={isSettingsActive}
+                isSubmenu
+                >
+                <Settings className="text-sidebar-primary" />
+                <span>Settings</span>
+                </SidebarMenuButton>
+            </CollapsibleTrigger>
+          </SidebarMenuItem>
+          <CollapsibleContent asChild>
+            <SidebarMenuSub>
+              <SidebarMenuSubItem>
+                <Link href="/dashboard/settings">
+                    <SidebarMenuSubButton isActive={pathname === '/dashboard/settings'}>General</SidebarMenuSubButton>
+                </Link>
+              </SidebarMenuSubItem>
+              <SidebarMenuSubItem>
+                <Link href="/dashboard/users">
+                    <SidebarMenuSubButton isActive={pathname.startsWith('/dashboard/users')}>Users</SidebarMenuSubButton>
+                </Link>
+              </SidebarMenuSubItem>
+               <SidebarMenuSubItem>
+                 <Link href="/dashboard/access-control">
+                    <SidebarMenuSubButton isActive={pathname.startsWith('/dashboard/access-control')}>Roles</SidebarMenuSubButton>
+                </Link>
+              </SidebarMenuSubItem>
+            </SidebarMenuSub>
+          </CollapsibleContent>
+        </>
+      </Collapsible> 
+      */}
     </SidebarMenu>
   )
 }

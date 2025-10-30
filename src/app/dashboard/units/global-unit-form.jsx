@@ -5,7 +5,7 @@ import { useEffect, useState, useCallback } from "react"
 import { useForm, Controller } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
-import { Loader2, KeyRound, PlusCircle } from "lucide-react"
+import { Loader2, KeyRound } from "lucide-react"
 import { useRouter } from "next/navigation"
 
 import { Button } from "@/components/ui/button"
@@ -36,25 +36,27 @@ import {
 import { useToast } from "@/hooks/use-toast"
 import { api } from "@/services/api"
 import { Skeleton } from "@/components/ui/skeleton"
-import { CreateRoomTypeDialog } from "./create-room-type-dialog"
-import { CreatePropertyDialog } from "../room-types/create-property-dialog"
+import { Textarea } from "@/components/ui/textarea"
 import { PhotoGallery } from "../room-types/[roomTypeId]/photo-gallery"
+
 
 const unitFormSchema = z.object({
   property_id: z.coerce.number({ required_error: "Please select a property." }),
   room_type_id: z.coerce.number({ required_error: "Please select a room type." }),
   unit_identifier: z.string().min(1, "Unit identifier is required."),
   status: z.enum(['available', 'maintenance', 'owner_use']),
+  description: z.string().optional(),
+  about: z.string().optional(),
+  guest_access: z.string().optional(),
+  max_free_stay_days: z.coerce.number().optional(),
 })
 
-export function GlobalUnitForm() {
+export function GlobalUnitForm({ isEditMode = false, unitId }) {
   const [submitting, setSubmitting] = useState(false)
   const [loading, setLoading] = useState(true);
   const [properties, setProperties] = useState([]);
   const [roomTypes, setRoomTypes] = useState([]);
   const [isRoomTypeLoading, setIsRoomTypeLoading] = useState(false);
-  const [isCreateRoomTypeOpen, setCreateRoomTypeOpen] = useState(false);
-  const [isCreatePropertyOpen, setCreatePropertyOpen] = useState(false);
   const [createdUnit, setCreatedUnit] = useState(null);
   const { toast } = useToast()
   const router = useRouter();
@@ -66,10 +68,16 @@ export function GlobalUnitForm() {
       room_type_id: undefined,
       unit_identifier: "",
       status: "available",
+      description: "",
+      about: "",
+      guest_access: "",
+      max_free_stay_days: 0,
     },
   })
 
   const selectedPropertyId = form.watch("property_id");
+  const selectedRoomTypeId = form.watch("room_type_id");
+
 
   const fetchProperties = useCallback(async () => {
     try {
@@ -101,51 +109,47 @@ export function GlobalUnitForm() {
     async function initialFetch() {
         setLoading(true);
         await fetchProperties();
+        if (isEditMode && unitId) {
+            try {
+                const unitRes = await api.get(`units/${unitId}`);
+                const unitData = unitRes.data;
+                await fetchRoomTypes(unitData.property?.id);
+                form.reset({
+                  ...unitData,
+                  property_id: unitData.property?.id,
+                  room_type_id: unitData.room_type?.id,
+                });
+            } catch (error) {
+                toast({ variant: "destructive", title: "Error", description: `Could not fetch unit data. ${error.message}` });
+            }
+        }
         setLoading(false);
     }
     initialFetch();
-  }, [fetchProperties]);
+  }, [isEditMode, unitId, fetchProperties, fetchRoomTypes, form, toast]);
 
   useEffect(() => {
-    form.setValue("room_type_id", undefined);
-    fetchRoomTypes(selectedPropertyId);
-  }, [selectedPropertyId, fetchRoomTypes, form]);
-
-  const handleNewPropertySuccess = (newProperty) => {
-    fetchProperties().then(() => {
-      form.setValue("property_id", newProperty.id, { shouldValidate: true });
-    });
-  };
-
-  const handleNewRoomTypeSuccess = (newRoomType) => {
-    fetchRoomTypes(selectedPropertyId).then(() => {
-      form.setValue("room_type_id", newRoomType.id, { shouldValidate: true });
-    });
-  };
-
-  const handleCreateRoomTypeClick = () => {
-    if (!selectedPropertyId) {
-      toast({
-        variant: "destructive",
-        title: "Property Not Selected",
-        description: "Please select a property before creating a new room type.",
-      });
-      return;
+    if (!isEditMode) {
+        form.setValue("room_type_id", undefined);
+        fetchRoomTypes(selectedPropertyId);
     }
-    setCreateRoomTypeOpen(true);
-  };
+  }, [selectedPropertyId, fetchRoomTypes, form, isEditMode]);
 
   async function onSubmit(values) {
     setSubmitting(true)
     const { property_id, ...submissionValues } = values;
 
     try {
-      const response = await api.post('units', submissionValues);
-      toast({
-        title: "Unit Created",
-        description: `Now you can manage it.`,
-      })
-      setCreatedUnit(response.data);
+      if (isEditMode) {
+         await api.put(`units/${unitId}`, submissionValues);
+         toast({ title: "Unit Updated", description: `The unit "${values.unit_identifier}" has been successfully updated.` });
+         router.push('/dashboard/units');
+         router.refresh();
+      } else {
+        const response = await api.post('units', submissionValues);
+        toast({ title: "Unit Created", description: `The unit "${values.unit_identifier}" has been successfully created.`});
+        setCreatedUnit(response.data);
+      }
     } catch (error) {
        toast({
         variant: "destructive",
@@ -161,13 +165,13 @@ export function GlobalUnitForm() {
     return <Card><CardContent className="p-6"><Skeleton className="h-48 w-full" /></CardContent></Card>
   }
   
-  if (createdUnit) {
+  if (!isEditMode && createdUnit) {
      return (
         <Card>
             <CardHeader>
                 <CardTitle>Unit Created: {createdUnit.unit_identifier}</CardTitle>
                 <CardDescription>
-                    This unit has been successfully created under the Room Type "{createdUnit.room_type.name}".
+                    This unit has been successfully created.
                 </CardDescription>
             </CardHeader>
             <CardContent>
@@ -184,138 +188,185 @@ export function GlobalUnitForm() {
 
   return (
     <>
-    <Card>
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)}>
-          <CardHeader>
-            <CardTitle>Create New Unit</CardTitle>
-            <CardDescription>
-              First select a property, then a room type to create a new unit.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="grid gap-6">
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <FormField
-                control={form.control}
-                name="property_id"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Property</FormLabel>
-                    <div className="flex gap-2">
-                        <Select onValueChange={(value) => field.onChange(Number(value))} value={field.value?.toString()}>
+    <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <Card>
+            <CardHeader>
+                <CardTitle>{isEditMode ? 'Edit Unit' : 'Create New Unit'}</CardTitle>
+                <CardDescription>
+                {isEditMode ? 'Update the details for this unit.' : 'First select a property, then a room type to create a new unit.'}
+                </CardDescription>
+            </CardHeader>
+            <CardContent className="grid gap-6">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <FormField
+                    control={form.control}
+                    name="property_id"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Property</FormLabel>
+                            <Select onValueChange={(value) => field.onChange(Number(value))} value={field.value?.toString()} disabled={isEditMode}>
+                            <FormControl>
+                                <SelectTrigger>
+                                <SelectValue placeholder="Select a property" />
+                                </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                                {properties.map(prop => (
+                                <SelectItem key={prop.id} value={prop.id.toString()}>{prop.name}</SelectItem>
+                                ))}
+                            </SelectContent>
+                            </Select>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+                <FormField
+                    control={form.control}
+                    name="room_type_id"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Room Type</FormLabel>
+                            <Select onValueChange={(value) => field.onChange(Number(value))} value={field.value?.toString()} disabled={!selectedPropertyId || isRoomTypeLoading || isEditMode}>
+                            <FormControl>
+                                <SelectTrigger>
+                                <SelectValue placeholder={isRoomTypeLoading ? "Loading..." : "Select a room type"} />
+                                </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                                {roomTypes.map(rt => (
+                                <SelectItem key={rt.id} value={rt.id.toString()}>{rt.name}</SelectItem>
+                                ))}
+                            </SelectContent>
+                            </Select>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+                </div>
+                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <FormField
+                    control={form.control}
+                    name="unit_identifier"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Unit Identifier</FormLabel>
+                        <FormControl>
+                        <Input placeholder="e.g., Room 101, Apartment 3B" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+                <FormField
+                    control={form.control}
+                    name="status"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Status</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                             <SelectTrigger>
-                            <SelectValue placeholder="Select a property" />
+                            <SelectValue placeholder="Select a status" />
                             </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                            {properties.map(prop => (
-                            <SelectItem key={prop.id} value={prop.id.toString()}>{prop.name}</SelectItem>
-                            ))}
+                            <SelectItem value="available">Available</SelectItem>
+                            <SelectItem value="maintenance">Maintenance</SelectItem>
+                            <SelectItem value="owner_use">Owner Use</SelectItem>
                         </SelectContent>
                         </Select>
-                        <Button type="button" variant="outline" onClick={() => setCreatePropertyOpen(true)}>
-                            <PlusCircle className="mr-2 h-4 w-4" />
-                            New
-                        </Button>
-                    </div>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="room_type_id"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Room Type</FormLabel>
-                    <div className="flex gap-2">
-                        <Select onValueChange={(value) => field.onChange(Number(value))} value={field.value?.toString()} disabled={!selectedPropertyId || isRoomTypeLoading}>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+                </div>
+                <FormField
+                    control={form.control}
+                    name="max_free_stay_days"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Max Free Stay Days (Optional)</FormLabel>
                         <FormControl>
-                            <SelectTrigger>
-                            <SelectValue placeholder={isRoomTypeLoading ? "Loading..." : "Select a room type"} />
-                            </SelectTrigger>
+                        <Input type="number" placeholder="e.g., 7" {...field} />
                         </FormControl>
-                        <SelectContent>
-                            {roomTypes.map(rt => (
-                            <SelectItem key={rt.id} value={rt.id.toString()}>{rt.name}</SelectItem>
-                            ))}
-                        </SelectContent>
-                        </Select>
-                        <Button type="button" variant="outline" onClick={handleCreateRoomTypeClick}>
-                            <PlusCircle className="mr-2 h-4 w-4" />
-                            New
-                        </Button>
-                    </div>
-                    <FormMessage />
-                  </FormItem>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+                <FormField
+                    control={form.control}
+                    name="description"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Description (Optional)</FormLabel>
+                        <FormControl>
+                        <Textarea placeholder="Describe the unit..." {...field} />
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+                <FormField
+                    control={form.control}
+                    name="about"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>About Your Place (Optional)</FormLabel>
+                        <FormControl>
+                        <Textarea placeholder="What makes this unit unique?" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+                <FormField
+                    control={form.control}
+                    name="guest_access"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Guest Access (Optional)</FormLabel>
+                        <FormControl>
+                        <Textarea placeholder="What can guests access?" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+            </CardContent>
+            </Card>
+
+            {selectedRoomTypeId && (
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Room Type Photos</CardTitle>
+                        <CardDescription>
+                            These are the photos associated with the selected room type. You can manage them from the Room Types page.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <PhotoGallery roomTypeId={selectedRoomTypeId} />
+                    </CardContent>
+                </Card>
+            )}
+
+            <div className="flex justify-between">
+                 <Button type="button" variant="outline" onClick={() => router.push('/dashboard/units')}>
+                    Cancel
+                </Button>
+                <Button type="submit" disabled={submitting}>
+                {submitting ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                    <KeyRound className="mr-2 h-4 w-4" />
                 )}
-              />
+                {isEditMode ? 'Update Unit' : 'Create Unit'}
+                </Button>
             </div>
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <FormField
-                control={form.control}
-                name="unit_identifier"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Unit Identifier</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g., Room 101, Apartment 3B" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="status"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Status</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a status" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="available">Available</SelectItem>
-                        <SelectItem value="maintenance">Maintenance</SelectItem>
-                        <SelectItem value="owner_use">Owner Use</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-          </CardContent>
-          <CardFooter>
-            <Button type="submit" disabled={submitting}>
-              {submitting ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <KeyRound className="mr-2 h-4 w-4" />
-              )}
-              Create Unit
-            </Button>
-          </CardFooter>
         </form>
-      </Form>
-    </Card>
-    <CreatePropertyDialog
-        isOpen={isCreatePropertyOpen}
-        onClose={() => setCreatePropertyOpen(false)}
-        onSuccess={handleNewPropertySuccess}
-    />
-    {selectedPropertyId && (
-        <CreateRoomTypeDialog
-            isOpen={isCreateRoomTypeOpen}
-            onClose={() => setCreateRoomTypeOpen(false)}
-            onSuccess={handleNewRoomTypeSuccess}
-            propertyId={selectedPropertyId}
-        />
-    )}
+    </Form>
     </>
   )
 }
+
+    

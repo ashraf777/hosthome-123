@@ -18,7 +18,7 @@ export default function NewGlobalRoomTypePage() {
             <p className="text-muted-foreground">Add a new room type to any property.</p>
         </div>
       </div>
-      <GlobalRoomTypeForm />
+      <GlobalRoomTypeForm isEditMode={false} />
     </div>
   )
 }

@@ -27,7 +27,7 @@ export default function RoomTypesPage({ params }) {
   const { toast } = useToast();
 
   const fetchPropertyWithRoomTypes = React.useCallback(async () => {
-    setLoading(true);
+    // setLoading(true); // Don't show loading skeleton on re-fetch
     try {
         const res = await api.get(`properties/${propertyId}`);
         setProperty(res.data);
@@ -56,7 +56,7 @@ export default function RoomTypesPage({ params }) {
     <>
     <div className="flex flex-col gap-6">
       <div className="flex items-center gap-4">
-        <Link href="/dashboard/listings" passHref>
+        <Link href="/dashboard/properties" passHref>
           <Button variant="outline" size="icon">
             <ArrowLeft />
           </Button>

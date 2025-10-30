@@ -130,7 +130,7 @@ export function StepUnits({ onNext, onBack, initialData, roomTypes, propertyId }
               });
 
               return (
-                <AccordionItem value={roomType.roomTypeId.toString()} key={roomType.roomTypeId} className="border rounded-lg bg-background">
+                <AccordionItem value={roomType.roomTypeId.toString()} key={roomType.roomTypeId} className="border rounded-lg">
                   <AccordionTrigger className="p-4 hover:no-underline rounded-t-lg">
                     <div className="flex flex-col text-left">
                       <span className="font-semibold">Room Type: {roomType.name}</span>
@@ -149,7 +149,7 @@ export function StepUnits({ onNext, onBack, initialData, roomTypes, propertyId }
                             Add Unit to "{roomType.name}"
                         </Button>
                       {fields.map((field, index) => (
-                        <div key={field.id} className="border rounded-lg p-4 space-y-4 relative">
+                        <div key={field.id} className="border rounded-lg p-4 space-y-4 relative bg-muted/20">
                           <h4 className="font-medium">Unit {index + 1}</h4>
                           <Separator />
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

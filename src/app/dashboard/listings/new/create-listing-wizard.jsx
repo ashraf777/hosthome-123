@@ -29,7 +29,7 @@ export function CreateListingWizard() {
     hostingCompany: null,
     propertyDetails: null,
     propertyId: null,
-    roomTypes: [],
+    roomTypes: [], // This will now hold only one item, but is kept as an array for consistency
     units: {},
     createdUnitIds: [], // To store IDs of units created in step 4
     owner: null,
@@ -64,13 +64,12 @@ export function CreateListingWizard() {
           const newProperty = response.data || response;
           newFormData.propertyId = newProperty.id;
           newFormData.propertyDetails = { ...newProperty, room_types: [] }; // Initialize with server response
-          toast({ title: "Property Saved", description: `"${newProperty.name}" has been created.` });
+          newFormData.roomTypes = []; // Ensure room types are fresh
 
           // Now, attach amenities if any were selected
           if (amenityIds && amenityIds.length > 0) {
               try {
                   await api.post(`properties/${newProperty.id}/amenities`, { amenity_ids: amenityIds });
-                  toast({ title: "Amenities Attached", description: `${amenityIds.length} amenities have been linked to the property.` });
               } catch (amenityError) {
                    toast({ variant: "destructive", title: "Amenity Error", description: amenityError.message || "Could not attach amenities." });
               }
@@ -80,6 +79,10 @@ export function CreateListingWizard() {
           newFormData.propertyId = data.propertyDetails.id;
           newFormData.propertyDetails = data.propertyDetails;
         }
+
+        // Always reset roomTypes when leaving step 2 to ensure step 3 is fresh
+        newFormData.roomTypes = [];
+
       } catch (error) {
         toast({ variant: "destructive", title: "Error", description: error.message || "Could not save property details." });
         setIsLoading(false);

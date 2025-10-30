@@ -20,16 +20,26 @@ import {
 import { Skeleton } from "@/components/ui/skeleton"
 import { api } from "@/services/api"
 import { useToast } from "@/hooks/use-toast"
-import { Bed, PlusCircle } from "lucide-react"
+import { Bed, PlusCircle, MoreHorizontal, Edit } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { useRouter } from "next/navigation"
 
 
 export default function AllRoomTypesPage() {
   const [roomTypes, setRoomTypes] = React.useState([])
   const [loading, setLoading] = React.useState(true)
   const { toast } = useToast()
+  const router = useRouter();
+
 
   React.useEffect(() => {
     const fetchRoomTypes = async () => {
@@ -37,7 +47,6 @@ export default function AllRoomTypesPage() {
       try {
         const response = await api.get("room-types")
         const roomTypesData = response.data?.data || response.data || response || [];
-        console.log("Fetched room types data:", roomTypesData);
         setRoomTypes(Array.isArray(roomTypesData) ? roomTypesData : []);
       } catch (error) {
         toast({
@@ -56,7 +65,6 @@ export default function AllRoomTypesPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-3xl font-bold tracking-tight">All Room Types</h1>
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -84,8 +92,10 @@ export default function AllRoomTypesPage() {
                 <TableRow>
                   <TableHead>Room Type</TableHead>
                   <TableHead>Property</TableHead>
-                  <TableHead>Size</TableHead>
                   <TableHead className="text-center">Max Guests</TableHead>
+                   <TableHead>
+                    <span className="sr-only">Actions</span>
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -94,8 +104,9 @@ export default function AllRoomTypesPage() {
                     <TableRow key={i}>
                       <TableCell className="pl-6"><Skeleton className="h-6 w-40" /></TableCell>
                       <TableCell><Skeleton className="h-6 w-48" /></TableCell>
-                      <TableCell><Skeleton className="h-6 w-12 mx-auto" /></TableCell>
-                      <TableCell><Skeleton className="h-6 w-12 mx-auto" /></TableCell>
+                      <TableCell className="text-center"><Skeleton className="h-6 w-12 mx-auto" /></TableCell>
+                      <TableCell className="text-center"><Skeleton className="h-6 w-12 mx-auto" /></TableCell>
+                      <TableCell className="text-right"><Skeleton className="h-8 w-8 ml-auto" /></TableCell>
                     </TableRow>
                   ))
                 ) : roomTypes.map((roomType) => (
@@ -105,10 +116,28 @@ export default function AllRoomTypesPage() {
                         {roomType.name}
                       </Link>
                     </TableCell>
-                    <TableCell>{roomType.property && roomType.property?.name}</TableCell>
-                    <TableCell>{roomType?.size}</TableCell>
+                    <TableCell>{roomType.property?.name || 'N/A'}</TableCell>
                     <TableCell className="text-center">
-                      <Badge variant="secondary">{roomType?.max_adults}</Badge>
+                      <Badge variant="secondary">{(roomType.max_adults || 0) + (roomType.max_children || 0)}</Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button aria-haspopup="true" size="icon" variant="ghost">
+                              <MoreHorizontal className="h-4 w-4" />
+                              <span className="sr-only">Toggle menu</span>
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                            <DropdownMenuItem
+                              onSelect={() => router.push(`/dashboard/room-types/${roomType.id}/edit`)}
+                            >
+                              <Edit className="mr-2 h-4 w-4" />
+                              Edit Room Type
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                     </TableCell>
                   </TableRow>
                 ))}

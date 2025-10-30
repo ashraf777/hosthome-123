@@ -1,8 +1,8 @@
-
 "use client"
 
 import * as React from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import {
   Card,
   CardContent,
@@ -20,7 +20,14 @@ import {
 } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { KeyRound, PlusCircle } from "lucide-react"
+import { KeyRound, PlusCircle, MoreHorizontal, Edit } from "lucide-react"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { api } from "@/services/api"
 import { useToast } from "@/hooks/use-toast"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -29,6 +36,7 @@ export default function AllUnitsPage() {
   const [units, setUnits] = React.useState([])
   const [loading, setLoading] = React.useState(true)
   const { toast } = useToast()
+  const router = useRouter()
 
   React.useEffect(() => {
     const fetchUnits = async () => {
@@ -100,6 +108,9 @@ export default function AllUnitsPage() {
                   <TableHead>Room Type</TableHead>
                   <TableHead>Property</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>
+                    <span className="sr-only">Actions</span>
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -110,6 +121,7 @@ export default function AllUnitsPage() {
                       <TableCell><Skeleton className="h-6 w-32" /></TableCell>
                       <TableCell><Skeleton className="h-6 w-48" /></TableCell>
                       <TableCell><Skeleton className="h-6 w-20" /></TableCell>
+                      <TableCell className="text-right"><Skeleton className="h-8 w-8 ml-auto" /></TableCell>
                     </TableRow>
                   ))
                 ) : units.map((unit) => (
@@ -121,6 +133,25 @@ export default function AllUnitsPage() {
                       <Badge variant={getStatusBadgeVariant(unit.status)} className="capitalize">
                         {unit.status.replace('_', ' ')}
                       </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                       <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button aria-haspopup="true" size="icon" variant="ghost">
+                            <MoreHorizontal className="h-4 w-4" />
+                            <span className="sr-only">Toggle menu</span>
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                          <DropdownMenuItem
+                            onSelect={() => router.push(`/dashboard/units/${unit.id}/edit`)}
+                          >
+                            <Edit className="mr-2 h-4 w-4" />
+                            Edit
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </TableCell>
                   </TableRow>
                 ))}

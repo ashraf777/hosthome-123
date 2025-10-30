@@ -98,7 +98,7 @@ export function RoomTypeList({ propertyId, assignedRoomTypes, loading, onUpdate 
                 </Link>
               </TableCell>
               <TableCell>
-                <Badge variant="secondary">{roomType.max_guests || (roomType.max_adults || 0) + (roomType.max_children || 0)}</Badge>
+                <Badge variant="secondary">{(roomType.max_adults || 0) + (roomType.max_children || 0)}</Badge>
               </TableCell>
                <TableCell>
                 <Badge variant="outline">{roomType.units_count || 0}</Badge>

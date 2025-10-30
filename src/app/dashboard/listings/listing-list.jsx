@@ -5,7 +5,7 @@ import * as React from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
-import { MoreHorizontal, PlusCircle, Home, Bed } from "lucide-react"
+import { MoreHorizontal, PlusCircle, Home, Bed, Edit } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -70,8 +70,9 @@ export function ListingList() {
   const fetchListings = React.useCallback(async () => {
     try {
       setLoading(true);
-      const response = await api.get('properties');
+      const response = await api.get('units');
       const listingsData = response?.data || response || [];
+      console.log("Fetched listings data:", listingsData);
       setListings(Array.isArray(listingsData) ? listingsData : []);
     } catch (error) {
       toast({
@@ -91,17 +92,17 @@ export function ListingList() {
 
   const handleDelete = async (id) => {
     try {
-      await api.delete(`properties/${id}`);
+      await api.delete(`units/${id}`);
       toast({
-          title: "Property Deleted",
-          description: "The property has been successfully deleted.",
+          title: "Unit Deleted",
+          description: "The unit has been successfully deleted.",
       })
       fetchListings(); // Re-fetch to update the list
     } catch (error) {
       toast({
         variant: "destructive",
         title: "Error",
-        description: error.message || "Failed to delete the property. Please try again.",
+        description: error.message || "Failed to delete the unit. Please try again.",
       });
     }
   };
@@ -126,15 +127,15 @@ export function ListingList() {
       <CardHeader>
         <div className="flex items-center justify-between">
             <div>
-                <CardTitle>Properties</CardTitle>
+                <CardTitle>Listings</CardTitle>
                 <CardDescription>
-                Manage your properties and their details.
+                Manage your listings and their details.
                 </CardDescription>
             </div>
-            <Link href="/dashboard/properties/new">
+            <Link href="/dashboard/listings/new">
                 <Button>
                     <PlusCircle className="mr-2" />
-                    Add New Property
+                    Add New Listing
                 </Button>
             </Link>
         </div>
@@ -143,10 +144,12 @@ export function ListingList() {
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead>Unit</TableHead>
+              <TableHead>Room Type</TableHead>
               <TableHead>Property</TableHead>
-              <TableHead>Owner</TableHead>
+              <TableHead>Weekday Price</TableHead>
+              <TableHead>Weekend Price</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead>City</TableHead>
               <TableHead>
                 <span className="sr-only">Actions</span>
               </TableHead>
@@ -164,7 +167,6 @@ export function ListingList() {
                   </TableCell>
                   <TableCell><Skeleton className="h-6 w-32" /></TableCell>
                   <TableCell><Skeleton className="h-6 w-20" /></TableCell>
-                  <TableCell><Skeleton className="h-6 w-24" /></TableCell>
                   <TableCell className="text-right"><Skeleton className="h-8 w-8 ml-auto" /></TableCell>
                 </TableRow>
               ))
@@ -176,22 +178,24 @@ export function ListingList() {
                       <div className="flex items-center gap-3">
                         <Image
                           src={placeholder.url}
-                          alt={listing.name}
+                          alt={listing.unit_identifier}
                           width={80}
                           height={60}
                           className="rounded-md object-cover"
                           data-ai-hint={placeholder.hint}
                         />
-                        <span>{listing.name}</span>
+                        <span>{listing.unit_identifier}</span>
                       </div>
                     </TableCell>
-                    <TableCell>{listing.owner?.full_name || "N/A"}</TableCell>
+                    <TableCell>{listing.room_type?.name || "N/A"}</TableCell>
+                    <TableCell>{listing.property?.name || "N/A"}</TableCell>
+                    <TableCell>{listing.room_type?.weekday_price || "N/A"}</TableCell>
+                    <TableCell>{listing.room_type?.weekend_price || "N/A"}</TableCell>
                     <TableCell>
-                      <Badge variant={getStatusBadgeVariant(listing.listing_status)} className="capitalize">
-                        {listing.listing_status}
+                      <Badge variant={getStatusBadgeVariant(listing.status)} className="capitalize">
+                        {listing.status.replace("_", " ")}
                       </Badge>
                     </TableCell>
-                    <TableCell>{listing.city}</TableCell>
                     <TableCell className="text-right">
                       <AlertDialog>
                         <DropdownMenu>
@@ -204,16 +208,10 @@ export function ListingList() {
                           <DropdownMenuContent align="end">
                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
                             <DropdownMenuItem
-                              onSelect={() => router.push(`/dashboard/properties/${listing.id}/edit`)}
+                              onSelect={() => router.push(`/dashboard/listings/${listing.id}/edit`)}
                             >
-                              <Home className="mr-2 h-4 w-4" />
-                              Edit Property
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onSelect={() => router.push(`/dashboard/listings/${listing.id}/room-types`)}
-                            >
-                                <Bed className="mr-2 h-4 w-4" />
-                                Manage Room Types
+                              <Edit className="mr-2 h-4 w-4" />
+                              Edit Listing
                             </DropdownMenuItem>
                              <AlertDialogTrigger asChild>
                                <DropdownMenuItem className="text-destructive focus:text-destructive">
@@ -226,7 +224,7 @@ export function ListingList() {
                           <AlertDialogHeader>
                             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                             <AlertDialogDescription>
-                              This action cannot be undone. This will permanently delete the property and all its related data.
+                              This action cannot be undone. This will permanently delete this unit.
                             </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>
@@ -249,11 +247,11 @@ export function ListingList() {
          {!loading && listings.length === 0 && (
           <div className="text-center py-12 text-muted-foreground flex flex-col items-center gap-4">
             <Home className="w-12 h-12 text-muted-foreground/50" />
-            <p>No Properties Found.</p>
-            <Link href="/dashboard/properties/new">
+            <p>No Listings Found.</p>
+            <Link href="/dashboard/listings/new">
                 <Button>
                     <PlusCircle className="mr-2" />
-                    Add Your First Property
+                    Add Your First Listing
                 </Button>
             </Link>
           </div>

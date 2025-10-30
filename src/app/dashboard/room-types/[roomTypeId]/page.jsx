@@ -11,7 +11,7 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { ArrowLeft, Bed, Building, KeyRound, Pencil, Tag } from "lucide-react"
+import { ArrowLeft, Bed, Building, KeyRound, Pencil, Tag, Edit } from "lucide-react"
 import { api } from "@/services/api"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useToast } from "@/hooks/use-toast"
@@ -46,7 +46,7 @@ export default function RoomTypeDetailsPage({ params }) {
         {loading ? (
            <Skeleton className="h-10 w-10" />
         ) : (
-          <Link href={`/dashboard/listings/${roomType?.property_id}/room-types`} passHref>
+          <Link href={roomType?.property?.id ? `/dashboard/listings/${roomType?.property.id}/room-types` : '/dashboard/room-types'} passHref>
             <Button variant="outline" size="icon">
               <ArrowLeft />
             </Button>
@@ -74,7 +74,7 @@ export default function RoomTypeDetailsPage({ params }) {
                  <Card>
                     <CardHeader>
                         <CardTitle>Photo Gallery</CardTitle>
-                        <CardDescription>Manage photos for this room type. The main photo will be used as the primary image in listings.</CardDescription>
+                        <CardDescription>Manage photos for this room type.</CardDescription>
                     </CardHeader>
                     <CardContent>
                         <PhotoGallery roomTypeId={roomTypeId} />
@@ -97,32 +97,36 @@ export default function RoomTypeDetailsPage({ params }) {
                              </div>
                         ) : (
                             <>
-                                <div className="flex items-center justify-between">
-                                    <span className="font-medium text-muted-foreground flex items-center gap-2"><Building className="h-4 w-4" /> Property</span>
-                                    <Link href={`/dashboard/listings/${roomType.property.id}/edit`} className="font-medium hover:underline">
-                                        {roomType.property.name}
-                                    </Link>
-                                </div>
+                                {roomType.property && (
+                                    <div className="flex items-center justify-between">
+                                        <span className="font-medium text-muted-foreground flex items-center gap-2"><Building className="h-4 w-4" /> Property</span>
+                                        <Link href={`/dashboard/properties/${roomType.property.id}/edit`} className="font-medium hover:underline">
+                                            {roomType.property.name}
+                                        </Link>
+                                    </div>
+                                )}
                                  <div className="flex items-center justify-between">
                                     <span className="font-medium text-muted-foreground flex items-center gap-2"><Tag className="h-4 w-4" /> Max Guests</span>
-                                    <Badge variant="secondary">{roomType.max_guests}</Badge>
+                                    <Badge variant="secondary">{(roomType.max_adults || 0) + (roomType.max_children || 0)}</Badge>
                                 </div>
                                 <div className="flex items-center justify-between">
                                     <span className="font-medium text-muted-foreground flex items-center gap-2"><KeyRound className="h-4 w-4" /> Units</span>
                                     <Badge variant="outline">{roomType.units_count}</Badge>
                                 </div>
                                 <div className="flex pt-4 gap-2">
-                                     <Link href={`/dashboard/listings/${roomType.property_id}/room-types/${roomTypeId}/edit`} passHref>
+                                     <Link href={`/dashboard/room-types/${roomTypeId}/edit`} passHref>
                                         <Button>
-                                            <Pencil className="mr-2 h-4 w-4" />
+                                            <Edit className="mr-2 h-4 w-4" />
                                             Edit Details
                                         </Button>
                                     </Link>
-                                    <Link href={`/dashboard/listings/${roomType.property_id}/room-types/${roomTypeId}/units`} passHref>
-                                        <Button variant="outline">
-                                            Manage Units
-                                        </Button>
-                                    </Link>
+                                    {roomType.property && (
+                                        <Link href={`/dashboard/listings/${roomType.property.id}/room-types/${roomTypeId}/units`} passHref>
+                                            <Button variant="outline">
+                                                Manage Units
+                                            </Button>
+                                        </Link>
+                                    )}
                                 </div>
                             </>
                         )}

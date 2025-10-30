@@ -33,11 +33,11 @@ export function PhotoGallery({ roomTypeId }) {
       const response = await api.get(`room-types/${roomTypeId}/photos`)
       setPhotos(response.data)
     } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Could not fetch photos.",
-      })
+      // toast({
+      //   variant: "destructive",
+      //   title: "Error",
+      //   description: "Could not fetch photos.",
+      // })
     } finally {
       setLoading(false)
     }
