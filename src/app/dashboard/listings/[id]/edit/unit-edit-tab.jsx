@@ -17,7 +17,7 @@ import { useToast } from "@/hooks/use-toast"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
-import { PhotoGallery } from "@/app/dashboard/room-types/[roomTypeId]/photo-gallery"
+import { PhotoGallery } from "@/components/photo-gallery"
 
 const unitSchema = z.object({
   unit_identifier: z.string().min(1, "Unit name is required."),
@@ -97,8 +97,6 @@ export function UnitEditTab({ unitData, onUpdate }) {
             </Card>
         )
     }
-
-    const roomTypeId = unitData?.room_type?.id;
 
     return (
         <Form {...form}>
@@ -220,17 +218,19 @@ export function UnitEditTab({ unitData, onUpdate }) {
                     </CardContent>
                 </Card>
 
-                {roomTypeId && (
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Photo Gallery</CardTitle>
-                            
-                        </CardHeader>
-                        <CardContent>
-                            <PhotoGallery roomTypeId={roomTypeId} />
-                        </CardContent>
-                    </Card>
-                )}
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Unit Photos</CardTitle>
+                        <CardDescription>Manage photos specific to this unit.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <PhotoGallery 
+                            photoType="unit" 
+                            photoTypeId={unitData.id} 
+                            hostingCompanyId={unitData?.property?.hosting_company_id}
+                        />
+                    </CardContent>
+                </Card>
 
                 <div className="flex justify-between">
                     <Button type="button" variant="outline" onClick={() => router.push('/dashboard/listings')}>Cancel</Button>

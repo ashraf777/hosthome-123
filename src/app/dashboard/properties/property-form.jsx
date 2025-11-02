@@ -5,7 +5,7 @@ import { useEffect, useState, useCallback } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
-import { Loader2, Home, PlusCircle } from "lucide-react"
+import { Loader2, Home } from "lucide-react"
 import { useRouter } from "next/navigation"
 
 import { Button } from "@/components/ui/button"
@@ -39,7 +39,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Separator } from "@/components/ui/separator"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
-import { PhotoGallery } from "../room-types/[roomTypeId]/photo-gallery"
+import { PhotoGallery } from "@/components/photo-gallery"
 
 const propertySchema = z.object({
   name: z.string().min(5, "Property name must be at least 5 characters."),
@@ -93,7 +93,6 @@ export function GlobalPropertyForm({ isEditMode = false, propertyId, onSuccess }
         api.get('property-references'),
         api.get('amenities'),
       ]);
-      console.log("Fetched property type:", propTypesRes);
       setOwners(ownersRes.data || []);
       setPropertyTypes(propTypesRes.property_type || []);
       
@@ -121,7 +120,6 @@ export function GlobalPropertyForm({ isEditMode = false, propertyId, onSuccess }
         if (isEditMode && propertyId) {
             try {
                 const propertyDataRes = await api.get(`properties/${propertyId}`);
-                console.log("Fetched property data:", propertyDataRes);
                 const property = propertyDataRes.data || propertyDataRes;
                 setPropertyData(property);
                  
@@ -132,7 +130,7 @@ export function GlobalPropertyForm({ isEditMode = false, propertyId, onSuccess }
 
                  form.reset({
                     ...property,
-                    property_type_ref_id: property.property_type?.id,
+                    property_type_ref_id: property.type_reference?.id,
                     property_owner_id: property.property_owner_id,
                     amenities: currentAmenities,
                     check_in_time: property.check_in_time || "12:00",
@@ -166,22 +164,20 @@ export function GlobalPropertyForm({ isEditMode = false, propertyId, onSuccess }
             title: "Property Updated",
             description: `The property "${values.name}" has been updated.`,
         });
+        if (onSuccess) {
+            onSuccess();
+        }
       } else {
         const response = await api.post("properties", values);
-         if (amenityIds && response.data.id) {
-            await api.post(`properties/${response.data.id}/amenities`, { amenity_ids: amenityIds });
+        const newProperty = response.data || response;
+         if (amenityIds && newProperty.id) {
+            await api.post(`properties/${newProperty.id}/amenities`, { amenity_ids: amenityIds });
         }
         toast({
             title: "Property Created",
             description: `The property "${values.name}" has been created.`,
         });
-      }
-
-      if (onSuccess) {
-        onSuccess();
-      } else {
-        router.push("/dashboard/properties");
-        router.refresh();
+        setPropertyData(newProperty); // Set for photo gallery
       }
     } catch (error) {
       toast({
@@ -208,14 +204,35 @@ export function GlobalPropertyForm({ isEditMode = false, propertyId, onSuccess }
     );
   }
 
-  const firstRoomTypeId = propertyData?.room_types?.[0]?.id;
+  if (!isEditMode && propertyData) {
+     return (
+        <Card>
+            <CardHeader>
+                <CardTitle>Step 2: Add Photos</CardTitle>
+                <CardDescription>
+                    Your property has been created. Now, add some photos.
+                </CardDescription>
+            </CardHeader>
+            <CardContent>
+                <PhotoGallery 
+                    photoType="property" 
+                    photoTypeId={propertyData.id} 
+                    hostingCompanyId={propertyData.hosting_company_id}
+                />
+            </CardContent>
+             <CardFooter>
+                <Button onClick={() => router.push('/dashboard/properties')}>Done</Button>
+            </CardFooter>
+        </Card>
+    );
+  }
 
   return (
     <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <Card>
                 <CardHeader>
-                <CardTitle>{isEditMode ? "Edit Property" : "New Property Details"}</CardTitle>
+                <CardTitle>{isEditMode ? "Edit Property" : "Step 1: New Property Details"}</CardTitle>
                 <CardDescription>
                     {isEditMode ? "Update the details for your property." : "Enter the details for the new property."}
                 </CardDescription>
@@ -449,34 +466,31 @@ export function GlobalPropertyForm({ isEditMode = false, propertyId, onSuccess }
                     )}
                     />
                 </CardContent>
+                <CardFooter className="flex justify-between">
+                    <Button type="button" variant="outline" onClick={() => onSuccess ? onSuccess() : router.push('/dashboard/properties')}>Cancel</Button>
+                    <Button type="submit" disabled={submitting}>
+                        {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        {isEditMode ? 'Update Property' : 'Save and Continue'}
+                    </Button>
+                </CardFooter>
             </Card>
 
-            {isEditMode && firstRoomTypeId && (
+            {isEditMode && propertyData && (
                 <Card>
                     <CardHeader>
-                        <CardTitle>Photo Gallery</CardTitle>
-                        
+                        <CardTitle>Property Photos</CardTitle>
+                        <CardDescription>Manage photos for this property.</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <PhotoGallery roomTypeId={firstRoomTypeId} />
+                        <PhotoGallery 
+                            photoType="property" 
+                            photoTypeId={propertyId} 
+                            hostingCompanyId={propertyData.hosting_company_id}
+                        />
                     </CardContent>
                 </Card>
             )}
-
-            <div className="flex justify-between">
-                <Button type="button" variant="outline" onClick={() => router.push('/dashboard/properties')}>Cancel</Button>
-                <Button type="submit" disabled={submitting}>
-                    {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    {isEditMode ? 'Update Property' : 'Create Property'}
-                </Button>
-            </div>
-
-            
-          </form>
-        </Form>
+        </form>
+    </Form>
   )
 }
-
-    
-
-    

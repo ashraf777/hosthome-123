@@ -8,7 +8,7 @@ import { z } from "zod"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { RoomTypeForm } from "@/app/dashboard/listings/[id]/room-types/room-type-form";
-import { PhotoGallery } from "@/app/dashboard/room-types/[roomTypeId]/photo-gallery";
+import { PhotoGallery } from "@/components/photo-gallery";
 import { Button } from "@/components/ui/button"
 import { Loader2 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
@@ -29,6 +29,7 @@ const roomTypeSchema = z.object({
 
 export function RoomTypeEditTab({ roomTypeId, propertyId, onUpdate }) {
     const [isSubmitting, setIsSubmitting] = React.useState(false);
+    const [roomTypeData, setRoomTypeData] = React.useState(null);
     const { toast } = useToast();
     const router = useRouter();
 
@@ -46,6 +47,14 @@ export function RoomTypeEditTab({ roomTypeId, propertyId, onUpdate }) {
             amenity_ids: [],
         },
     });
+
+    React.useEffect(() => {
+        if(roomTypeId) {
+            api.get(`room-types/${roomTypeId}`).then(res => {
+                setRoomTypeData(res.data);
+            });
+        }
+    }, [roomTypeId]);
 
     async function onSubmit(values) {
         setIsSubmitting(true);
@@ -99,10 +108,15 @@ export function RoomTypeEditTab({ roomTypeId, propertyId, onUpdate }) {
             </Card>
              <Card>
                 <CardHeader>
-                    <CardTitle>Photo Gallery</CardTitle>
+                    <CardTitle>Room Type Photos</CardTitle>
+                    <CardDescription>Manage photos for this room type.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <PhotoGallery roomTypeId={roomTypeId} />
+                   <PhotoGallery 
+                        photoType="room_type" 
+                        photoTypeId={roomTypeId} 
+                        hostingCompanyId={roomTypeData?.hosting_company_id}
+                    />
                 </CardContent>
             </Card>
              <div className="flex justify-between">
@@ -111,7 +125,7 @@ export function RoomTypeEditTab({ roomTypeId, propertyId, onUpdate }) {
                 {isSubmitting ? (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 ) : null}
-                Update
+                Update Room Type
                 </Button>
             </div>
         </form>

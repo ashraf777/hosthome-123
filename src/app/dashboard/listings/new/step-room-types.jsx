@@ -10,7 +10,7 @@ import { PlusCircle, Loader2 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { Separator } from "@/components/ui/separator"
 import { api } from "@/services/api"
-import { PhotoGallery } from "@/app/dashboard/room-types/[roomTypeId]/photo-gallery"
+import { PhotoGallery } from "@/components/photo-gallery"
 import { Switch } from "@/components/ui/switch"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -180,7 +180,11 @@ export function StepRoomTypes({ onNext, onBack, propertyId, propertyDetails, set
                 <CardDescription>Upload images for your new room type. You can do this later too.</CardDescription>
             </CardHeader>
             <div className="p-6 pt-0">
-                <PhotoGallery roomTypeId={createdRoomType.id} />
+                <PhotoGallery 
+                    photoType="room_type" 
+                    photoTypeId={createdRoomType.id} 
+                    hostingCompanyId={propertyDetails?.hosting_company_id}
+                />
             </div>
             <div className="p-6 pt-0 flex justify-end">
                  <Button onClick={handleFinishPhotoStep}>Done &amp; Continue</Button>
@@ -390,3 +394,5 @@ export function StepRoomTypes({ onNext, onBack, propertyId, propertyDetails, set
     </div>
   )
 }
+
+    

@@ -37,7 +37,7 @@ import { useToast } from "@/hooks/use-toast"
 import { api } from "@/services/api"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Textarea } from "@/components/ui/textarea"
-import { PhotoGallery } from "../room-types/[roomTypeId]/photo-gallery"
+import { PhotoGallery } from "@/components/photo-gallery"
 
 
 const unitFormSchema = z.object({
@@ -77,7 +77,7 @@ export function GlobalUnitForm({ isEditMode = false, unitId }) {
 
   const selectedPropertyId = form.watch("property_id");
   const selectedRoomTypeId = form.watch("room_type_id");
-
+  const selectedProperty = properties.find(p => p.id === selectedPropertyId);
 
   const fetchProperties = useCallback(async () => {
     try {
@@ -113,6 +113,7 @@ export function GlobalUnitForm({ isEditMode = false, unitId }) {
             try {
                 const unitRes = await api.get(`units/${unitId}`);
                 const unitData = unitRes.data;
+                setCreatedUnit(unitData); // Used for photo gallery
                 await fetchRoomTypes(unitData.property?.id);
                 form.reset({
                   ...unitData,
@@ -173,11 +174,15 @@ export function GlobalUnitForm({ isEditMode = false, unitId }) {
             <CardHeader>
                 <CardTitle>Unit Created: {createdUnit.unit_identifier}</CardTitle>
                 <CardDescription>
-                    This unit has been successfully created.
+                    You can now manage photos for this unit.
                 </CardDescription>
             </CardHeader>
             <CardContent>
-                <p>You can now manage this unit from the "Units" or "Listings" section of the dashboard.</p>
+               <PhotoGallery 
+                    photoType="unit" 
+                    photoTypeId={createdUnit.id} 
+                    hostingCompanyId={createdUnit.hosting_company_id}
+                />
             </CardContent>
             <CardFooter>
                 <Button onClick={() => router.push(`/dashboard/units`)}>
@@ -338,16 +343,20 @@ export function GlobalUnitForm({ isEditMode = false, unitId }) {
             </CardContent>
             </Card>
 
-            {selectedRoomTypeId && (
+             {isEditMode && createdUnit && (
                 <Card>
                     <CardHeader>
-                        <CardTitle>Room Type Photos</CardTitle>
+                        <CardTitle>Unit Specific Photos</CardTitle>
                         <CardDescription>
-                            These are the photos associated with the selected room type. You can manage them from the Room Types page.
+                           Upload photos that are unique to this specific unit.
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <PhotoGallery roomTypeId={selectedRoomTypeId} />
+                        <PhotoGallery 
+                            photoType="unit" 
+                            photoTypeId={createdUnit.id} 
+                            hostingCompanyId={createdUnit.property?.hosting_company_id}
+                        />
                     </CardContent>
                 </Card>
             )}
@@ -370,5 +379,3 @@ export function GlobalUnitForm({ isEditMode = false, unitId }) {
     </>
   )
 }
-
-    

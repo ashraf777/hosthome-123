@@ -15,7 +15,7 @@ import { ArrowLeft, Bed, Building, KeyRound, Pencil, Tag, Edit } from "lucide-re
 import { api } from "@/services/api"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useToast } from "@/hooks/use-toast"
-import { PhotoGallery } from "./photo-gallery"
+import { PhotoGallery } from "@/components/photo-gallery"
 import { Badge } from "@/components/ui/badge"
 
 export default function RoomTypeDetailsPage({ params }) {
@@ -77,7 +77,11 @@ export default function RoomTypeDetailsPage({ params }) {
                         <CardDescription>Manage photos for this room type.</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <PhotoGallery roomTypeId={roomTypeId} />
+                        <PhotoGallery 
+                            photoType="room_type" 
+                            photoTypeId={roomTypeId}
+                            hostingCompanyId={roomType?.hosting_company_id}
+                        />
                     </CardContent>
                 </Card>
             </div>

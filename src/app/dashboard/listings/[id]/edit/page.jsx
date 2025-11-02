@@ -57,8 +57,10 @@ export default function EditListingPage({ params }) {
             </>
           ) : (
             <>
-              <h1 className="text-3xl font-bold tracking-tight">Edit Listing Wizard</h1>
-              
+              <h1 className="text-3xl font-bold tracking-tight">Edit Listing</h1>
+              <p className="text-muted-foreground">
+                Editing Unit: <span className="font-semibold">{unitData?.unit_identifier}</span>
+              </p>
             </>
           )}
         </div>

@@ -1,10 +1,12 @@
+
+
 "use client"
 
 import { useEffect, useState, useCallback } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
-import { Loader2, BedDouble, PlusCircle } from "lucide-react"
+import { Loader2, BedDouble } from "lucide-react"
 import { useRouter } from "next/navigation"
 
 import { Button } from "@/components/ui/button"
@@ -35,8 +37,7 @@ import {
 import { useToast } from "@/hooks/use-toast"
 import { api } from "@/services/api"
 import { Skeleton } from "@/components/ui/skeleton"
-import { CreatePropertyDialog } from "./create-property-dialog"
-import { PhotoGallery } from "./[roomTypeId]/photo-gallery"
+import { PhotoGallery } from "@/components/photo-gallery"
 import { Switch } from "@/components/ui/switch"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -62,7 +63,6 @@ export function GlobalRoomTypeForm({ isEditMode = false, roomTypeId }) {
   const [loading, setLoading] = useState(true);
   const [properties, setProperties] = useState([]);
   const [allAmenities, setAllAmenities] = useState({});
-  const [isCreatePropertyOpen, setCreatePropertyOpen] = useState(false);
   const [createdRoomType, setCreatedRoomType] = useState(null); 
   const { toast } = useToast()
   const router = useRouter();
@@ -126,6 +126,7 @@ export function GlobalRoomTypeForm({ isEditMode = false, roomTypeId }) {
                     status: roomTypeData.status === 1,
                     amenity_ids: currentAmenities,
                 });
+                if (roomTypeData) setCreatedRoomType(roomTypeData); // To show gallery
             } catch (error) {
                  toast({ variant: "destructive", title: "Error", description: "Could not fetch room type details." });
             }
@@ -136,13 +137,6 @@ export function GlobalRoomTypeForm({ isEditMode = false, roomTypeId }) {
     initialFetch();
   }, [isEditMode, roomTypeId, fetchProperties, fetchAmenities, toast, form]);
 
-
-  const handleNewPropertySuccess = (newPropertyResponse) => {
-    const newProperty = newPropertyResponse.data || newPropertyResponse;
-    fetchProperties().then(() => {
-      form.setValue("property_id", newProperty.id, { shouldValidate: true });
-    });
-  };
 
   async function onSubmit(values) {
     setSubmitting(true)
@@ -191,7 +185,11 @@ export function GlobalRoomTypeForm({ isEditMode = false, roomTypeId }) {
                 </CardDescription>
             </CardHeader>
             <CardContent>
-                <PhotoGallery roomTypeId={createdRoomType.id} />
+                <PhotoGallery 
+                    photoType="room_type" 
+                    photoTypeId={createdRoomType.id} 
+                    hostingCompanyId={createdRoomType.hosting_company_id}
+                />
             </CardContent>
             <CardFooter>
                 <Button onClick={() => router.push(`/dashboard/room-types`)}>
@@ -203,194 +201,192 @@ export function GlobalRoomTypeForm({ isEditMode = false, roomTypeId }) {
   }
 
   return (
-    <>
-    <Card>
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <CardHeader>
-                <CardTitle>{isEditMode ? "Edit Room Type" : "Step 1: Room Type Details"}</CardTitle>
-                <CardDescription>
-                {isEditMode ? "Update the details of this room type." : "Select a property, fill out the info, then you can add photos."}
-                </CardDescription>
-            </CardHeader>
-            <CardContent className="grid gap-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
-                    control={form.control}
-                    name="property_id"
-                    render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Property</FormLabel>
-                        <div className="flex gap-2">
-                        <Select onValueChange={(value) => field.onChange(Number(value))} value={field.value?.toString()} disabled={isEditMode}>
-                            <FormControl>
-                            <SelectTrigger>
-                                <SelectValue placeholder="Select a property" />
-                            </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                            {properties.map(prop => (
-                                <SelectItem key={prop.id} value={prop.id.toString()}>{prop.name}</SelectItem>
-                            ))}
-                            </SelectContent>
-                        </Select>
-                        </div>
-                        <FormMessage />
-                    </FormItem>
-                    )}
-                />
-                <FormField
-                    control={form.control}
-                    name="name"
-                    render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Room Type Name</FormLabel>
-                        <FormControl>
-                        <Input placeholder="e.g., Deluxe King Suite" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                    </FormItem>
-                    )}
-                />
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField control={form.control} name="max_adults" render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Max Adults</FormLabel>
-                        <FormControl><Input type="number" {...field} /></FormControl>
-                        <FormMessage />
-                    </FormItem>
-                    )} />
-                    <FormField control={form.control} name="max_children" render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Max Children</FormLabel>
-                        <FormControl><Input type="number" {...field} /></FormControl>
-                        <FormMessage />
-                    </FormItem>
-                    )} />
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <FormField control={form.control} name="size" render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Room Size</FormLabel>
-                        <FormControl><Input placeholder="e.g., 25 sqm" {...field} /></FormControl>
-                        <FormMessage />
-                    </FormItem>
-                    )} />
-                    <FormField control={form.control} name="weekday_price" render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Weekday Price ($)</FormLabel>
-                        <FormControl><Input type="number" step="0.01" {...field} /></FormControl>
-                        <FormMessage />
-                    </FormItem>
-                    )} />
-                    <FormField control={form.control} name="weekend_price" render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Weekend Price ($)</FormLabel>
-                        <FormControl><Input type="number" step="0.01" {...field} /></FormControl>
-                        <FormMessage />
-                    </FormItem>
-                    )} />
-                </div>
-                <FormField control={form.control} name="status" render={({ field }) => (
-                <FormItem>
-                    <div className="flex items-center space-x-2">
-                        <Switch id="status-switch" checked={field.value} onCheckedChange={field.onChange} />
-                        <FormLabel htmlFor="status-switch">Active</FormLabel>
-                    </div>
-                    <FormMessage />
-                </FormItem>
-                )} />
-                <FormField
-                control={form.control}
-                name="amenity_ids"
-                render={() => (
-                    <FormItem>
-                    <Accordion type="single" collapsible className="w-full bg-background rounded-lg">
-                        <AccordionItem value="amenities" className="border">
-                        <AccordionTrigger className="px-4">
-                            <h3 className="text-md font-medium">Amenities</h3>
-                        </AccordionTrigger>
-                        <AccordionContent className="p-4">
-                            <FormMessage className="mb-4" />
-                            <div className="space-y-6">
-                            {Object.entries(allAmenities).map(([category, items]) => (
-                                <div key={category}>
-                                <h4 className="font-medium text-md mb-2">{category}</h4>
-                                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                                    {items.map((item) => (
-                                    <FormField
-                                        key={item.id}
-                                        control={form.control}
-                                        name="amenity_ids"
-                                        render={({ field }) => {
-                                        return (
-                                            <FormItem
-                                            key={item.id}
-                                            className="flex flex-row items-start space-x-3 space-y-0"
-                                            >
-                                            <FormControl>
-                                                <Checkbox
-                                                checked={field.value?.includes(item.id)}
-                                                onCheckedChange={(checked) => {
-                                                    return checked
-                                                    ? field.onChange([...(field.value || []), item.id])
-                                                    : field.onChange(
-                                                        field.value?.filter(
-                                                        (value) => value !== item.id
-                                                        )
-                                                    )
-                                                }}
-                                                />
-                                            </FormControl>
-                                            <FormLabel className="font-normal">
-                                                {item.name}
-                                            </FormLabel>
-                                            </FormItem>
-                                        )
-                                        }}
-                                    />
+    <div className="space-y-6">
+        <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                 <Card>
+                    <CardHeader>
+                        <CardTitle>{isEditMode ? "Edit Room Type" : "Step 1: Room Type Details"}</CardTitle>
+                        <CardDescription>
+                        {isEditMode ? "Update the details of this room type." : "Select a property, fill out the info, then you can add photos."}
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent className="grid gap-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <FormField
+                            control={form.control}
+                            name="property_id"
+                            render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Property</FormLabel>
+                                <div className="flex gap-2">
+                                <Select onValueChange={(value) => field.onChange(Number(value))} value={field.value?.toString()} disabled={isEditMode}>
+                                    <FormControl>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select a property" />
+                                    </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                    {properties.map(prop => (
+                                        <SelectItem key={prop.id} value={prop.id.toString()}>{prop.name}</SelectItem>
                                     ))}
+                                    </SelectContent>
+                                </Select>
                                 </div>
-                                </div>
-                            ))}
+                                <FormMessage />
+                            </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={form.control}
+                            name="name"
+                            render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Room Type Name</FormLabel>
+                                <FormControl>
+                                <Input placeholder="e.g., Deluxe King Suite" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                            )}
+                        />
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <FormField control={form.control} name="max_adults" render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Max Adults</FormLabel>
+                                <FormControl><Input type="number" {...field} /></FormControl>
+                                <FormMessage />
+                            </FormItem>
+                            )} />
+                            <FormField control={form.control} name="max_children" render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Max Children</FormLabel>
+                                <FormControl><Input type="number" {...field} /></FormControl>
+                                <FormMessage />
+                            </FormItem>
+                            )} />
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <FormField control={form.control} name="size" render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Room Size</FormLabel>
+                                <FormControl><Input placeholder="e.g., 25 sqm" {...field} /></FormControl>
+                                <FormMessage />
+                            </FormItem>
+                            )} />
+                            <FormField control={form.control} name="weekday_price" render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Weekday Price ($)</FormLabel>
+                                <FormControl><Input type="number" step="0.01" {...field} /></FormControl>
+                                <FormMessage />
+                            </FormItem>
+                            )} />
+                            <FormField control={form.control} name="weekend_price" render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Weekend Price ($)</FormLabel>
+                                <FormControl><Input type="number" step="0.01" {...field} /></FormControl>
+                                <FormMessage />
+                            </FormItem>
+                            )} />
+                        </div>
+                        <FormField control={form.control} name="status" render={({ field }) => (
+                        <FormItem>
+                            <div className="flex items-center space-x-2">
+                                <Switch id="status-switch" checked={field.value} onCheckedChange={field.onChange} />
+                                <FormLabel htmlFor="status-switch">Active</FormLabel>
                             </div>
-                        </AccordionContent>
-                        </AccordionItem>
-                    </Accordion>
-                    </FormItem>
+                            <FormMessage />
+                        </FormItem>
+                        )} />
+                        <FormField
+                        control={form.control}
+                        name="amenity_ids"
+                        render={() => (
+                            <FormItem>
+                            <Accordion type="single" collapsible className="w-full bg-background rounded-lg">
+                                <AccordionItem value="amenities" className="border">
+                                <AccordionTrigger className="px-4">
+                                    <h3 className="text-md font-medium">Amenities</h3>
+                                </AccordionTrigger>
+                                <AccordionContent className="p-4">
+                                    <FormMessage className="mb-4" />
+                                    <div className="space-y-6">
+                                    {Object.entries(allAmenities).map(([category, items]) => (
+                                        <div key={category}>
+                                        <h4 className="font-medium text-md mb-2">{category}</h4>
+                                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                                            {items.map((item) => (
+                                            <FormField
+                                                key={item.id}
+                                                control={form.control}
+                                                name="amenity_ids"
+                                                render={({ field }) => {
+                                                return (
+                                                    <FormItem
+                                                    key={item.id}
+                                                    className="flex flex-row items-start space-x-3 space-y-0"
+                                                    >
+                                                    <FormControl>
+                                                        <Checkbox
+                                                        checked={field.value?.includes(item.id)}
+                                                        onCheckedChange={(checked) => {
+                                                            return checked
+                                                            ? field.onChange([...(field.value || []), item.id])
+                                                            : field.onChange(
+                                                                field.value?.filter(
+                                                                (value) => value !== item.id
+                                                                )
+                                                            )
+                                                        }}
+                                                        />
+                                                    </FormControl>
+                                                    <FormLabel className="font-normal">
+                                                        {item.name}
+                                                    </FormLabel>
+                                                    </FormItem>
+                                                )
+                                                }}
+                                            />
+                                            ))}
+                                        </div>
+                                        </div>
+                                    ))}
+                                    </div>
+                                </AccordionContent>
+                                </AccordionItem>
+                            </Accordion>
+                            </FormItem>
+                        )}
+                        />
+                    </CardContent>
+                </Card>
+
+                {isEditMode && createdRoomType && (
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Room Type Photos</CardTitle>
+                            <CardDescription>Manage photos for this room type.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <PhotoGallery 
+                                photoType="room_type" 
+                                photoTypeId={roomTypeId} 
+                                hostingCompanyId={createdRoomType.hosting_company_id}
+                            />
+                        </CardContent>
+                    </Card>
                 )}
-                />
-            </CardContent>
-            <CardFooter>
-                <Button type="submit" disabled={submitting}>
-                {submitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <BedDouble className="mr-2 h-4 w-4" />}
-                {isEditMode ? "Update Room Type" : "Save and Continue"}
-                </Button>
-            </CardFooter>
-        </form>
-      </Form>
-    </Card>
 
-    {isEditMode && roomTypeId && (
-        <Card>
-            <CardHeader>
-                <CardTitle>Photo Gallery</CardTitle>
-                <CardDescription>Manage photos for this room type.</CardDescription>
-            </CardHeader>
-            <CardContent>
-                <PhotoGallery roomTypeId={roomTypeId} />
-            </CardContent>
-        </Card>
-    )}
-
-    <div className="flex justify-between">
-        {!isEditMode ? <div></div> : <Button type="button" variant="outline" onClick={() => router.push('/dashboard/room-types')}>Cancel</Button>}
-            {isEditMode && <Button type="submit" disabled={submitting} onClick={form.handleSubmit(onSubmit)}>
-            {submitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-            Update Room Type
-        </Button>}
+                 <div className="flex justify-between mt-6">
+                    <Button type="button" variant="outline" onClick={() => router.push('/dashboard/room-types')}>Cancel</Button>
+                     <Button type="submit" disabled={submitting}>
+                        {submitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <BedDouble className="mr-2 h-4 w-4" />}
+                        {isEditMode ? "Update Room Type" : "Save and Continue"}
+                    </Button>
+                </div>
+            </form>
+        </Form>
     </div>
-    </>
   )
 }

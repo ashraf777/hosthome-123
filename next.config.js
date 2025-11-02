@@ -27,6 +27,12 @@ const nextConfig = {
         port: '',
         pathname: '/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'hosthomestaging.frenclub.com',
+        port: '',
+        pathname: '/**',
+      },
     ],
   },
 };

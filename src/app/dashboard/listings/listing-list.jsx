@@ -72,7 +72,6 @@ export function ListingList() {
       setLoading(true);
       const response = await api.get('units');
       const listingsData = response?.data || response || [];
-      console.log("Fetched listings data:", listingsData);
       setListings(Array.isArray(listingsData) ? listingsData : []);
     } catch (error) {
       toast({

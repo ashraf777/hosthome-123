@@ -46,7 +46,7 @@ export default function AllRoomTypesPage() {
       setLoading(true)
       try {
         const response = await api.get("room-types")
-        const roomTypesData = response.data?.data || response.data || response || [];
+        const roomTypesData = response.data || response || [];
         setRoomTypes(Array.isArray(roomTypesData) ? roomTypesData : []);
       } catch (error) {
         toast({

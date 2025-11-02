@@ -167,12 +167,12 @@ export function PropertyList() {
                               <Edit className="mr-2 h-4 w-4" />
                               Edit Property
                             </DropdownMenuItem>
-                            {/* <DropdownMenuItem
+                            <DropdownMenuItem
                                 onSelect={() => router.push(`/dashboard/listings/${property.id}/room-types`)}
                             >
                               <Bed className="mr-2 h-4 w-4" />
                               Manage Room Types
-                            </DropdownMenuItem> */}
+                            </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
                     </TableCell>
