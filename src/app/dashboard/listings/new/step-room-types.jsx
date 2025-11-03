@@ -96,7 +96,11 @@ export function StepRoomTypes({ onNext, onBack, propertyId, propertyDetails, set
         api.get('amenities').then(amenitiesRes => {
           const amenitiesList = amenitiesRes.data || amenitiesRes;
           if (Array.isArray(amenitiesList)) {
-            const groupedAmenities = amenitiesList.reduce((acc, amenity) => {
+            const filteredAmenities = amenitiesList.filter(amenity => 
+                (amenity.type === 2 || amenity.type === 3) &&
+                (amenity.amenity_reference?.type === 2 || amenity.amenity_reference?.type === 3)
+            );
+            const groupedAmenities = filteredAmenities.reduce((acc, amenity) => {
               const category = amenity.amenity_reference?.name || 'General';
               if (!acc[category]) acc[category] = [];
               acc[category].push({ id: amenity.id, name: amenity.specific_name });

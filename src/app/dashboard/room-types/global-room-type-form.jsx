@@ -52,6 +52,7 @@ const roomTypeSchema = z.object({
   weekend_price: z.coerce.number().min(0).optional().nullable(),
   status: z.boolean().default(true),
   amenity_ids: z.array(z.number()).optional(),
+  hosting_company_id: z.coerce.number().optional(),
 }).superRefine((data, ctx) => {
     if (!data.property_id) {
         ctx.addIssue({ code: z.ZodIssueCode.custom, message: "A property must be selected or created.", path: ['property_id']});
@@ -95,7 +96,11 @@ export function GlobalRoomTypeForm({ isEditMode = false, roomTypeId }) {
        const amenitiesRes = await api.get('amenities');
        const amenitiesList = amenitiesRes.data || amenitiesRes;
         if (Array.isArray(amenitiesList)) {
-            const groupedAmenities = amenitiesList.reduce((acc, amenity) => {
+            const filteredAmenities = amenitiesList.filter(amenity => 
+                (amenity.type === 2 || amenity.type === 3) &&
+                (amenity.amenity_reference?.type === 2 || amenity.amenity_reference?.type === 3)
+            );
+            const groupedAmenities = filteredAmenities.reduce((acc, amenity) => {
             const category = amenity.amenity_reference?.name || 'General';
             if (!acc[category]) acc[category] = [];
             acc[category].push({ id: amenity.id, name: amenity.specific_name });
@@ -107,6 +112,17 @@ export function GlobalRoomTypeForm({ isEditMode = false, roomTypeId }) {
         toast({ variant: "destructive", title: "Error", description: "Could not fetch amenities." });
      }
   }, [toast])
+
+  const selectedPropertyId = form.watch("property_id");
+
+  useEffect(() => {
+    if (selectedPropertyId) {
+      const selectedProp = properties.find(p => p.id === selectedPropertyId);
+      if (selectedProp) {
+        form.setValue('hosting_company_id', selectedProp.hosting_company_id);
+      }
+    }
+  }, [selectedPropertyId, properties, form]);
 
   useEffect(() => {
     async function initialFetch() {
@@ -140,24 +156,43 @@ export function GlobalRoomTypeForm({ isEditMode = false, roomTypeId }) {
 
   async function onSubmit(values) {
     setSubmitting(true)
-    const payload = {
-        ...values,
+    const { amenity_ids, ...payload } = values;
+    const finalPayload = {
+        ...payload,
         status: values.status ? 1 : 0,
-        property_ids: values.property_id ? [values.property_id] : []
+        property_ids: values.property_id ? [values.property_id] : [],
     };
 
     try {
       let response;
       if (isEditMode) {
-        response = await api.put(`room-types/${roomTypeId}`, payload);
-         toast({ title: "Room Type Updated", description: "The room type has been successfully updated." });
-         router.push('/dashboard/room-types');
-         router.refresh();
+        response = await api.put(`room-types/${roomTypeId}`, finalPayload);
+        const updatedRoomType = response.data.data || response.data || response;
+
+        if (amenity_ids && updatedRoomType.id) {
+            await api.post(`room-types/${updatedRoomType.id}/amenities`, {
+                amenity_ids: amenity_ids,
+                hosting_company_id: values.hosting_company_id,
+            });
+        }
+        
+        toast({ title: "Room Type Updated", description: "The room type has been successfully updated." });
+        router.push('/dashboard/room-types');
+        router.refresh();
 
       } else {
-        response = await api.post('room-types', payload);
+        response = await api.post('room-types', finalPayload);
+        const newRoomType = response.data.data || response.data;
+        
+        if (amenity_ids && newRoomType.id) {
+            await api.post(`room-types/${newRoomType.id}/amenities`, {
+                amenity_ids: amenity_ids,
+                hosting_company_id: newRoomType.hosting_company_id,
+            });
+        }
+
         toast({ title: "Room Type Created", description: `Now you can add photos to your new room type.` });
-        setCreatedRoomType(response.data.data || response.data);
+        setCreatedRoomType(newRoomType);
       }
 
     } catch (error) {

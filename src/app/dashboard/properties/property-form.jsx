@@ -55,7 +55,8 @@ const propertySchema = z.object({
   check_out_time: z.string().optional(),
   min_nights: z.coerce.number().optional(),
   max_nights: z.coerce.number().optional(),
-  amenities: z.array(z.number()).optional(),
+  amenity_ids: z.array(z.number()).optional(),
+  hosting_company_id: z.coerce.number().optional(),
 });
 
 export function GlobalPropertyForm({ isEditMode = false, propertyId, onSuccess }) {
@@ -82,7 +83,7 @@ export function GlobalPropertyForm({ isEditMode = false, propertyId, onSuccess }
       check_out_time: "11:00",
       min_nights: 1,
       max_nights: 0,
-      amenities: [],
+      amenity_ids: [],
     },
   });
 
@@ -90,15 +91,19 @@ export function GlobalPropertyForm({ isEditMode = false, propertyId, onSuccess }
     try {
       const [ownersRes, propTypesRes, allAmenitiesRes] = await Promise.all([
         api.get('property-owners'),
-        api.get('property-references'),
-        api.get('amenities'),
+        api.get('property-references'), 
+        api.get('amenities'), 
       ]);
       setOwners(ownersRes.data || []);
-      setPropertyTypes(propTypesRes.property_type || []);
+      setPropertyTypes(propTypesRes.property_type || propTypesRes || []);
       
       const amenitiesList = allAmenitiesRes.data || allAmenitiesRes;
-      if (Array.isArray(amenitiesList)) {
-        const groupedAmenities = amenitiesList.reduce((acc, amenity) => {
+       if (Array.isArray(amenitiesList)) {
+        const filteredAmenities = amenitiesList.filter(amenity => 
+            (amenity.type === 1 || amenity.type === 3) &&
+            (amenity.amenity_reference?.type === 1 || amenity.amenity_reference?.type === 3)
+        );
+        const groupedAmenities = filteredAmenities.reduce((acc, amenity) => {
           const category = amenity.amenity_reference?.name || 'General';
           if (!acc[category]) acc[category] = [];
           acc[category].push({ id: amenity.id, name: amenity.specific_name });
@@ -130,13 +135,14 @@ export function GlobalPropertyForm({ isEditMode = false, propertyId, onSuccess }
 
                  form.reset({
                     ...property,
-                    property_type_ref_id: property.type_reference?.id,
+                    property_type_ref_id: property.property_type?.id,
                     property_owner_id: property.property_owner_id,
-                    amenities: currentAmenities,
+                    amenity_ids: currentAmenities,
                     check_in_time: property.check_in_time || "12:00",
                     check_out_time: property.check_out_time || "11:00",
                     min_nights: property.min_nights || 1,
                     max_nights: property.max_nights || 0,
+                    hosting_company_id: property.hosting_company_id,
                 });
             } catch (error) {
                 toast({ variant: "destructive", title: "Error", description: `Could not fetch property data. ${error.message}` });
@@ -152,13 +158,15 @@ export function GlobalPropertyForm({ isEditMode = false, propertyId, onSuccess }
   async function onSubmit(values) {
     setSubmitting(true);
     try {
-      const amenityIds = values.amenities;
-      delete values.amenities;
+      const { amenity_ids, ...propertyPayload } = values;
 
       if (isEditMode) {
-        await api.put(`properties/${propertyId}`, values);
-         if (amenityIds) {
-            await api.post(`properties/${propertyId}/amenities`, { amenity_ids: amenityIds });
+        await api.put(`properties/${propertyId}`, propertyPayload);
+         if (amenity_ids) {
+            await api.post(`properties/${propertyId}/amenities`, { 
+                amenity_ids: amenity_ids,
+                hosting_company_id: values.hosting_company_id 
+            });
         }
         toast({
             title: "Property Updated",
@@ -168,10 +176,13 @@ export function GlobalPropertyForm({ isEditMode = false, propertyId, onSuccess }
             onSuccess();
         }
       } else {
-        const response = await api.post("properties", values);
+        const response = await api.post("properties", propertyPayload);
         const newProperty = response.data || response;
-         if (amenityIds && newProperty.id) {
-            await api.post(`properties/${newProperty.id}/amenities`, { amenity_ids: amenityIds });
+         if (amenity_ids && newProperty.id) {
+            await api.post(`properties/${newProperty.id}/amenities`, { 
+                amenity_ids: amenity_ids,
+                hosting_company_id: newProperty.hosting_company_id 
+            });
         }
         toast({
             title: "Property Created",
@@ -272,7 +283,7 @@ export function GlobalPropertyForm({ isEditMode = false, propertyId, onSuccess }
                         <FormLabel>Property Type</FormLabel>
                         <Select onValueChange={(value) => field.onChange(Number(value))} value={field.value?.toString()}>
                             <FormControl><SelectTrigger><SelectValue placeholder="Select a type" /></SelectTrigger></FormControl>
-                            <SelectContent>{propertyTypes.map(type => (<SelectItem key={type.id} value={type.id.toString()}>{type.value}</SelectItem>))}</SelectContent>
+                            <SelectContent>{Array.isArray(propertyTypes) && propertyTypes.map(type => (<SelectItem key={type.id} value={type.id.toString()}>{type.value}</SelectItem>))}</SelectContent>
                         </Select>
                         <FormMessage />
                         </FormItem>
@@ -407,7 +418,7 @@ export function GlobalPropertyForm({ isEditMode = false, propertyId, onSuccess }
                     <Separator />
                     <FormField
                     control={form.control}
-                    name="amenities"
+                    name="amenity_ids"
                     render={() => (
                         <FormItem>
                         <Accordion type="single" collapsible className="w-full">
@@ -426,7 +437,7 @@ export function GlobalPropertyForm({ isEditMode = false, propertyId, onSuccess }
                                         <FormField
                                             key={item.id}
                                             control={form.control}
-                                            name="amenities"
+                                            name="amenity_ids"
                                             render={({ field }) => {
                                             return (
                                                 <FormItem

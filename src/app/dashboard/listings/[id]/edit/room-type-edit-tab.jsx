@@ -65,6 +65,15 @@ export function RoomTypeEditTab({ roomTypeId, propertyId, onUpdate }) {
         
         try {
             await api.put(`room-types/${roomTypeId}`, payload);
+            
+            // Save amenities
+            if (values.amenity_ids) {
+                await api.post(`room-types/${roomTypeId}/amenities`, {
+                    amenity_ids: values.amenity_ids,
+                    hosting_company_id: roomTypeData?.hosting_company_id,
+                });
+            }
+
             toast({
                 title: "Room Type Updated",
                 description: `The room type has been successfully updated.`,

@@ -22,7 +22,8 @@ import {
   KeyRound,
   Bed,
   PlusCircle,
-  Building
+  Building,
+  Sparkles
 } from "lucide-react"
 import {
   Collapsible,
@@ -48,6 +49,7 @@ export function DashboardNav() {
   const isUnitsActive = pathname.startsWith("/dashboard/units");
   const isUserManagementActive = pathname.startsWith("/dashboard/users");
   const isAccessControlActive = pathname.startsWith("/dashboard/access-control");
+  const isAmenitiesActive = pathname.startsWith("/dashboard/amenities");
 
   return (
     <SidebarMenu>
@@ -95,6 +97,15 @@ export function DashboardNav() {
                 <SidebarMenuButton isActive={isUnitsActive} tooltip="Units">
                     <KeyRound className="text-sidebar-primary" />
                     <span>Units</span>
+                </SidebarMenuButton>
+            </Link>
+        </SidebarMenuItem>
+        
+        <SidebarMenuItem>
+            <Link href="/dashboard/amenities">
+                <SidebarMenuButton isActive={isAmenitiesActive} tooltip="Amenities">
+                    <Sparkles className="text-sidebar-primary" />
+                    <span>Amenities</span>
                 </SidebarMenuButton>
             </Link>
         </SidebarMenuItem>

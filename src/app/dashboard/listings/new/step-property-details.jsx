@@ -130,11 +130,15 @@ export function StepPropertyDetails({ onNext, onBack, initialData }) {
       ]);
 
       setProperties(propsRes.data || []);
-      setPropertyTypes(propTypesRes.property_type || []);
+      setPropertyTypes(propTypesRes?.property_type || propTypesRes || []);
 
       const allAmenities = amenitiesRes.data || amenitiesRes;
       if (Array.isArray(allAmenities)) {
-        const groupedAmenities = allAmenities.reduce((acc, amenity) => {
+        const filteredAmenities = allAmenities.filter(amenity => 
+            (amenity.type === 1 || amenity.type === 3) &&
+            (amenity.amenity_reference?.type === 1 || amenity.amenity_reference?.type === 3)
+        );
+        const groupedAmenities = filteredAmenities.reduce((acc, amenity) => {
           const category = amenity.amenity_reference?.name || 'General';
           if (!acc[category]) {
             acc[category] = [];
