@@ -46,7 +46,7 @@ export default function DashboardPage() {
     <div className="flex flex-col gap-6">
       <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
       <Tabs defaultValue="overview" className="space-y-4">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <TabsList>
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="analytics">
@@ -57,9 +57,6 @@ export default function DashboardPage() {
             </TabsTrigger>
             </TabsList>
              <div className="flex items-center space-x-2">
-                <Button variant="outline" size="sm" onClick={() => setDate({ from: new Date(), to: new Date() })}>Today</Button>
-                <Button variant="outline" size="sm" onClick={() => setDate({ from: startOfWeek(new Date()), to: endOfWeek(new Date()) })}>This Week</Button>
-                <Button variant="outline" size="sm" onClick={() => setDate({ from: startOfMonth(new Date()), to: endOfMonth(new Date()) })}>This Month</Button>
                 <Popover>
                     <PopoverTrigger asChild>
                     <Button
@@ -67,7 +64,7 @@ export default function DashboardPage() {
                         variant={"outline"}
                         size="sm"
                         className={cn(
-                        "w-[240px] justify-start text-left font-normal",
+                        "w-full sm:w-[240px] justify-start text-left font-normal",
                         !date && "text-muted-foreground"
                         )}
                     >
@@ -100,7 +97,7 @@ export default function DashboardPage() {
             </div>
         </div>
         <TabsContent value="overview" className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">
@@ -156,8 +153,8 @@ export default function DashboardPage() {
               </CardContent>
             </Card>
           </div>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-            <Card className="col-span-4">
+          <div className="grid gap-4 grid-cols-1 lg:grid-cols-7">
+            <Card className="lg:col-span-4">
               <CardHeader>
                 <CardTitle>Revenue Overview</CardTitle>
               </CardHeader>
@@ -165,7 +162,7 @@ export default function DashboardPage() {
                 <Overview />
               </CardContent>
             </Card>
-            <Card className="col-span-4 lg:col-span-3">
+            <Card className="lg:col-span-3">
               <CardHeader>
                 <CardTitle>Recent Bookings</CardTitle>
                 <CardDescription>
@@ -192,7 +189,7 @@ export default function DashboardPage() {
             <CardContent>
               <div className="space-y-4">
                 {reports.map((report) => (
-                  <div key={report.name} className="flex items-center justify-between rounded-lg border p-4">
+                  <div key={report.name} className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 rounded-lg border p-4">
                     <div className="flex items-center gap-4">
                       <FileText className="h-6 w-6 text-muted-foreground" />
                       <div>
@@ -200,7 +197,7 @@ export default function DashboardPage() {
                         <p className="text-sm text-muted-foreground">{report.period}</p>
                       </div>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 self-end sm:self-center">
                         <Button variant="outline" size="sm">
                           <Download className="mr-2 h-4 w-4" />
                           PDF

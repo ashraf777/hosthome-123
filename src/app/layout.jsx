@@ -6,6 +6,7 @@ import { AuthProvider } from '@/providers/auth-provider.jsx';
 export const metadata = {
   title: 'HostHome',
   description: 'Boost your rental business with HostHome.',
+  viewport: 'width=device-width, initial-scale=1.0',
 };
 
 export default function RootLayout({

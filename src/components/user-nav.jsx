@@ -25,7 +25,7 @@ export function UserNav() {
         <Button variant="ghost" className="relative h-8 w-8 rounded-full">
           <Avatar className="h-9 w-9">
             <AvatarImage src={`https://picsum.photos/seed/${user?.email}/40/40`} alt={user?.name} data-ai-hint="person face" />
-            <AvatarFallback>{user?.name?.charAt(0).toUpperCase()}</AvatarFallback>
+            <AvatarFallback>{user?.name ? user.name.charAt(0).toUpperCase() : 'U'}</AvatarFallback>
           </Avatar>
         </Button>
       </DropdownMenuTrigger>

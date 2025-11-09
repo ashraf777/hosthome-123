@@ -8,12 +8,14 @@ import Link from "next/link"
 import { useAuth } from "@/contexts/auth-context.jsx";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
+import { useIsMobile } from "@/hooks/use-mobile.js";
 
 export default function DashboardLayout({
   children,
 }) {
   const { user, loading, token } = useAuth();
   const router = useRouter();
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     if (!loading && !token) {
@@ -30,7 +32,7 @@ export default function DashboardLayout({
   }
   
   return (
-    <SidebarProvider>
+    <SidebarProvider defaultOpen={!isMobile}>
       <Sidebar
         variant="sidebar"
         collapsible="icon"
