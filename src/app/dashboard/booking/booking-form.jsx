@@ -118,7 +118,7 @@ const bookingFormSchema = z.object({
 })
 
 const STEPS = [
-    { id: 1, title: 'Reservation Details', fields: ['property_id', 'room_type_id', 'property_unit_id', 'check_in_date', 'check_out_date', 'total_price', 'guest_count'] },
+    { id: 1, title: 'Booking Details', fields: ['property_id', 'room_type_id', 'property_unit_id', 'check_in_date', 'check_out_date', 'total_price', 'guest_count'] },
     { id: 2, title: 'Guest Details', fields: ['guests', 'emergency_contact', 'vehicles', 'items_provided'] },
     { id: 3, title: 'Other Charges', fields: [
         'early_checkin_fee', 'late_checkout_fee', 'shuttle_fee', 'transportation_fee',
@@ -458,7 +458,7 @@ export function BookingForm({ isEditMode = false, bookingId }) {
               <Card>
                   
                       <CardHeader>
-                          <CardTitle>Reservation Details</CardTitle>
+                          <CardTitle>Booking Details</CardTitle>
                       </CardHeader>
                       <CardContent className="grid gap-6">
                            {currentStep === 1 && (
@@ -946,7 +946,7 @@ export function BookingForm({ isEditMode = false, bookingId }) {
                     />
                      <Button type="submit" size="lg" className="w-full" disabled={submitting}>
                         {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        {isEditMode ? 'Update Reservation' : 'Create Reservation'}
+                        {isEditMode ? 'Update Booking' : 'New Booking'}
                     </Button>
                   </CardFooter>
               </Card>
