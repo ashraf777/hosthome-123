@@ -476,10 +476,8 @@ export function BookingForm({ isEditMode = false, bookingId }) {
                                               </SelectTrigger>
                                           </FormControl>
                                           <SelectContent>
-                                              <SelectItem value="confirmed">Confirm Reservation</SelectItem>
-                                              <SelectItem value="cancelled">Cancelled</SelectItem>
-                                              <SelectItem value="checked_in">Checked In</SelectItem>
-                                              <SelectItem value="checked_out">Checked Out</SelectItem>
+                                              <SelectItem value="confirmed">Confirm Booking</SelectItem>
+                                              <SelectItem value="cancelled">Booking Inquiry</SelectItem>
                                           </SelectContent>
                                           </Select>
                                           <FormMessage />
@@ -573,8 +571,13 @@ export function BookingForm({ isEditMode = false, bookingId }) {
                                           <FormControl><SelectTrigger><SelectValue placeholder="Select a type" /></SelectTrigger></FormControl>
                                           <SelectContent>
                                               <SelectItem value="Walk In">Walk In</SelectItem>
+                                              <SelectItem value="Extended Stay">Extended Stay</SelectItem>
+                                              <SelectItem value="Social Media">Social Media</SelectItem>
                                               <SelectItem value="Phone Call">Phone Call</SelectItem>
-                                              <SelectItem value="Email">Email</SelectItem>
+                                              <SelectItem value="Platform">Platform</SelectItem>
+                                              <SelectItem value="Free Stay">Free Stay</SelectItem>
+                                              <SelectItem value="Maintenance">Maintenance</SelectItem>
+                                              <SelectItem value="Blocked">Blocked</SelectItem>
                                           </SelectContent>
                                           </Select><FormMessage />
                                       </FormItem>
