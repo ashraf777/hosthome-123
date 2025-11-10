@@ -13,8 +13,8 @@ export default function EditBookingPage({ params }) {
           </Button>
         </Link>
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Edit Booking</h1>
-          <p className="text-muted-foreground">Editing booking with ID: {params.id}</p>
+          <h1 className="text-3xl font-bold tracking-tight">Edit Reservation</h1>
+          <p className="text-muted-foreground">Editing reservation with ID: {params.id}</p>
         </div>
       </div>
       <BookingForm isEditMode bookingId={params.id} />

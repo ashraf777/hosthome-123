@@ -70,10 +70,10 @@ export function DashboardNav() {
           <Link href="/dashboard/booking">
             <SidebarMenuButton
               isActive={isBookingsActive}
-              tooltip="Bookings"
+              tooltip="Reservations"
             >
               <Book className="text-sidebar-primary" />
-              <span>Bookings</span>
+              <span>Reservations</span>
             </SidebarMenuButton>
           </Link>
         </SidebarMenuItem>
