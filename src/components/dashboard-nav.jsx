@@ -66,7 +66,7 @@ export function DashboardNav() {
           </Link>
         </SidebarMenuItem>
 
-        <SidebarMenuItem>
+        {/* <SidebarMenuItem>
           <Link href="/dashboard/booking">
             <SidebarMenuButton
               isActive={isBookingsActive}
@@ -76,7 +76,7 @@ export function DashboardNav() {
               <span>Bookings</span>
             </SidebarMenuButton>
           </Link>
-        </SidebarMenuItem>
+        </SidebarMenuItem> */}
 
         <SidebarMenuItem>
             <Link href="/dashboard/listings">
