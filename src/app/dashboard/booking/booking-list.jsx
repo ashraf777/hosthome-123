@@ -40,6 +40,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { useToast } from "@/hooks/use-toast"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -250,18 +251,18 @@ export function BookingList() {
                         {booking.booking_source !== "HostPlatform" && <AirbnbIcon />}
                         <div>
                              <div className="font-medium text-blue-600 cursor-pointer hover:underline">{booking.confirmation_code}</div>
-                             <div className="text-xs text-muted-foreground">({booking.id})</div>
+                             <div className="text-xs text-muted-foreground">({booking.status})</div>
                         </div>
                     </div>
                 </TableCell>
-                <TableCell>{booking.property_unit?.property?.name}</TableCell>
+                <TableCell>{booking.property?.name}</TableCell>
                 <TableCell>{booking.property_unit?.unit_identifier}</TableCell>
                 <TableCell>{format(new Date(booking.check_in_date), "yyyy-MM-dd")}</TableCell>
                 <TableCell>{format(new Date(booking.check_out_date), "yyyy-MM-dd")}</TableCell>
                 <TableCell>{booking.guest?.first_name} {booking.guest?.last_name}</TableCell>
                 <TableCell>
-                  <a href={`tel:${booking.guest?.contact_number}`} className="text-blue-600 hover:underline">
-                    {booking.guest?.contact_number}
+                  <a href={`tel:${booking.guest?.phone_number}`} className="text-blue-600 hover:underline">
+                    {booking.guest?.phone_number}
                   </a>
                 </TableCell>
                 <TableCell className="text-right">

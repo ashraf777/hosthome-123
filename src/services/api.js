@@ -35,6 +35,10 @@ async function request(endpoint, options = {}) {
             const firstError = Object.values(errorData.errors)[0][0];
             throw new Error(firstError || errorData.message);
         }
+        // Handle custom error messages from the backend under the "error" key
+        if (errorData.error) {
+            throw new Error(errorData.error);
+        }
         throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
     }
     

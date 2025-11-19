@@ -5,8 +5,8 @@ import { useEffect, useState, useMemo } from "react"
 import { useForm, useFieldArray } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
-import { CalendarIcon, Loader2, BedDouble, PlusCircle, Trash2 } from "lucide-react"
-import { format, differenceInDays } from "date-fns"
+import { CalendarIcon, Loader2, BedDouble, PlusCircle, Trash2, FilePlus, History } from "lucide-react"
+import { format, differenceInDays, isBefore } from "date-fns"
 import { useRouter } from "next/navigation"
 
 import { Button } from "@/components/ui/button"
@@ -47,21 +47,22 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Textarea } from "@/components/ui/textarea"
 import { Switch } from "@/components/ui/switch"
 import { AddGuestDialog } from "./add-guest-dialog"
+import { ActivityLogSheet } from "./activity-log-sheet"
 
 
 const guestSchema = z.object({
   first_name: z.string().min(1, "First name is required"),
   last_name: z.string().min(1, "Last name is required"),
   nationality: z.string().optional(),
-  contact_number: z.string().optional(),
+  phone_number: z.string().min(1, "Contact number is required"),
   state: z.string().optional(),
   email: z.string().email("Invalid email").optional().or(z.literal('')),
-  passport_no: z.string().optional(),
+  ic_passport_no: z.string().optional(),
 });
 
 const emergencyContactSchema = z.object({
-  name: z.string().optional(),
-  contact_number: z.string().optional(),
+  emergency_contact_name: z.string().optional(),
+  emergency_contact_number: z.string().optional(),
 });
 
 const vehicleSchema = z.object({
@@ -72,20 +73,25 @@ const itemSchema = z.object({
   name: z.string().min(1, "Item name is required"),
 });
 
+const chargeSchema = z.object({
+    charge_reference_id: z.number(),
+    amount: z.coerce.number().min(0).optional().default(0)
+});
+
 const bookingFormSchema = z.object({
   property_id: z.coerce.number().optional(),
   room_type_id: z.coerce.number().optional(),
   property_unit_id: z.coerce.number({ required_error: "Please select a unit." }),
   check_in_date: z.date({ required_error: "Check-in date is required." }),
   check_out_date: z.date({ required_error: "Check-out date is required." }),
-  total_price: z.coerce.number().min(0, "Total price must be a positive number.").default(0),
-  guest_count: z.coerce.number().min(1, "Guest count must be at least 1.").default(1),
-  status: z.enum(['confirmed', 'cancelled', 'checked_in', 'checked_out']),
-  booking_type: z.string().optional(),
+  raw_room_rate: z.coerce.number().min(0, "Total price must be a positive number.").default(0),
+  number_of_guests: z.coerce.number().min(1, "Guest count must be at least 1.").default(1),
+  status: z.enum(['Confirmed', 'Booking Inquery', 'Awaiting Payment', 'Checked In', 'Checked Out', 'Cancel', 'No Show', 'Vacant Dirty(VD)', 'Vacant Clean(VC)']),
   booking_source: z.string().optional(),
+  booking_type: z.string().optional(),
   remarks: z.string().optional(),
+  room_rate_modifier: z.coerce.number().optional(),
   
-  // Step 2 fields
   guests: z.array(guestSchema).optional(),
   emergency_contact: emergencyContactSchema.optional(),
   vehicles: z.array(vehicleSchema).optional(),
@@ -93,40 +99,42 @@ const bookingFormSchema = z.object({
 
   guest_id: z.coerce.number().optional(),
 
-  // Step 3 fields
-  early_checkin_fee: z.coerce.number().optional(),
-  late_checkout_fee: z.coerce.number().optional(),
-  shuttle_fee: z.coerce.number().optional(),
-  transportation_fee: z.coerce.number().optional(),
-  breakfast_fee: z.coerce.number().optional(),
-  lunch_fee: z.coerce.number().optional(),
-  dinner_fee: z.coerce.number().optional(),
-  other_services_fee: z.coerce.number().optional(),
-  cleaning_fee: z.coerce.number().optional(),
-  extra_guest_fee: z.coerce.number().optional(),
-  sales_tax: z.coerce.number().optional(),
-  tourism_tax: z.coerce.number().optional(),
-  heritage_tax: z.coerce.number().optional(),
-  local_gov_tax: z.coerce.number().optional(),
-  other_tax: z.coerce.number().optional(),
-  ota_tax: z.coerce.number().optional(),
+  charges: z.array(chargeSchema).optional(),
   payment_method: z.string().optional(),
   
-  // Moved to payment card
-  collected_amount: z.coerce.number().optional(),
+  amount_paid: z.coerce.number().optional(),
+  amount_due: z.coerce.number().optional(),
   deposit_not_collected: z.boolean().default(false),
-})
+  new_payment_amount: z.coerce.number().optional(), // For edit mode only
+}).refine(data => {
+    if (data.check_in_date && data.check_out_date) {
+        return !isBefore(data.check_out_date, data.check_in_date);
+    }
+    return true;
+}, {
+    message: "Check-out date cannot be before check-in date.",
+    path: ["check_out_date"],
+});
 
 const STEPS = [
-    { id: 1, title: 'Booking Details', fields: ['property_id', 'room_type_id', 'property_unit_id', 'check_in_date', 'check_out_date', 'total_price', 'guest_count'] },
+    { id: 1, title: 'Reservation Details', fields: ['property_id', 'room_type_id', 'property_unit_id', 'check_in_date', 'check_out_date', 'raw_room_rate', 'number_of_guests'] },
     { id: 2, title: 'Guest Details', fields: ['guests', 'emergency_contact', 'vehicles', 'items_provided'] },
-    { id: 3, title: 'Other Charges', fields: [
-        'early_checkin_fee', 'late_checkout_fee', 'shuttle_fee', 'transportation_fee',
-        'breakfast_fee', 'lunch_fee', 'dinner_fee', 'other_services_fee', 'cleaning_fee',
-        'extra_guest_fee', 'sales_tax', 'tourism_tax', 'heritage_tax',
-        'local_gov_tax', 'other_tax', 'ota_tax', 'payment_method'
-    ] }
+    { id: 3, title: 'Other Charges', fields: ['charges', 'payment_method']}
 ];
+
+ const statusMapping = {
+    'Confirmed': 1,
+    'Cancel': 2,
+    'Checked In': 3,
+    'Checked Out': 4,
+    'Booking Inquery': 5,
+    'Awaiting Payment': 6,
+    'No Show': 7,
+    'Vacant Dirty(VD)': 8,
+    'Vacant Clean(VC)': 9,
+  };
+
+const reverseStatusMapping = Object.fromEntries(Object.entries(statusMapping).map(([k, v]) => [v, k]));
 
 export function BookingForm({ isEditMode = false, bookingId }) {
   const [submitting, setSubmitting] = useState(false)
@@ -134,9 +142,15 @@ export function BookingForm({ isEditMode = false, bookingId }) {
   const [properties, setProperties] = useState([]);
   const [roomTypes, setRoomTypes] = useState([]);
   const [units, setUnits] = useState([])
-  const [guests, setGuests] = useState([]) // For guest selection dialog
+  const [guests, setGuests] = useState([]) 
+  const [bookingTypes, setBookingTypes] = useState([])
+  const [bookingSources, setBookingSources] = useState([])
+  const [chargeReferences, setChargeReferences] = useState([])
   const [currentStep, setCurrentStep] = useState(1);
   const [isAddGuestOpen, setAddGuestOpen] = useState(false);
+  const [bookingDataForLog, setBookingDataForLog] = useState(null)
+  const [isActivityLogOpen, setActivityLogOpen] = useState(false)
+
 
   const { toast } = useToast()
   const router = useRouter();
@@ -144,156 +158,219 @@ export function BookingForm({ isEditMode = false, bookingId }) {
   const form = useForm({
     resolver: zodResolver(bookingFormSchema),
     defaultValues: {
-      status: "confirmed",
-      guest_count: 1,
-      total_price: 0,
-      booking_type: 'Walk In',
+      status: "Confirmed",
+      number_of_guests: 1,
+      raw_room_rate: 0,
       booking_source: 'HostPlatform',
-      guests: [{ first_name: '', last_name: '' }],
-      emergency_contact: { name: '', contact_number: '' },
+      booking_type: 'Walk In',
+      guests: [{ first_name: '', last_name: '', email: '', phone_number: '' }],
+      emergency_contact: { emergency_contact_name: '', emergency_contact_number: '' },
       vehicles: [],
       items_provided: [],
-      early_checkin_fee: 0,
-      late_checkout_fee: 0,
-      shuttle_fee: 0,
-      transportation_fee: 0,
-      breakfast_fee: 0,
-      lunch_fee: 0,
-      dinner_fee: 0,
-      other_services_fee: 0,
-      cleaning_fee: 0,
-      extra_guest_fee: 0,
-      sales_tax: 0,
-      tourism_tax: 0,
-      heritage_tax: 0,
-      local_gov_tax: 0,
-      other_tax: 0,
-      ota_tax: 0,
+      charges: [],
       payment_method: 'Cash',
-      collected_amount: 0,
+      amount_paid: 0,
+      amount_due: 0,
       deposit_not_collected: false,
+      room_rate_modifier: 0,
+      new_payment_amount: 0,
     },
   })
   
   const { fields: guestFields, append: appendGuest, remove: removeGuest } = useFieldArray({ control: form.control, name: "guests" });
   const { fields: vehicleFields, append: appendVehicle, remove: removeVehicle } = useFieldArray({ control: form.control, name: "vehicles" });
   const { fields: itemFields, append: appendItem, remove: removeItem } = useFieldArray({ control: form.control, name: "items_provided" });
+  const { fields: chargeFields, append: appendCharge } = useFieldArray({ control: form.control, name: "charges" });
+
 
   const selectedPropertyId = form.watch("property_id");
   const selectedRoomTypeId = form.watch("room_type_id");
   const checkInDate = form.watch("check_in_date");
   const checkOutDate = form.watch("check_out_date");
   
-  const formValues = form.watch();
+  const watchedCharges = form.watch("charges");
+  const watchedRoomRateModifier = form.watch("room_rate_modifier");
+  const amountPaid = form.watch("amount_paid") || 0;
+  const newPaymentAmount = form.watch("new_payment_amount") || 0;
+  
+  const bookingType = form.watch("booking_type");
+  const depositNotCollected = form.watch("deposit_not_collected");
+  const arePriceFieldsDisabled = bookingType === 'Blocked' || depositNotCollected;
+
 
   const numberOfNights = useMemo(() => {
-    if (checkInDate && checkOutDate) {
+    if (checkInDate && checkOutDate && !isBefore(checkOutDate, checkInDate)) {
       const diff = differenceInDays(checkOutDate, checkInDate);
       return diff > 0 ? diff : 0;
     }
     return 0;
   }, [checkInDate, checkOutDate]);
 
-  const roomRate = useMemo(() => {
-    return (formValues.total_price || 0) * numberOfNights;
-  }, [formValues.total_price, numberOfNights]);
-
-  const otherFees = useMemo(() => {
-    const feeFields = [
-      'early_checkin_fee', 'late_checkout_fee', 'shuttle_fee', 'transportation_fee',
-      'breakfast_fee', 'lunch_fee', 'dinner_fee', 'other_services_fee', 'cleaning_fee',
-      'extra_guest_fee', 'sales_tax', 'tourism_tax', 'heritage_tax',
-      'local_gov_tax', 'other_tax', 'ota_tax'
-    ];
-    return feeFields.reduce((sum, field) => sum + (Number(formValues[field]) || 0), 0);
-  }, [formValues]);
-
-  const totalPrice = useMemo(() => {
-    return roomRate + otherFees;
-  }, [roomRate, otherFees]);
-
-  const collectedAmount = formValues.collected_amount || 0;
+  const roomRate = (watchedRoomRateModifier || 0) * numberOfNights;
+  const otherFees = (form.watch('charges') || []).reduce((sum, charge) => sum + (Number(charge.amount) || 0), 0);
+  const totalAmount = roomRate + otherFees;
+  const totalPaidDisplay = isEditMode ? amountPaid + newPaymentAmount : amountPaid;
+  const outstandingBalance = totalAmount - totalPaidDisplay;
+  
+  useEffect(() => {
+    if (arePriceFieldsDisabled) {
+      form.setValue('room_rate_modifier', 0);
+      form.setValue('amount_paid', 0);
+    }
+  }, [arePriceFieldsDisabled, form]);
 
 
   useEffect(() => {
     async function fetchInitialData() {
-      setFormLoading(true);
-      try {
-        const propsRes = await api.get('properties');
-        setGuests([]); // Keeping guests empty as requested
-        
-        const propertiesData = propsRes.data || []
-        setProperties(Array.isArray(propertiesData) ? propertiesData : []);
+        setFormLoading(true);
+        try {
+            const [propsRes, bookingTypesRes, channelsRes, chargesRes] = await Promise.all([
+                api.get('properties'),
+                api.get('booking-type-references'),
+                api.get('channels'),
+                api.get('charge-references')
+            ]);
+            
+            setProperties(Array.isArray(propsRes.data) ? propsRes.data : []);
+            setBookingTypes(Array.isArray(bookingTypesRes.data) ? bookingTypesRes.data : []);
+            setBookingSources(Array.isArray(channelsRes.data) ? channelsRes.data : []);
 
-        if (isEditMode && bookingId) {
-          const { data: bookingData } = await api.get(`bookings/${bookingId}`);
-          const propertyId = bookingData.property_unit?.property?.id;
-          const roomTypeId = bookingData.property_unit?.room_type_id;
+            const chargesData = chargesRes.data || [];
+            if(Array.isArray(chargesData)) {
+              setChargeReferences(chargesData);
+              const initialCharges = chargesData.map(c => ({ charge_reference_id: c.id, amount: 0 }));
+              if (!isEditMode) {
+                form.setValue('charges', initialCharges);
+              }
+            }
 
-          if (propertyId) {
-             const roomTypesRes = await api.get(`properties/${propertyId}/room-types`);
-             setRoomTypes(Array.isArray(roomTypesRes.data) ? roomTypesRes.data : []);
-          }
-          if (roomTypeId) {
-             const unitsRes = await api.get(`units?room_type_id=${roomTypeId}`);
-             setUnits(Array.isArray(unitsRes.data) ? unitsRes.data : []);
-          }
-
-          const formattedBookingData = {
-            ...bookingData,
-            property_id: propertyId,
-            room_type_id: roomTypeId,
-            property_unit_id: bookingData.property_unit_id,
-            check_in_date: new Date(bookingData.check_in_date),
-            check_out_date: new Date(bookingData.check_out_date),
-            booking_type: 'Walk In',
-            booking_source: 'HostPlatform'
-          };
-          form.reset(formattedBookingData);
+        } catch (error) {
+            toast({ variant: "destructive", title: "Error", description: `Could not fetch initial form data. ${error.message}` });
+        } finally {
+            if (!isEditMode) {
+              setFormLoading(false);
+            }
         }
-      } catch (error) {
-         toast({ variant: "destructive", title: "Error", description: "Could not fetch required data." });
-      } finally {
-        setFormLoading(false);
-      }
     }
+    
     fetchInitialData();
-  }, [isEditMode, bookingId, form, toast]);
+  }, [toast, form, isEditMode]);
+
+  useEffect(() => {
+    if (isEditMode && bookingId && properties.length > 0 && chargeReferences.length > 0) {
+        async function fetchEditData() {
+            try {
+                const bookingRes = await api.get(`bookings/${bookingId}`);
+                const bookingData = bookingRes.data.data || bookingRes.data;
+                setBookingDataForLog(bookingData)
+
+                const propertyId = bookingData.property?.id;
+                const roomTypeId = bookingData.room_type?.id;
+        
+                if (propertyId) {
+                    const roomTypesRes = await api.get(`properties/${propertyId}/room-types`);
+                    const fetchedRoomTypes = Array.isArray(roomTypesRes.data) ? roomTypesRes.data : [];
+                    setRoomTypes(fetchedRoomTypes);
+
+                    if (roomTypeId) {
+                        const unitsRes = await api.get(`units?room_type_id=${roomTypeId}`);
+                        setUnits(Array.isArray(unitsRes.data) ? unitsRes.data : []);
+                    }
+                }
+                
+                const existingCharges = bookingData.charges || [];
+                const allCharges = chargeReferences.map(ref => {
+                    const existing = existingCharges.find(c => c.charge_reference_id === ref.id);
+                    return {
+                        charge_reference_id: ref.id,
+                        amount: Number(existing?.amount) || 0
+                    };
+                });
+
+                const formattedBookingData = {
+                    property_id: propertyId || undefined,
+                    room_type_id: roomTypeId || undefined,
+                    property_unit_id: bookingData.property_unit?.id || undefined,
+                    check_in_date: bookingData.check_in_date ? new Date(bookingData.check_in_date) : null,
+                    check_out_date: bookingData.check_out_date ? new Date(bookingData.check_out_date) : null,
+                    booking_source: bookingData.channel?.name || 'HostPlatform',
+                    booking_type: bookingData.booking_type?.name || 'Walk In',
+                    status: reverseStatusMapping[bookingData.status] || 'Confirmed',
+                    guests: (bookingData.guest ? [{
+                        first_name: bookingData.guest.first_name || '',
+                        last_name: bookingData.guest.last_name || '',
+                        email: bookingData.guest.email || '',
+                        nationality: bookingData.guest.nationality || '',
+                        phone_number: bookingData.guest.phone_number || '',
+                        state: bookingData.guest.state || '',
+                        ic_passport_no: bookingData.guest.ic_passport_no || ''
+                    }] : [{ first_name: '', last_name: '', email: '', phone_number: '' }]),
+                    emergency_contact: {
+                        emergency_contact_name: bookingData.guest?.emergency_contact_name || '',
+                        emergency_contact_number: bookingData.guest?.emergency_contact_number || '',
+                    },
+                    vehicles: bookingData.guest?.vehicles?.map(v => ({ number: v.registration_number })) || [],
+                    items_provided: bookingData.items_provided?.map(item => ({ name: item.name })) || [],
+                    amount_paid: Number(bookingData.amount_paid) || 0,
+                    deposit_not_collected: !!bookingData.deposit_not_collected,
+                    payment_method: bookingData.payments?.[0]?.payment_method || 'Cash',
+                    remarks: bookingData.remarks || '',
+                    raw_room_rate: Number(bookingData.raw_room_rate) || 0,
+                    room_rate_modifier: Number(bookingData.room_rate_modifier) || 0,
+                    number_of_guests: bookingData.number_of_guests || 1,
+                    charges: allCharges,
+                };
+                form.reset(formattedBookingData);
+            } catch (error) {
+                toast({ variant: "destructive", title: "Error", description: `Could not fetch required data. ${error.message}` });
+            } finally {
+                setFormLoading(false);
+            }
+        }
+        fetchEditData();
+    }
+}, [isEditMode, bookingId, form, toast, properties, chargeReferences]);
 
   useEffect(() => {
     if (selectedPropertyId) {
         api.get(`properties/${selectedPropertyId}/room-types`).then(res => {
-            const roomTypesData = Array.isArray(res.data) ? res.data : [];
-            setRoomTypes(roomTypesData);
-            setUnits([]);
-            form.setValue('room_type_id', undefined);
-            form.setValue('property_unit_id', undefined);
+            const fetchedRoomTypes = Array.isArray(res.data) ? res.data : [];
+            setRoomTypes(fetchedRoomTypes);
+            if (!isEditMode || (isEditMode && form.getValues('property_id') !== selectedPropertyId)) {
+                form.setValue('room_type_id', undefined);
+                form.setValue('property_unit_id', undefined);
+                setUnits([]);
+            }
         });
     } else {
         setRoomTypes([]);
         setUnits([]);
     }
-  }, [selectedPropertyId, form]);
+}, [selectedPropertyId, form, isEditMode]);
 
   useEffect(() => {
     if (selectedRoomTypeId) {
       api.get(`units?room_type_id=${selectedRoomTypeId}`).then(res => {
-        const unitsData = Array.isArray(res.data) ? res.data : [];
-        setUnits(unitsData);
-        form.setValue('property_unit_id', undefined);
+        setUnits(Array.isArray(res.data) ? res.data : []);
+        if(!isEditMode || (isEditMode && form.getValues('room_type_id') !== selectedRoomTypeId)) {
+             form.setValue('property_unit_id', undefined);
+        }
         
         const selectedRoomType = roomTypes.find(rt => rt.id === Number(selectedRoomTypeId));
-        if (selectedRoomType) {
+        if (selectedRoomType && (!form.getValues('raw_room_rate'))) {
             const newPrice = Number(selectedRoomType.weekday_price) || 0;
-            form.setValue('total_price', newPrice);
+            form.setValue('raw_room_rate', newPrice);
+            form.setValue('room_rate_modifier', newPrice);
         }
-
       });
     } else {
       setUnits([]);
-      form.setValue('total_price', 0);
+      if(!isEditMode) {
+         form.setValue('raw_room_rate', 0);
+         form.setValue('room_rate_modifier', 0);
+      }
     }
-  }, [selectedRoomTypeId, form, roomTypes]);
+  }, [selectedRoomTypeId, form, roomTypes, isEditMode]);
 
   const handleNextStep = async () => {
     const currentStepFields = STEPS.find(step => step.id === currentStep)?.fields || [];
@@ -312,41 +389,73 @@ export function BookingForm({ isEditMode = false, bookingId }) {
     }
   };
 
+  
+   const channelMapping = {
+      HostPlatform: 1,
+      Direct: 2,
+      Airbnb: 3,
+      'Booking.com': 4,
+      Expedia: 5,
+      Other: 6
+    };
+
+    const bookingTypeMapping = {
+        "Walk In": 1,
+        "Extended Stay": 2,
+        "Social Media": 3,
+        "Phone Call": 4,
+        "Platform": 5,
+        "Free Stay": 6,
+        "Maintenance": 7,
+        "Blocked": 8
+    }
+
+
   async function onSubmit(values) {
     setSubmitting(true);
     
-    const mainGuest = values.guests && values.guests.length > 0 ? values.guests[0] : null;
-    let guestId = values.guest_id;
-
-    if (!guestId && mainGuest && mainGuest.first_name && mainGuest.last_name && mainGuest.email) {
-      try {
-        const guestResponse = await api.post("guests", {
-          first_name: mainGuest.first_name,
-          last_name: mainGuest.last_name,
-          email: mainGuest.email,
-          password: "password",
-        });
-        guestId = guestResponse.data.id;
-        toast({ title: "Guest Created", description: `Main guest ${mainGuest.first_name} has been saved.` });
-      } catch (error) {
-         if (error.message.includes('email already exists')) {
-             toast({ variant: "destructive", title: "Guest Exists", description: `A guest with email ${mainGuest.email} already exists. Please select them or use a different email.` });
-             setSubmitting(false);
-             return;
-         }
-         toast({ variant: "destructive", title: "Guest Creation Failed", description: error.message });
-         setSubmitting(false);
-         return;
-      }
+    const mainGuestData = values.guests && values.guests.length > 0 ? values.guests[0] : {};
+    const selectedProperty = properties.find(p => p.id === values.property_id);
+    const guestPayload = {
+      ...mainGuestData,
+      ...values.emergency_contact,
+      hosting_company_id: selectedProperty?.hosting_company_id,
     }
 
+    const charges = values.charges?.filter(charge => charge.amount > 0) || [];
+    
+    const finalAmountPaid = (isEditMode ? (form.getValues('amount_paid') || 0) : 0) + (values.new_payment_amount || 0) + (!isEditMode ? (values.amount_paid || 0) : 0);
+    const calculatedAmountDue = totalAmount - finalAmountPaid;
+    const newPaymentAmount = isEditMode ? (values.new_payment_amount || 0) : (values.amount_paid || 0);
 
     const formattedValues = {
-        ...values,
-        guest_id: guestId,
+        guest: guestPayload,
         check_in_date: values.check_in_date.toISOString().split('T')[0],
         check_out_date: values.check_out_date.toISOString().split('T')[0],
-    }
+        total_amount: totalAmount,
+        raw_room_rate: values.raw_room_rate,
+        room_rate_modifier: values.room_rate_modifier || 0,
+        amount_paid: finalAmountPaid,
+        amount_due: calculatedAmountDue,
+        deposit_not_collected: values.deposit_not_collected,
+        number_of_guests: Number(values.number_of_guests),
+        status: statusMapping[values.status],
+        channel_id: channelMapping[values.booking_source],
+        booking_type_reference_id: bookingTypeMapping[values.booking_type],
+        remarks: values.remarks,
+        property_id: Number(values.property_id),
+        room_type_id: Number(values.room_type_id),
+        property_unit_id: Number(values.property_unit_id),
+        hosting_company_id: selectedProperty?.hosting_company_id,
+        vehicles: values.vehicles?.map(v => ({ registration_number: v.number })),
+        items_provided: values.items_provided?.map(item => ({ name: item.name })),
+        charges: charges,
+        payment: {
+            amount: Number(newPaymentAmount) || 0,
+            payment_method: values.payment_method,
+            status: isEditMode ? 1 : 0,
+        }
+    };
     
     try {
       if (isEditMode) {
@@ -363,6 +472,7 @@ export function BookingForm({ isEditMode = false, bookingId }) {
       router.refresh();
 
     } catch (error) {
+       console.error('API Error:', error.response || error.message);
        toast({
         variant: "destructive",
         title: "An error occurred",
@@ -458,7 +568,7 @@ export function BookingForm({ isEditMode = false, bookingId }) {
               <Card>
                   
                       <CardHeader>
-                          <CardTitle>Booking Details</CardTitle>
+                          <CardTitle>Reservation Details</CardTitle>
                       </CardHeader>
                       <CardContent className="grid gap-6">
                            {currentStep === 1 && (
@@ -475,10 +585,17 @@ export function BookingForm({ isEditMode = false, bookingId }) {
                                               <SelectValue placeholder="Select a status" />
                                               </SelectTrigger>
                                           </FormControl>
-                                          <SelectContent>
-                                              <SelectItem value="confirmed">Confirm Booking</SelectItem>
-                                              <SelectItem value="cancelled">Booking Inquiry</SelectItem>
-                                          </SelectContent>
+                                            <SelectContent>
+                                                <SelectItem value="Confirmed">Confirmed</SelectItem>
+                                                <SelectItem value="Booking Inquery">Booking Inquery</SelectItem>
+                                                <SelectItem value="Awaiting Payment">Awaiting Payment</SelectItem>
+                                                <SelectItem value="Checked In">Checked In</SelectItem>
+                                                <SelectItem value="Checked Out">Checked Out</SelectItem>
+                                                <SelectItem value="Cancel">Cancel</SelectItem>
+                                                <SelectItem value="No Show">No Show</SelectItem>
+                                                <SelectItem value="Vacant Dirty(VD)">Vacant Dirty (VD)</SelectItem>
+                                                <SelectItem value="Vacant Clean(VC)">Vacant Clean (VC)</SelectItem>
+                                            </SelectContent>
                                           </Select>
                                           <FormMessage />
                                       </FormItem>
@@ -548,56 +665,55 @@ export function BookingForm({ isEditMode = false, bookingId }) {
                                       )} />
                                   </div>
                                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                                      <FormField control={form.control} name="total_price" render={({ field }) => (
+                                      <FormField control={form.control} name="raw_room_rate" render={({ field }) => (
                                           <FormItem>
-                                              <FormLabel>Room Rate Modifier</FormLabel>
-                                              <FormControl><Input type="number" placeholder="e.g., 300" {...field} /></FormControl>
+                                              <FormLabel>Room Rate (per night)</FormLabel>
+                                              <FormControl><Input type="number" placeholder="e.g., 300" {...field} disabled /></FormControl>
                                               <FormMessage />
                                           </FormItem>
                                           )} />
-                                      <FormField control={form.control} name="guest_count" render={({ field }) => (
-                                      <FormItem>
-                                          <FormLabel>Number of Pax</FormLabel>
-                                          <FormControl><Input type="number" placeholder="e.g., 2" {...field} /></FormControl>
-                                          <FormMessage />
-                                      </FormItem>
-                                      )} />
+                                      <FormField control={form.control} name="room_rate_modifier" render={({ field }) => (
+                                          <FormItem>
+                                              <FormLabel>Room Rate Modifier</FormLabel>
+                                              <FormControl><Input type="number" placeholder="e.g., -50 for discount" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} disabled={arePriceFieldsDisabled} /></FormControl>
+                                              <FormMessage />
+                                          </FormItem>
+                                          )} />
                                   </div>
+                                  <FormField control={form.control} name="number_of_guests" render={({ field }) => (
+                                  <FormItem>
+                                      <FormLabel>Number of Pax</FormLabel>
+                                      <FormControl><Input type="number" placeholder="e.g., 2" {...field} /></FormControl>
+                                      <FormMessage />
+                                  </FormItem>
+                                  )} />
                                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                                       <FormField control={form.control} name="booking_type" render={({ field }) => (
-                                      <FormItem>
-                                          <FormLabel>Booking Type</FormLabel>
-                                          <Select onValueChange={field.onChange} value={field.value}>
-                                          <FormControl><SelectTrigger><SelectValue placeholder="Select a type" /></SelectTrigger></FormControl>
-                                          <SelectContent>
-                                              <SelectItem value="Walk In">Walk In</SelectItem>
-                                              <SelectItem value="Extended Stay">Extended Stay</SelectItem>
-                                              <SelectItem value="Social Media">Social Media</SelectItem>
-                                              <SelectItem value="Phone Call">Phone Call</SelectItem>
-                                              <SelectItem value="Platform">Platform</SelectItem>
-                                              <SelectItem value="Free Stay">Free Stay</SelectItem>
-                                              <SelectItem value="Maintenance">Maintenance</SelectItem>
-                                              <SelectItem value="Blocked">Blocked</SelectItem>
-                                          </SelectContent>
-                                          </Select><FormMessage />
-                                      </FormItem>
-                                      )} />
-                                      <FormField control={form.control} name="booking_source" render={({ field }) => (
-                                      <FormItem>
-                                          <FormLabel>Booking Source</FormLabel>
-                                          <Select onValueChange={field.onChange} value={field.value}>
-                                          <FormControl><SelectTrigger><SelectValue placeholder="Select a source" /></SelectTrigger></FormControl>
-                                          <SelectContent>
-                                              <SelectItem value="HostPlatform">HostPlatform</SelectItem>
-                                              <SelectItem value="Direct">Direct</SelectItem>
-                                              <SelectItem value="Airbnb">Airbnb</SelectItem>
-                                              <SelectItem value="Booking.com">Booking.com</SelectItem>
-                                              <SelectItem value="Expedia">Expedia</SelectItem>
-                                              <SelectItem value="Other">Other</SelectItem>
-                                          </SelectContent>
-                                          </Select><FormMessage />
-                                      </FormItem>
-                                      )} />
+                                       <FormField control={form.control} name="booking_source" render={({ field }) => (
+                                          <FormItem>
+                                              <FormLabel>Booking Source</FormLabel>
+                                              <Select onValueChange={field.onChange} value={field.value}>
+                                              <FormControl><SelectTrigger><SelectValue placeholder="Select a source" /></SelectTrigger></FormControl>
+                                                <SelectContent>
+                                                  {bookingSources.map(bs => (
+                                                    <SelectItem key={bs.id} value={bs.name}>{bs.name}</SelectItem>
+                                                  ))}
+                                                </SelectContent>
+                                              </Select><FormMessage />
+                                          </FormItem>
+                                        )} />
+                                        <FormField control={form.control} name="booking_type" render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Booking Type</FormLabel>
+                                                <Select onValueChange={field.onChange} value={field.value}>
+                                                <FormControl><SelectTrigger><SelectValue placeholder="Select a type" /></SelectTrigger></FormControl>
+                                                    <SelectContent>
+                                                        {bookingTypes.map(bt => (
+                                                            <SelectItem key={bt.id} value={bt.name}>{bt.name}</SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select><FormMessage />
+                                            </FormItem>
+                                        )} />
                                   </div>
                                    <FormField control={form.control} name="remarks" render={({ field }) => (
                                       <FormItem>
@@ -649,9 +765,9 @@ export function BookingForm({ isEditMode = false, bookingId }) {
                                                     <FormMessage />
                                                 </FormItem>
                                             )} />
-                                            <FormField control={form.control} name={`guests.${index}.contact_number`} render={({ field }) => (
+                                            <FormField control={form.control} name={`guests.${index}.phone_number`} render={({ field }) => (
                                                 <FormItem>
-                                                    <FormLabel>Contact Number</FormLabel>
+                                                    <FormLabel>Contact Number <span className="text-destructive">*</span></FormLabel>
                                                     <FormControl><Input placeholder="Contact Number" {...field} /></FormControl>
                                                     <FormMessage />
                                                 </FormItem>
@@ -673,7 +789,7 @@ export function BookingForm({ isEditMode = false, bookingId }) {
                                                 </FormItem>
                                             )} />
                                         </div>
-                                        <FormField control={form.control} name={`guests.${index}.passport_no`} render={({ field }) => (
+                                        <FormField control={form.control} name={`guests.${index}.ic_passport_no`} render={({ field }) => (
                                             <FormItem>
                                                 <FormLabel>IC/Passport No. (Optional)</FormLabel>
                                                 <FormControl><Input placeholder="IC/Passport No." {...field} /></FormControl>
@@ -682,21 +798,21 @@ export function BookingForm({ isEditMode = false, bookingId }) {
                                         )} />
                                     </div>
                                     ))}
-                                    <Button type="button" variant="outline" className="w-full border-dashed" onClick={() => appendGuest({ first_name: '', last_name: '' })}>
+                                    <Button type="button" variant="outline" className="w-full border-dashed" onClick={() => appendGuest({ first_name: '', last_name: '', email: '', phone_number: '' })}>
                                         <PlusCircle className="mr-2 h-4 w-4"/> Add guest
                                     </Button>
 
                                     <div className="space-y-4 pt-4">
                                         <CardTitle className="text-xl">Emergency Contact</CardTitle>
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                             <FormField control={form.control} name="emergency_contact.name" render={({ field }) => (
+                                             <FormField control={form.control} name="emergency_contact.emergency_contact_name" render={({ field }) => (
                                                 <FormItem>
                                                     <FormLabel>Emergency Contact Name</FormLabel>
                                                     <FormControl><Input placeholder="Emergency Contact Name" {...field} /></FormControl>
                                                     <FormMessage />
                                                 </FormItem>
                                             )} />
-                                            <FormField control={form.control} name="emergency_contact.contact_number" render={({ field }) => (
+                                            <FormField control={form.control} name="emergency_contact.emergency_contact_number" render={({ field }) => (
                                                 <FormItem>
                                                     <FormLabel>Emergency Contact Number</FormLabel>
                                                     <FormControl><Input placeholder="Emergency Contact No." {...field} /></FormControl>
@@ -752,90 +868,30 @@ export function BookingForm({ isEditMode = false, bookingId }) {
 
                           {currentStep === 3 && (
                                <div className="space-y-6">
-                                   <div className="space-y-4 p-4 border rounded-md">
-                                        <h3 className="font-medium">Services Fees</h3>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            <FormField control={form.control} name="early_checkin_fee" render={({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel>Early Check-in Fee</FormLabel>
-                                                    <div className="flex items-center gap-2"><span className="text-sm font-medium p-2 bg-muted rounded-md">MYR</span><FormControl><Input type="number" placeholder="0" {...field} /></FormControl></div><FormMessage />
-                                                </FormItem>
-                                            )} />
-                                            <FormField control={form.control} name="late_checkout_fee" render={({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel>Late Check-out Fee</FormLabel>
-                                                     <div className="flex items-center gap-2"><span className="text-sm font-medium p-2 bg-muted rounded-md">MYR</span><FormControl><Input type="number" placeholder="0" {...field} /></FormControl></div><FormMessage />
-                                                </FormItem>
-                                            )} />
+                                    <div className="space-y-4 p-4 border rounded-md">
+                                        <h3 className="font-medium">Other Charges & Fees</h3>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                            {chargeReferences.map((chargeRef, index) => (
+                                                <FormField
+                                                    key={chargeRef.id}
+                                                    control={form.control}
+                                                    name={`charges.${index}.amount`}
+                                                    render={({ field }) => (
+                                                        <FormItem>
+                                                            <FormLabel>{chargeRef.description}</FormLabel>
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="text-sm font-medium p-2 bg-muted rounded-md">MYR</span>
+                                                                <FormControl>
+                                                                    <Input type="number" placeholder="0" {...field} />
+                                                                </FormControl>
+                                                            </div>
+                                                            <FormMessage />
+                                                        </FormItem>
+                                                    )}
+                                                />
+                                            ))}
                                         </div>
-                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            <FormField control={form.control} name="shuttle_fee" render={({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel>Shuttle Fee</FormLabel>
-                                                    <div className="flex items-center gap-2"><span className="text-sm font-medium p-2 bg-muted rounded-md">MYR</span><FormControl><Input type="number" placeholder="0" {...field} /></FormControl></div><FormMessage />
-                                                </FormItem>
-                                            )} />
-                                            <FormField control={form.control} name="transportation_fee" render={({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel>Transportation Fee</FormLabel>
-                                                     <div className="flex items-center gap-2"><span className="text-sm font-medium p-2 bg-muted rounded-md">MYR</span><FormControl><Input type="number" placeholder="0" {...field} /></FormControl></div><FormMessage />
-                                                </FormItem>
-                                            )} />
-                                        </div>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            <FormField control={form.control} name="breakfast_fee" render={({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel>Breakfast</FormLabel>
-                                                    <div className="flex items-center gap-2"><span className="text-sm font-medium p-2 bg-muted rounded-md">MYR</span><FormControl><Input type="number" placeholder="0" {...field} /></FormControl></div><FormMessage />
-                                                </FormItem>
-                                            )} />
-                                            <FormField control={form.control} name="lunch_fee" render={({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel>Lunch</FormLabel>
-                                                     <div className="flex items-center gap-2"><span className="text-sm font-medium p-2 bg-muted rounded-md">MYR</span><FormControl><Input type="number" placeholder="0" {...field} /></FormControl></div><FormMessage />
-                                                </FormItem>
-                                            )} />
-                                        </div>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            <FormField control={form.control} name="dinner_fee" render={({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel>Dinner</FormLabel>
-                                                    <div className="flex items-center gap-2"><span className="text-sm font-medium p-2 bg-muted rounded-md">MYR</span><FormControl><Input type="number" placeholder="0" {...field} /></FormControl></div><FormMessage />
-                                                </FormItem>
-                                            )} />
-                                            <FormField control={form.control} name="other_services_fee" render={({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel>Others</FormLabel>
-                                                     <div className="flex items-center gap-2"><span className="text-sm font-medium p-2 bg-muted rounded-md">MYR</span><FormControl><Input type="number" placeholder="0" {...field} /></FormControl></div><FormMessage />
-                                                </FormItem>
-                                            )} />
-                                        </div>
-                                   </div>
-                                   <div className="space-y-4 p-4 border rounded-md">
-                                        <h3 className="font-medium">Other Fees</h3>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            <FormField control={form.control} name="cleaning_fee" render={({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel>Cleaning Fees</FormLabel>
-                                                    <div className="flex items-center gap-2"><span className="text-sm font-medium p-2 bg-muted rounded-md">MYR</span><FormControl><Input type="number" placeholder="0" {...field} /></FormControl></div><FormMessage />
-                                                </FormItem>
-                                            )} />
-                                            <FormField control={form.control} name="extra_guest_fee" render={({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel>Extra Guest Fees</FormLabel>
-                                                     <div className="flex items-center gap-2"><span className="text-sm font-medium p-2 bg-muted rounded-md">MYR</span><FormControl><Input type="number" placeholder="0" {...field} /></FormControl></div><FormMessage />
-                                                </FormItem>
-                                            )} />
-                                        </div>
-                                        <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                                            <FormField control={form.control} name="sales_tax" render={({ field }) => (<FormItem><FormLabel>Sales & Service Tax</FormLabel><div className="flex items-center gap-2"><span className="text-sm font-medium p-2 bg-muted rounded-md">MYR</span><FormControl><Input type="number" placeholder="0" {...field} /></FormControl></div><FormMessage /></FormItem>)} />
-                                            <FormField control={form.control} name="tourism_tax" render={({ field }) => (<FormItem><FormLabel>Tourism Tax</FormLabel><div className="flex items-center gap-2"><span className="text-sm font-medium p-2 bg-muted rounded-md">MYR</span><FormControl><Input type="number" placeholder="0" {...field} /></FormControl></div><FormMessage /></FormItem>)} />
-                                            <FormField control={form.control} name="heritage_tax" render={({ field }) => (<FormItem><FormLabel>Heritage Tax</FormLabel><div className="flex items-center gap-2"><span className="text-sm font-medium p-2 bg-muted rounded-md">MYR</span><FormControl><Input type="number" placeholder="0" {...field} /></FormControl></div><FormMessage /></FormItem>)} />
-                                            <FormField control={form.control} name="local_gov_tax" render={({ field }) => (<FormItem><FormLabel>Local Government Tax</FormLabel><div className="flex items-center gap-2"><span className="text-sm font-medium p-2 bg-muted rounded-md">MYR</span><FormControl><Input type="number" placeholder="0" {...field} /></FormControl></div><FormMessage /></FormItem>)} />
-                                            <FormField control={form.control} name="other_tax" render={({ field }) => (<FormItem><FormLabel>Other Tax</FormLabel><div className="flex items-center gap-2"><span className="text-sm font-medium p-2 bg-muted rounded-md">MYR</span><FormControl><Input type="number" placeholder="0" {...field} /></FormControl></div><FormMessage /></FormItem>)} />
-                                            <FormField control={form.control} name="ota_tax" render={({ field }) => (<FormItem><FormLabel>OTA Tax</FormLabel><div className="flex items-center gap-2"><span className="text-sm font-medium p-2 bg-muted rounded-md">MYR</span><FormControl><Input type="number" placeholder="0" {...field} /></FormControl></div><FormMessage /></FormItem>)} />
-                                        </div>
-                                   </div>
+                                    </div>
                                     <div className="space-y-4 p-4 border rounded-md">
                                         <h3 className="font-medium">Payment Type</h3>
                                         <FormField control={form.control} name="payment_method" render={({ field }) => (
@@ -878,8 +934,21 @@ export function BookingForm({ isEditMode = false, bookingId }) {
           </div>
           <div className="lg:col-span-1">
                <Card>
-                  <CardHeader>
-                      <CardTitle>Payment Details</CardTitle>
+                  <CardHeader className="flex flex-row items-start justify-between">
+                      <div>
+                          <CardTitle>Payment Details</CardTitle>
+                           {isEditMode && bookingDataForLog?.confirmation_code && (
+                            <CardDescription className="pt-1">
+                                Confirmation Code: <span className="font-semibold text-primary">{bookingDataForLog.confirmation_code}</span>
+                            </CardDescription>
+                          )}
+                      </div>
+                      {isEditMode && (
+                        <Button variant="outline" size="sm" type="button" onClick={() => setActivityLogOpen(true)}>
+                            <History className="mr-2 h-4 w-4" />
+                            Payment Log
+                        </Button>
+                      )}
                   </CardHeader>
                   <CardContent className="space-y-6 text-sm">
                       <div className="flex justify-between items-center">
@@ -901,35 +970,70 @@ export function BookingForm({ isEditMode = false, bookingId }) {
                           </div>
                           <div className="flex justify-between items-center font-bold text-lg border-t pt-2">
                               <span>Total Amount</span>
-                              <span>MYR {totalPrice.toFixed(2)}</span>
+                              <span>MYR {totalAmount.toFixed(2)}</span>
                           </div>
                           <div className="flex justify-between items-center">
                               <span className="text-muted-foreground">Payment Received</span>
-                              <span className="font-medium text-green-600">MYR {collectedAmount.toFixed(2)}</span>
+                              <span className="font-medium text-green-600">MYR {totalPaidDisplay.toFixed(2)}</span>
                           </div>
                           <div className="flex justify-between items-center font-bold text-lg text-destructive border-t pt-2">
                               <span>Outstanding Balance</span>
-                              <span>MYR {(totalPrice - collectedAmount).toFixed(2)}</span>
+                              <span>MYR {outstandingBalance.toFixed(2)}</span>
                           </div>
                        </div>
                   </CardContent>
                   <CardFooter className="flex flex-col gap-4 items-stretch">
-                     <FormField
-                        control={form.control}
-                        name="collected_amount"
-                        render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Collected</FormLabel>
-                                <div className="flex items-center gap-2">
-                                    <span className="text-sm font-medium p-2 bg-muted rounded-md">MYR</span>
-                                    <FormControl>
-                                        <Input type="number" placeholder="Enter Amount" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} />
-                                    </FormControl>
-                                </div>
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
+                     {isEditMode ? (
+                        <>
+                           <FormField
+                                control={form.control}
+                                name="amount_paid"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Total Collected</FormLabel>
+                                        <FormControl>
+                                            <Input type="number" {...field} disabled />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="new_payment_amount"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Receive Payment</FormLabel>
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-sm font-medium p-2 bg-muted rounded-md">MYR</span>
+                                            <FormControl>
+                                                <Input type="number" placeholder="0" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} />
+                                            </FormControl>
+                                        </div>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        </>
+                     ) : (
+                        <FormField
+                            control={form.control}
+                            name="amount_paid"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Collected</FormLabel>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-sm font-medium p-2 bg-muted rounded-md">MYR</span>
+                                        <FormControl>
+                                            <Input type="number" placeholder="Enter Amount" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} disabled={arePriceFieldsDisabled}/>
+                                        </FormControl>
+                                    </div>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                     )}
+
                     <FormField
                         control={form.control}
                         name="deposit_not_collected"
@@ -949,7 +1053,7 @@ export function BookingForm({ isEditMode = false, bookingId }) {
                     />
                      <Button type="submit" size="lg" className="w-full" disabled={submitting}>
                         {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        {isEditMode ? 'Update Booking' : 'New Booking'}
+                        {isEditMode ? 'Update Reservation' : 'Create Reservation'}
                     </Button>
                   </CardFooter>
               </Card>
@@ -961,6 +1065,11 @@ export function BookingForm({ isEditMode = false, bookingId }) {
         onClose={() => setAddGuestOpen(false)}
         onSuccess={onGuestAdded}
     />
+     <ActivityLogSheet
+        isOpen={isActivityLogOpen}
+        onClose={() => setActivityLogOpen(false)}
+        payments={bookingDataForLog?.payments || []}
+      />
     </>
   )
 }
