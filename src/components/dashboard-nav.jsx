@@ -51,6 +51,8 @@ export function DashboardNav() {
   const isAccessControlActive = pathname.startsWith("/dashboard/access-control");
   const isAmenitiesActive = pathname.startsWith("/dashboard/amenities");
   const isBookingsActive = pathname.startsWith("/dashboard/booking");
+  const isCalendarActive = pathname.startsWith("/dashboard/calendar");
+  const isMultiCalendarActive = pathname.startsWith("/dashboard/multi-calendar");
 
   return (
     <SidebarMenu>
@@ -74,6 +76,30 @@ export function DashboardNav() {
             >
               <Book className="text-sidebar-primary" />
               <span>Bookings</span>
+            </SidebarMenuButton>
+          </Link>
+        </SidebarMenuItem>
+
+        <SidebarMenuItem>
+          <Link href="/dashboard/multi-calendar">
+            <SidebarMenuButton
+              isActive={isMultiCalendarActive}
+              tooltip="Multi Calendar"
+            >
+              <Calendar className="text-sidebar-primary" />
+              <span>Multi Calendar</span>
+            </SidebarMenuButton>
+          </Link>
+        </SidebarMenuItem>
+
+        <SidebarMenuItem>
+          <Link href="/dashboard/calendar">
+            <SidebarMenuButton
+              isActive={isCalendarActive}
+              tooltip="Calendar"
+            >
+              <Calendar className="text-sidebar-primary" />
+              <span>Calendar</span>
             </SidebarMenuButton>
           </Link>
         </SidebarMenuItem>

@@ -1,6 +1,9 @@
-"use client"
+'use client'
 
 import * as React from "react"
+import Link from "next/link";
+import { api } from "@/services/api"
+import { useToast } from "@/hooks/use-toast"
 import {
   Select,
   SelectContent,
@@ -27,8 +30,8 @@ import {
   isSameDay,
   addMonths,
   subMonths,
-  getDay,
   isWithinInterval,
+  subDays,
 } from "date-fns"
 import {
   DropdownMenu,
@@ -38,75 +41,26 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
-
-
-
-// Mock Data
-const bookings = [
-  {
-    id: "booking-001",
-    guestName: "Olivia Martin",
-    checkIn: new Date(new Date().getFullYear(), new Date().getMonth(), 8),
-    checkOut: new Date(new Date().getFullYear(), new Date().getMonth(), 12),
-    status: "Confirmed",
-    channel: "Airbnb",
-    total: 796.0,
-    roomType: "Entire Place"
-  },
-  {
-    id: "booking-002",
-    guestName: "Jackson Lee",
-    checkIn: new Date(new Date().getFullYear(), new Date().getMonth(), 15),
-    checkOut: new Date(new Date().getFullYear(), new Date().getMonth(), 18),
-    status: "Pending",
-    channel: "Booking.com",
-    total: 450.0,
-    roomType: "Private Room"
-  },
-  {
-    id: "booking-003",
-    guestName: "Isabella Nguyen",
-    checkIn: new Date(new Date().getFullYear(), new Date().getMonth(), 20),
-    checkOut: new Date(new Date().getFullYear(), new Date().getMonth(), 25),
-    status: "Confirmed",
-    channel: "Agoda",
-    total: 1100.0,
-    roomType: "Entire Place"
-  },
-  {
-    id: "booking-004",
-    guestName: "William Kim",
-    checkIn: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
-    checkOut: new Date(new Date().getFullYear(), new Date().getMonth(), 5),
-    status: "Cancelled",
-    channel: "Expedia",
-    total: 600.0,
-    roomType: "Shared Room"
-  },
-];
-
-
-const channels = [
-  "Airbnb",
-  "Booking.com",
-  "Agoda",
-  "Expedia",
-  "Google Vacation Rentals",
-]
-
-const statuses = ["Confirmed", "Pending", "Cancelled"]
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
+import { Skeleton } from "@/components/ui/skeleton"
 
 const getBadgeVariant = (status) => {
   switch (status) {
     case 'Confirmed':
-      return 'default';
+    case 'Checked In':
+    case 'Checked Out':
+    case 'Vacant Clean(VC)':
+        return 'default';
     case 'Pending':
-      return 'secondary';
-    case 'Cancelled':
-      return 'destructive';
+    case 'Awaiting Payment':
+    case 'Booking Inquery':
+        return 'secondary';
+    case 'Cancel':
+    case 'No Show':
+    case 'Vacant Dirty(VD)':
+        return 'destructive';
     default:
-      return 'outline';
+        return 'outline';
   }
 }
 
@@ -125,11 +79,73 @@ const getChannelColor = (channel) => {
   }
 }
 
+const statusMapping = {
+    1: 'Confirmed',
+    2: 'Cancel',
+    3: 'Checked In',
+    4: 'Checked Out',
+    5: 'Booking Inquery',
+    6: 'Awaiting Payment',
+    7: 'No Show',
+    8: 'Vacant Dirty(VD)',
+    9: 'Vacant Clean(VC)',
+};
+
 export default function CalendarPage() {
   const [currentDate, setCurrentDate] = React.useState(new Date())
-  const [selectedChannels, setSelectedChannels] = React.useState(channels)
-  const [selectedStatuses, setSelectedStatuses] = React.useState(statuses)
+  const [bookings, setBookings] = React.useState([]);
+  const [allChannels, setAllChannels] = React.useState([]);
+  const [allStatuses, setAllStatuses] = React.useState(Object.values(statusMapping));
+  const [selectedChannels, setSelectedChannels] = React.useState([]);
+  const [selectedStatuses, setSelectedStatuses] = React.useState([]);
+  const [loading, setLoading] = React.useState(true);
   const [selectedBooking, setSelectedBooking] = React.useState(null)
+  const { toast } = useToast();
+
+  React.useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const [bookingsResponse, channelsResponse] = await Promise.all([
+          api.get('bookings'),
+          api.get('channels'),
+        ]);
+
+        const bookingsData = bookingsResponse.data.data || bookingsResponse.data;
+        const channelsData = channelsResponse.data.data || channelsResponse.data;
+
+        const formattedBookings = bookingsData.map(booking => ({
+          id: booking.id,
+          guestName: `${booking.guest?.first_name || ''} ${booking.guest?.last_name || ''}`.trim(),
+          checkIn: new Date(booking.check_in_date),
+          checkOut: new Date(booking.check_out_date),
+          status: statusMapping[booking.status] || 'Unknown',
+          channel: booking.channel?.name || 'N/A',
+          total: booking.total_amount,
+          roomType: booking.room_type?.name || 'N/A',
+          unitIdentifier: booking.property_unit?.unit_identifier || 'N/A',
+        }));
+
+        setBookings(formattedBookings);
+        
+        const channelNames = channelsData.map(c => c.name);
+        setAllChannels(channelNames);
+        setSelectedChannels(channelNames);
+        setSelectedStatuses(Object.values(statusMapping));
+
+      } catch (error) {
+        toast({
+          variant: "destructive",
+          title: "Error fetching data",
+          description: error.message || "Could not fetch data. Please try again.",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [toast]);
   
   const firstDayOfMonth = startOfMonth(currentDate)
   const lastDayOfMonth = endOfMonth(currentDate)
@@ -145,9 +161,9 @@ export default function CalendarPage() {
   )
 
   const getBookingsForDay = (day) => {
-    return filteredBookings.filter(booking => 
-      isWithinInterval(day, { start: booking.checkIn, end: booking.checkOut }) || isSameDay(day, booking.checkIn)
-    )
+    return filteredBookings.filter(booking => {
+        return isSameDay(day, booking.checkIn) || isWithinInterval(day, { start: booking.checkIn, end: subDays(booking.checkOut, 1) });
+    });
   }
 
   const handleChannelChange = (channel) => (checked) => {
@@ -161,6 +177,28 @@ export default function CalendarPage() {
       checked ? [...prev, status] : prev.filter(s => s !== status)
     );
   };
+
+  if (loading) {
+      return (
+          <div className="flex flex-col gap-6 h-full">
+              <div className="flex items-center justify-between flex-wrap gap-4">
+                  <div className="flex items-center gap-4">
+                      <Skeleton className="h-10 w-48" />
+                      <div className="flex items-center gap-2">
+                          <Skeleton className="h-10 w-10" />
+                          <Skeleton className="h-10 w-24" />
+                          <Skeleton className="h-10 w-10" />
+                      </div>
+                  </div>
+                  <div className="flex items-center gap-4">
+                      <Skeleton className="h-10 w-36" />
+                      <Skeleton className="h-10 w-36" />
+                  </div>
+              </div>
+              <Skeleton className="flex-grow h-96" />
+          </div>
+      )
+  }
 
   return (
     <div className="flex flex-col gap-6 h-full">
@@ -190,7 +228,7 @@ export default function CalendarPage() {
             <DropdownMenuContent className="w-56">
               <DropdownMenuLabel>Filter by Channel</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              {channels.map((channel) => (
+              {allChannels.map((channel) => (
                 <DropdownMenuCheckboxItem
                   key={channel}
                   checked={selectedChannels.includes(channel)}
@@ -211,7 +249,7 @@ export default function CalendarPage() {
             <DropdownMenuContent className="w-56">
               <DropdownMenuLabel>Filter by Status</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              {statuses.map((status) => (
+              {allStatuses.map((status) => (
                 <DropdownMenuCheckboxItem
                   key={status}
                   checked={selectedStatuses.includes(status)}
@@ -243,24 +281,26 @@ export default function CalendarPage() {
                 </div>
                 <div className="flex flex-col gap-1">
                   {getBookingsForDay(day).map(booking => {
-                    if (isSameDay(day, booking.checkIn) || (getDay(day) === 0 && isWithinInterval(day, { start: booking.checkIn, end: booking.checkOut }))) {
-                      const duration = (booking.checkOut.getTime() - booking.checkIn.getTime()) / (1000 * 3600 * 24);
-                      const dayOfWeek = getDay(day);
-                      const widthSpan = Math.min(duration + 1, 7 - dayOfWeek);
-                      
-                      return (
-                        <button
-                          key={booking.id}
-                          onClick={() => setSelectedBooking(booking)}
-                          className={`text-left text-xs rounded-sm px-1 py-0.5 border truncate cursor-pointer ${getChannelColor(booking.channel)}`}
-                          style={{ width: `calc(${widthSpan} * 100% + ${widthSpan - 1} * 1px)` }}
-                        >
+                    const isStart = isSameDay(day, booking.checkIn);
+                    const isEnd = isSameDay(day, subDays(booking.checkOut, 1));
+                    
+                    return (
+                      <button
+                        key={booking.id}
+                        onClick={() => setSelectedBooking(booking)}
+                        className={`text-left text-xs px-1 py-0.5 border truncate cursor-pointer w-full
+                            ${getChannelColor(booking.channel)}
+                            ${isStart ? 'rounded-l-md' : ''}
+                            ${isEnd ? 'rounded-r-md' : ''}
+                            ${!isStart && !isEnd ? 'rounded-none' : ''}
+                        `}
+                      >
+                        <>
                           <Badge variant={getBadgeVariant(booking.status)} className="mr-1 text-xs px-1 py-0">{booking.status.slice(0,1)}</Badge>
-                          {booking.guestName}
-                        </button>
-                      )
-                    }
-                    return null;
+                          {booking.unitIdentifier} ({booking.guestName})
+                        </>
+                      </button>
+                    )
                   })}
                 </div>
               </div>
@@ -278,38 +318,49 @@ export default function CalendarPage() {
             </DialogDescription>
           </DialogHeader>
           {selectedBooking && (
-            <div className="grid gap-4 py-4 text-sm">
-              <div className="grid grid-cols-2 gap-x-4 gap-y-2">
-                <span className="font-medium text-muted-foreground">Guest:</span>
-                <span>{selectedBooking.guestName}</span>
+            <>
+              <div className="grid gap-4 py-4 text-sm">
+                <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                  <span className="font-medium text-muted-foreground">Guest:</span>
+                  <span>{selectedBooking.guestName}</span>
+                </div>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                    <span className="font-medium text-muted-foreground">Unit:</span>
+                    <span>{selectedBooking.unitIdentifier}</span>
+                </div>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                  <span className="font-medium text-muted-foreground">Check-in:</span>
+                  <span>{format(selectedBooking.checkIn, 'PPP')}</span>
+                </div>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                  <span className="font-medium text-muted-foreground">Check-out:</span>
+                  <span>{format(selectedBooking.checkOut, 'PPP')}</span>
+                </div>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-2 items-center">
+                  <span className="font-medium text-muted-foreground">Status:</span>
+                  <span><Badge variant={getBadgeVariant(selectedBooking.status)}>{selectedBooking.status}</Badge></span>
+                </div>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-2 items-center">
+                  <span className="font-medium text-muted-foreground">Channel:</span>
+                   <span className={`text-xs rounded-sm px-2 py-1 border w-fit ${getChannelColor(selectedBooking.channel)}`}>
+                    {selectedBooking.channel}
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                  <span className="font-medium text-muted-foreground">Room Type:</span>
+                  <span>{selectedBooking.roomType}</span>
+                </div>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                  <span className="font-medium text-muted-foreground">Total Amount:</span>
+                  <span className="font-semibold">{new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(selectedBooking.total)}</span>
+                </div>
               </div>
-              <div className="grid grid-cols-2 gap-x-4 gap-y-2">
-                <span className="font-medium text-muted-foreground">Check-in:</span>
-                <span>{format(selectedBooking.checkIn, 'PPP')}</span>
-              </div>
-              <div className="grid grid-cols-2 gap-x-4 gap-y-2">
-                <span className="font-medium text-muted-foreground">Check-out:</span>
-                <span>{format(selectedBooking.checkOut, 'PPP')}</span>
-              </div>
-              <div className="grid grid-cols-2 gap-x-4 gap-y-2 items-center">
-                <span className="font-medium text-muted-foreground">Status:</span>
-                <span><Badge variant={getBadgeVariant(selectedBooking.status)}>{selectedBooking.status}</Badge></span>
-              </div>
-              <div className="grid grid-cols-2 gap-x-4 gap-y-2 items-center">
-                <span className="font-medium text-muted-foreground">Channel:</span>
-                 <span className={`text-xs rounded-sm px-2 py-1 border w-fit ${getChannelColor(selectedBooking.channel)}`}>
-                  {selectedBooking.channel}
-                </span>
-              </div>
-              <div className="grid grid-cols-2 gap-x-4 gap-y-2">
-                <span className="font-medium text-muted-foreground">Room Type:</span>
-                <span>{selectedBooking.roomType}</span>
-              </div>
-              <div className="grid grid-cols-2 gap-x-4 gap-y-2">
-                <span className="font-medium text-muted-foreground">Total Amount:</span>
-                <span className="font-semibold">{new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(selectedBooking.total)}</span>
-              </div>
-            </div>
+              <DialogFooter>
+                <Link href={`/dashboard/booking/${selectedBooking.id}/edit`} passHref>
+                  <Button>Edit Booking</Button>
+                </Link>
+              </DialogFooter>
+            </>
           )}
         </DialogContent>
       </Dialog>

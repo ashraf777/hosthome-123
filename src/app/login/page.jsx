@@ -124,7 +124,7 @@ export default function LoginPage() {
         </CardContent>
       </Card>
       <div className="absolute bottom-4 text-center text-sm text-muted-foreground">
-        (version: 1.0.5 Build 1)
+        (version: 1.0.6 Build 1)
       </div>
     </div>
   );

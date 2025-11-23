@@ -1,5 +1,4 @@
 
-
 "use client"
 
 import { useEffect, useState, useCallback } from "react"
@@ -41,6 +40,7 @@ import { PhotoGallery } from "@/components/photo-gallery"
 import { Switch } from "@/components/ui/switch"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { Checkbox } from "@/components/ui/checkbox"
+import RoomSetupForm from "./room-setup-form"
 
 const roomTypeSchema = z.object({
   property_id: z.coerce.number({ required_error: "Please select a property." }).optional(),
@@ -53,6 +53,14 @@ const roomTypeSchema = z.object({
   status: z.boolean().default(true),
   amenity_ids: z.array(z.number()).optional(),
   hosting_company_id: z.coerce.number().optional(),
+  room_setup: z.object({
+    livingRooms: z.number().min(0),
+    bathrooms: z.number().min(1),
+    rooms: z.array(z.object({
+      name: z.string(),
+      beds: z.record(z.string(), z.number())
+    }))
+  }).optional(),
 }).superRefine((data, ctx) => {
     if (!data.property_id) {
         ctx.addIssue({ code: z.ZodIssueCode.custom, message: "A property must be selected or created.", path: ['property_id']});
@@ -79,6 +87,11 @@ export function GlobalRoomTypeForm({ isEditMode = false, roomTypeId }) {
       weekend_price: 120,
       status: true,
       amenity_ids: [],
+      room_setup: {
+        livingRooms: 1,
+        bathrooms: 1,
+        rooms: [{ name: 'Room 1', beds: { 'Queen Bed': 1 } }]
+      }
     },
   })
   
@@ -127,22 +140,23 @@ export function GlobalRoomTypeForm({ isEditMode = false, roomTypeId }) {
   useEffect(() => {
     async function initialFetch() {
         setLoading(true);
-        await Promise.all([
-          fetchProperties(), 
-          fetchAmenities()
-        ]);
+        await Promise.all([fetchProperties(), fetchAmenities()]);
         
         if (isEditMode && roomTypeId) {
             try {
                 const roomTypeRes = await api.get(`room-types/${roomTypeId}`);
-                const roomTypeData = roomTypeRes.data || roomTypeRes;
-                const currentAmenities = roomTypeData.amenities?.map(a => a.id) || [];
-                form.reset({
-                    ...roomTypeData,
-                    status: roomTypeData.status === 1,
-                    amenity_ids: currentAmenities,
-                });
-                if (roomTypeData) setCreatedRoomType(roomTypeData); // To show gallery
+                const roomTypeData = roomTypeRes.data.data || roomTypeRes.data;
+
+                if (roomTypeData) {
+                    const currentAmenities = roomTypeData.amenities?.map(a => a.id) || [];
+                    form.reset({
+                        ...roomTypeData,
+                        status: roomTypeData.status === true || roomTypeData.status === 1,
+                        amenity_ids: currentAmenities,
+                        room_setup: roomTypeData.room_setup || form.getValues('room_setup')
+                    });
+                    setCreatedRoomType(roomTypeData);
+                }
             } catch (error) {
                  toast({ variant: "destructive", title: "Error", description: "Could not fetch room type details." });
             }
@@ -227,7 +241,7 @@ export function GlobalRoomTypeForm({ isEditMode = false, roomTypeId }) {
                 />
             </CardContent>
             <CardFooter>
-                <Button onClick={() => router.push(`/dashboard/room-types`)}>
+                <Button onClick={() => router.push(`/dashboard/room-types`)} >
                     Done
                 </Button>
             </CardFooter>
@@ -396,6 +410,19 @@ export function GlobalRoomTypeForm({ isEditMode = false, roomTypeId }) {
                         />
                     </CardContent>
                 </Card>
+
+                <FormField
+                    control={form.control}
+                    name="room_setup"
+                    render={({ field }) => (
+                    <RoomSetupForm
+                        livingRooms={field.value?.livingRooms}
+                        bathrooms={field.value?.bathrooms}
+                        rooms={field.value?.rooms}
+                        onChange={field.onChange}
+                    />
+                    )}
+                />
 
                 {isEditMode && createdRoomType && (
                     <Card>

@@ -6,15 +6,17 @@ import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { useRouter } from "next/navigation"
-import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { RoomTypeForm } from "@/app/dashboard/listings/[id]/room-types/room-type-form";
 import { PhotoGallery } from "@/components/photo-gallery";
 import { Button } from "@/components/ui/button"
 import { Loader2 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { api } from "@/services/api"
+import RoomSetupForm from "../../../room-types/room-setup-form";
+import { FormField, Form } from "@/components/ui/form";
+import { Skeleton } from "@/components/ui/skeleton"
 
-// Schema needs to be here to be used by the form hook in this component
 const roomTypeSchema = z.object({
   name: z.string().min(3, "Room type name is required."),
   max_adults: z.coerce.number().min(1, "Max adults must be at least 1."),
@@ -24,16 +26,25 @@ const roomTypeSchema = z.object({
   weekend_price: z.coerce.number().min(0).optional().nullable(),
   status: z.boolean().default(true),
   amenity_ids: z.array(z.number()).optional(),
+  room_setup: z.object({
+    livingRooms: z.number().min(0),
+    bathrooms: z.number().min(1),
+    rooms: z.array(z.object({
+      name: z.string(),
+      beds: z.record(z.string(), z.number())
+    }))
+  }).optional(),
 });
 
 
 export function RoomTypeEditTab({ roomTypeId, propertyId, onUpdate }) {
     const [isSubmitting, setIsSubmitting] = React.useState(false);
+    const [loading, setLoading] = React.useState(true);
     const [roomTypeData, setRoomTypeData] = React.useState(null);
+    const [allAmenities, setAllAmenities] = React.useState({});
     const { toast } = useToast();
     const router = useRouter();
 
-    // The form hook is now in the parent tab component
     const form = useForm({
         resolver: zodResolver(roomTypeSchema),
         defaultValues: {
@@ -45,16 +56,64 @@ export function RoomTypeEditTab({ roomTypeId, propertyId, onUpdate }) {
             weekend_price: 120,
             status: true,
             amenity_ids: [],
+            room_setup: {
+                livingRooms: 1,
+                bathrooms: 1,
+                rooms: [{ name: 'Room 1', beds: { 'Queen Bed': 1 } }]
+            }
         },
     });
 
     React.useEffect(() => {
-        if(roomTypeId) {
-            api.get(`room-types/${roomTypeId}`).then(res => {
-                setRoomTypeData(res.data);
-            });
-        }
-    }, [roomTypeId]);
+        const fetchAllData = async () => {
+            if (!roomTypeId) {
+                setLoading(false);
+                return;
+            }
+            setLoading(true);
+            try {
+                const [amenitiesRes, roomTypeRes] = await Promise.all([
+                    api.get('amenities'),
+                    api.get(`room-types/${roomTypeId}`),
+                ]);
+
+                // Process amenities
+                const amenitiesList = amenitiesRes.data || amenitiesRes;
+                if (Array.isArray(amenitiesList)) {
+                    const filteredAmenities = amenitiesList.filter(amenity => 
+                        (amenity.type === 2 || amenity.type === 3) &&
+                        (amenity.amenity_reference?.type === 2 || amenity.amenity_reference?.type === 3)
+                    );
+                    const groupedAmenities = filteredAmenities.reduce((acc, amenity) => {
+                        const category = amenity.amenity_reference?.name || 'General';
+                        if (!acc[category]) acc[category] = [];
+                        acc[category].push({ id: amenity.id, name: amenity.specific_name });
+                        return acc;
+                    }, {});
+                    setAllAmenities(groupedAmenities);
+                }
+
+                // Process room type data and reset the form
+                const data = roomTypeRes.data.data || roomTypeRes.data;
+                setRoomTypeData(data); 
+
+                if (data) {
+                    const currentAmenities = data.amenities?.map(a => a.id) || [];
+                    form.reset({
+                        ...data,
+                        status: data.status === 1 || data.status === true,
+                        amenity_ids: currentAmenities,
+                        room_setup: data.room_setup || { livingRooms: 1, bathrooms: 1, rooms: [{ name: 'Room 1', beds: {} }] }
+                    });
+                }
+            } catch(error) {
+                toast({ variant: "destructive", title: "Error", description: "Could not fetch room type details." });
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchAllData();
+    }, [roomTypeId, form, toast]);
 
     async function onSubmit(values) {
         setIsSubmitting(true);
@@ -66,7 +125,6 @@ export function RoomTypeEditTab({ roomTypeId, propertyId, onUpdate }) {
         try {
             await api.put(`room-types/${roomTypeId}`, payload);
             
-            // Save amenities
             if (values.amenity_ids) {
                 await api.post(`room-types/${roomTypeId}/amenities`, {
                     amenity_ids: values.amenity_ids,
@@ -101,42 +159,58 @@ export function RoomTypeEditTab({ roomTypeId, propertyId, onUpdate }) {
         )
     }
 
+    if (loading) {
+        return <Skeleton className="h-96 w-full" />;
+    }
+
     return (
-         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <Card>
-                <CardContent className="pt-6">
-                    {/* Pass the form down to the details component */}
-                    <RoomTypeForm 
-                        form={form} // Pass the form instance
-                        isEditMode
-                        roomTypeId={roomTypeId}
-                        propertyId={propertyId}
-                        onSuccess={onUpdate}
+        <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                <Card>
+                    <CardContent className="pt-6">
+                        <RoomTypeForm 
+                            form={form}
+                            allAmenities={allAmenities}
+                        />
+                    </CardContent>
+                </Card>
+
+                <FormField
+                    control={form.control}
+                    name="room_setup"
+                    render={({ field }) => (
+                    <RoomSetupForm
+                        livingRooms={field.value?.livingRooms}
+                        bathrooms={field.value?.bathrooms}
+                        rooms={field.value?.rooms}
+                        onChange={field.onChange}
                     />
-                </CardContent>
-            </Card>
-             <Card>
-                <CardHeader>
-                    <CardTitle>Room Type Photos</CardTitle>
-                    <CardDescription>Manage photos for this room type.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                   <PhotoGallery 
-                        photoType="room_type" 
-                        photoTypeId={roomTypeId} 
-                        hostingCompanyId={roomTypeData?.hosting_company_id}
-                    />
-                </CardContent>
-            </Card>
-             <div className="flex justify-between">
-                <Button type="button" variant="outline" onClick={() => router.push('/dashboard/listings')}>Cancel</Button>
-                <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : null}
-                Update Room Type
-                </Button>
-            </div>
-        </form>
+                    )}
+                />
+
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Room Type Photos</CardTitle>
+                        <CardDescription>Manage photos for this room type.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                    <PhotoGallery 
+                            photoType="room_type" 
+                            photoTypeId={roomTypeId} 
+                            hostingCompanyId={roomTypeData?.hosting_company_id}
+                        />
+                    </CardContent>
+                </Card>
+                <div className="flex justify-between">
+                    <Button type="button" variant="outline" onClick={() => router.push('/dashboard/listings')}>Cancel</Button>
+                    <Button type="submit" disabled={isSubmitting}>
+                    {isSubmitting ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : null}
+                    Update Room Type
+                    </Button>
+                </div>
+            </form>
+        </Form>
     )
 }
