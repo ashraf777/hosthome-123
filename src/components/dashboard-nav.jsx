@@ -99,7 +99,7 @@ export function DashboardNav() {
               tooltip="Calendar"
             >
               <Calendar className="text-sidebar-primary" />
-              <span>Booking Calendar</span>
+              <span>Calendar</span>
             </SidebarMenuButton>
           </Link>
         </SidebarMenuItem>
