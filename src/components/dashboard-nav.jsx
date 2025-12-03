@@ -23,7 +23,10 @@ import {
   Bed,
   PlusCircle,
   Building,
-  Sparkles
+  Sparkles,
+  Paintbrush,
+  List,
+  CheckSquare
 } from "lucide-react"
 import {
   Collapsible,
@@ -51,8 +54,7 @@ export function DashboardNav() {
   const isAccessControlActive = pathname.startsWith("/dashboard/access-control");
   const isAmenitiesActive = pathname.startsWith("/dashboard/amenities");
   const isBookingsActive = pathname.startsWith("/dashboard/booking");
-  const isCalendarActive = pathname.startsWith("/dashboard/calendar");
-  const isMultiCalendarActive = pathname.startsWith("/dashboard/multi-calendar");
+  const isTaskManagementActive = pathname.startsWith("/dashboard/task-management");
 
   return (
     <SidebarMenu>
@@ -72,34 +74,10 @@ export function DashboardNav() {
           <Link href="/dashboard/booking">
             <SidebarMenuButton
               isActive={isBookingsActive}
-              tooltip="Bookings"
+              tooltip="Reservations"
             >
               <Book className="text-sidebar-primary" />
-              <span>Bookings</span>
-            </SidebarMenuButton>
-          </Link>
-        </SidebarMenuItem>
-
-        <SidebarMenuItem>
-          <Link href="/dashboard/multi-calendar">
-            <SidebarMenuButton
-              isActive={isMultiCalendarActive}
-              tooltip="Multi Calendar"
-            >
-              <Calendar className="text-sidebar-primary" />
-              <span>Multi Calendar</span>
-            </SidebarMenuButton>
-          </Link>
-        </SidebarMenuItem>
-
-        <SidebarMenuItem>
-          <Link href="/dashboard/calendar">
-            <SidebarMenuButton
-              isActive={isCalendarActive}
-              tooltip="Calendar"
-            >
-              <Calendar className="text-sidebar-primary" />
-              <span>Calendar</span>
+              <span>Reservations</span>
             </SidebarMenuButton>
           </Link>
         </SidebarMenuItem>
@@ -149,6 +127,59 @@ export function DashboardNav() {
             </Link>
         </SidebarMenuItem>
 
+        <Collapsible asChild>
+        <>
+          <SidebarMenuItem>
+            <CollapsibleTrigger asChild>
+                <SidebarMenuButton
+                isActive={isTaskManagementActive}
+                isSubmenu
+                >
+                <Paintbrush className="text-sidebar-primary" />
+                <span>Task Management</span>
+                </SidebarMenuButton>
+            </CollapsibleTrigger>
+          </SidebarMenuItem>
+
+          <CollapsibleContent asChild>
+            <SidebarMenuSub>
+              <SidebarMenuSubItem>
+                 <Link href="/dashboard/task-management/task-list">
+                    <SidebarMenuSubButton isActive={pathname.startsWith('/dashboard/task-management/task-list')}>
+                        <List className="h-4 w-4 mr-2" />
+                        Task List
+                    </SidebarMenuSubButton>
+                </Link>
+              </SidebarMenuSubItem>
+               <SidebarMenuSubItem>
+                 <Link href="/dashboard/task-management/checklist">
+                    <SidebarMenuSubButton isActive={pathname.startsWith('/dashboard/task-management/checklist')}>
+                        <CheckSquare className="h-4 w-4 mr-2" />
+                        Checklist
+                    </SidebarMenuSubButton>
+                </Link>
+              </SidebarMenuSubItem>
+              <SidebarMenuSubItem>
+                 <Link href="/dashboard/task-management/cleaning-team">
+                    <SidebarMenuSubButton isActive={pathname.startsWith('/dashboard/task-management/cleaning-team')}>
+                        <Users className="h-4 w-4 mr-2" />
+                        Cleaning Team
+                    </SidebarMenuSubButton>
+                </Link>
+              </SidebarMenuSubItem>
+              <SidebarMenuSubItem>
+                 <Link href="/dashboard/task-management/preset-task">
+                    <SidebarMenuSubButton isActive={pathname.startsWith('/dashboard/task-management/preset-task')}>
+                        <Settings className="h-4 w-4 mr-2" />
+                        Preset Task
+                    </SidebarMenuSubButton>
+                </Link>
+              </SidebarMenuSubItem>
+            </SidebarMenuSub>
+          </CollapsibleContent>
+        </>
+      </Collapsible>
+
         <SidebarMenuItem>
             <Link href="/dashboard/users">
                 <SidebarMenuButton isActive={isUserManagementActive} tooltip="User Management">
@@ -166,205 +197,6 @@ export function DashboardNav() {
                 </SidebarMenuButton>
             </Link>
         </SidebarMenuItem>
-
-      {/* 
-      const navItems = [
-        {
-          href: "/dashboard",
-          label: "Dashboard",
-          icon: LayoutDashboard,
-        },
-        {
-          href: "/dashboard/calendar",
-          label: "Calendar",
-          icon: Calendar,
-        },
-        {
-          href: "/dashboard/booking",
-          label: "Bookings",
-          icon: Book,
-        },
-        {
-          href: "/dashboard/guests",
-          label: "Guests",
-          icon: Users,
-        },
-      ]
-
-      const isSettingsActive = pathname.startsWith("/dashboard/settings") || pathname.startsWith("/dashboard/users") || pathname.startsWith("/dashboard/access-control");
-      const isAccountsActive = pathname.startsWith("/dashboard/accounts");
-
-      {navItems.map((item) => (
-        <SidebarMenuItem key={item.href}>
-          <Link href={item.href}>
-            <SidebarMenuButton
-              isActive={pathname.startsWith(item.href) && (item.href === "/dashboard" ? pathname === item.href : true)}
-              tooltip={item.label}
-            >
-              <item.icon className="text-sidebar-primary" />
-              <span>{item.label}</span>
-            </SidebarMenuButton>
-          </Link>
-        </SidebarMenuItem>
-      ))}
-      <Collapsible asChild>
-        <>
-          <SidebarMenuItem>
-            <CollapsibleTrigger asChild>
-                <SidebarMenuButton
-                isActive={isListingsActive || isPropertiesActive || isRoomTypesActive || isUnitsActive}
-                isSubmenu
-                >
-                <Home className="text-sidebar-primary" />
-                <span>Property</span>
-                </SidebarMenuButton>
-            </CollapsibleTrigger>
-          </SidebarMenuItem>
-
-          <CollapsibleContent asChild>
-            <SidebarMenuSub>
-              <SidebarMenuSubItem>
-                 <Link href="/dashboard/listings">
-                    <SidebarMenuSubButton isActive={isListingsActive}>
-                        Listings
-                    </SidebarMenuSubButton>
-                </Link>
-              </SidebarMenuSubItem>
-               <SidebarMenuSubItem>
-                 <Link href="/dashboard/properties">
-                    <SidebarMenuSubButton isActive={isPropertiesActive}>
-                        Properties
-                    </SidebarMenuSubButton>
-                </Link>
-              </SidebarMenuSubItem>
-              <SidebarMenuSubItem>
-                 <Link href="/dashboard/room-types">
-                    <SidebarMenuSubButton isActive={isRoomTypesActive}>
-                        Room Types
-                    </SidebarMenuSubButton>
-                </Link>
-              </SidebarMenuSubItem>
-              <SidebarMenuSubItem>
-                 <Link href="/dashboard/units">
-                    <SidebarMenuSubButton isActive={isUnitsActive}>
-                        Units
-                    </SidebarMenuSubButton>
-                </Link>
-              </SidebarMenuSubItem>
-            </SidebarMenuSub>
-          </CollapsibleContent>
-        </>
-      </Collapsible>
-      <Collapsible asChild>
-        <>
-          <SidebarMenuItem>
-            <CollapsibleTrigger asChild>
-                <SidebarMenuButton
-                isActive={isAccountsActive}
-                isSubmenu
-                >
-                <DollarSign className="text-sidebar-primary" />
-                <span>Accounts</span>
-                </SidebarMenuButton>
-            </CollapsibleTrigger>
-          </SidebarMenuItem>
-
-          <CollapsibleContent asChild>
-            <SidebarMenuSub>
-              <SidebarMenuSubItem>
-                 <Link href="/dashboard/accounts/invoice">
-                    <SidebarMenuSubButton isActive={pathname.startsWith('/dashboard/accounts/invoice')}>
-                        Invoice
-                    </SidebarMenuSubButton>
-                </Link>
-              </SidebarMenuSubItem>
-               <SidebarMenuSubItem>
-                 <Link href="/dashboard/accounts/expenses">
-                    <SidebarMenuSubButton isActive={pathname.startsWith('/dashboard/accounts/expenses')}>
-                        Expenses
-                    </SidebarMenuSubButton>
-                </Link>
-              </SidebarMenuSubItem>
-               <SidebarMenuSubItem>
-                 <Link href="/dashboard/accounts/payout">
-                    <SidebarMenuSubButton isActive={pathname.startsWith('/dashboard/accounts/payout')}>
-                        Payout
-                    </SidebarMenuSubButton>
-                </Link>
-              </SidebarMenuSubItem>
-            </SidebarMenuSub>
-          </CollapsibleContent>
-        </>
-      </Collapsible>
-       <SidebarMenuItem>
-          <Link href="/dashboard/pricing">
-            <SidebarMenuButton
-              isActive={pathname.startsWith('/dashboard/pricing')}
-              tooltip="Intelligent Pricing"
-            >
-              <BarChart2 className="text-sidebar-primary" />
-              <span>Intelligent Pricing</span>
-            </SidebarMenuButton>
-          </Link>
-      </SidebarMenuItem>
-      <SidebarMenuItem>
-          <Link href="/dashboard/channel-sync">
-            <SidebarMenuButton
-              isActive={pathname.startsWith('/dashboard/channel-sync')}
-              tooltip="Channel Sync"
-            >
-              <Cable className="text-sidebar-primary" />
-              <span>Channel Sync</span>
-            </SidebarMenuButton>
-          </Link>
-      </SidebarMenuItem>
-       <SidebarMenuItem>
-          <Link href="/dashboard/messaging">
-            <SidebarMenuButton
-              isActive={pathname.startsWith('/dashboard/messaging')}
-              tooltip="Messaging"
-            >
-              <MessageCircle className="text-sidebar-primary" />
-              <span>Messaging</span>
-            </SidebarMenuButton>
-          </Link>
-      </SidebarMenuItem>
-
-       <Collapsible asChild>
-        <>
-          <SidebarMenuItem>
-            <CollapsibleTrigger asChild>
-                <SidebarMenuButton
-                isActive={isSettingsActive}
-                isSubmenu
-                >
-                <Settings className="text-sidebar-primary" />
-                <span>Settings</span>
-                </SidebarMenuButton>
-            </CollapsibleTrigger>
-          </SidebarMenuItem>
-          <CollapsibleContent asChild>
-            <SidebarMenuSub>
-              <SidebarMenuSubItem>
-                <Link href="/dashboard/settings">
-                    <SidebarMenuSubButton isActive={pathname === '/dashboard/settings'}>General</SidebarMenuSubButton>
-                </Link>
-              </SidebarMenuSubItem>
-              <SidebarMenuSubItem>
-                <Link href="/dashboard/users">
-                    <SidebarMenuSubButton isActive={pathname.startsWith('/dashboard/users')}>Users</SidebarMenuSubButton>
-                </Link>
-              </SidebarMenuSubItem>
-               <SidebarMenuSubItem>
-                 <Link href="/dashboard/access-control">
-                    <SidebarMenuSubButton isActive={pathname.startsWith('/dashboard/access-control')}>Roles</SidebarMenuSubButton>
-                </Link>
-              </SidebarMenuSubItem>
-            </SidebarMenuSub>
-          </CollapsibleContent>
-        </>
-      </Collapsible> 
-      */}
     </SidebarMenu>
   )
 }

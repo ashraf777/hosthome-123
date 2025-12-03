@@ -23,7 +23,10 @@ import {
   Bed,
   PlusCircle,
   Building,
-  Sparkles
+  Sparkles,
+  Paintbrush,
+  List,
+  CheckSquare
 } from "lucide-react"
 import {
   Collapsible,
@@ -51,6 +54,7 @@ export function DashboardNav() {
   const isAccessControlActive = pathname.startsWith("/dashboard/access-control");
   const isAmenitiesActive = pathname.startsWith("/dashboard/amenities");
   const isBookingsActive = pathname.startsWith("/dashboard/booking");
+  const isTaskManagementActive = pathname.startsWith("/dashboard/task-management");
 
   return (
     <SidebarMenu>
@@ -122,6 +126,59 @@ export function DashboardNav() {
                 </SidebarMenuButton>
             </Link>
         </SidebarMenuItem>
+
+        <Collapsible asChild>
+        <>
+          <SidebarMenuItem>
+            <CollapsibleTrigger asChild>
+                <SidebarMenuButton
+                isActive={isTaskManagementActive}
+                isSubmenu
+                >
+                <Paintbrush className="text-sidebar-primary" />
+                <span>Task Management</span>
+                </SidebarMenuButton>
+            </CollapsibleTrigger>
+          </SidebarMenuItem>
+
+          <CollapsibleContent asChild>
+            <SidebarMenuSub>
+              <SidebarMenuSubItem>
+                 <Link href="/dashboard/task-management/task-list">
+                    <SidebarMenuSubButton isActive={pathname.startsWith('/dashboard/task-management/task-list')}>
+                        <List className="h-4 w-4 mr-2" />
+                        Task List
+                    </SidebarMenuSubButton>
+                </Link>
+              </SidebarMenuSubItem>
+               <SidebarMenuSubItem>
+                 <Link href="/dashboard/task-management/checklist">
+                    <SidebarMenuSubButton isActive={pathname.startsWith('/dashboard/task-management/checklist')}>
+                        <CheckSquare className="h-4 w-4 mr-2" />
+                        Checklist
+                    </SidebarMenuSubButton>
+                </Link>
+              </SidebarMenuSubItem>
+              <SidebarMenuSubItem>
+                 <Link href="/dashboard/task-management/cleaning-team">
+                    <SidebarMenuSubButton isActive={pathname.startsWith('/dashboard/task-management/cleaning-team')}>
+                        <Users className="h-4 w-4 mr-2" />
+                        Cleaning Team
+                    </SidebarMenuSubButton>
+                </Link>
+              </SidebarMenuSubItem>
+              <SidebarMenuSubItem>
+                 <Link href="/dashboard/task-management/preset-task">
+                    <SidebarMenuSubButton isActive={pathname.startsWith('/dashboard/task-management/preset-task')}>
+                        <Settings className="h-4 w-4 mr-2" />
+                        Preset Task
+                    </SidebarMenuSubButton>
+                </Link>
+              </SidebarMenuSubItem>
+            </SidebarMenuSub>
+          </CollapsibleContent>
+        </>
+      </Collapsible>
 
         <SidebarMenuItem>
             <Link href="/dashboard/users">

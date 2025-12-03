@@ -1,0 +1,58 @@
+
+[
+  {
+    "id": "TSK-001",
+    "createdAt": "2023-08-09T12:12:00Z",
+    "unitName": "Suria 03A-10",
+    "propertyName": "Suria North Kiara",
+    "teamName": "ngpuisi",
+    "cleanerName": "kim",
+    "status": "Completed",
+    "priority": "Urgent",
+    "hours": 0.02
+  },
+  {
+    "id": "TSK-002",
+    "createdAt": "2023-08-15T16:36:00Z",
+    "unitName": "Suria 03A-10",
+    "propertyName": "Suria North Kiara",
+    "teamName": "Cleaner ANA",
+    "cleanerName": "kim",
+    "status": "Completed",
+    "priority": "Urgent",
+    "hours": 0.01
+  },
+  {
+    "id": "TSK-003",
+    "createdAt": "2023-08-15T16:37:00Z",
+    "unitName": null,
+    "propertyName": null,
+    "teamName": "Aunty Gan maintenance team",
+    "cleanerName": "ayuman owner",
+    "status": "Completed",
+    "priority": "Urgent",
+    "hours": 0.01
+  },
+  {
+    "id": "TSK-004",
+    "createdAt": "2024-01-01T10:00:00Z",
+    "unitName": "Vista 07-02",
+    "propertyName": "Vista Residence",
+    "teamName": "Morning Shift",
+    "cleanerName": "john",
+    "status": "To Do",
+    "priority": "Medium",
+    "hours": null
+  },
+  {
+    "id": "TSK-005",
+    "createdAt": "2024-01-02T11:30:00Z",
+    "unitName": "Residensi 12-05",
+    "propertyName": "Residensi AVA",
+    "teamName": "ngpuisi",
+    "cleanerName": "jane",
+    "status": "In Progress",
+    "priority": "High",
+    "hours": null
+  }
+]

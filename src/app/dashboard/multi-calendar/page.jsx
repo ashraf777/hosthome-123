@@ -139,7 +139,7 @@ const UnitRow = memo(({ unit, daysInRange, selectedStatuses }) => {
                         title={`${unit.name} - ${statusName} (${booking.confirmation_code})`}
                     >
                         {/* Display booking code or status name (only on the first cell) */}
-                        {booking?.amount_paid} - {statusName}
+                        {statusName}
                     </div>
                 </td>
             );
@@ -260,7 +260,7 @@ export default function MultiCalendarPage() {
             setCalendarLoading(true);
             try {
                 const startDate = format(date.from, 'yyyy-MM-dd');
-                const endDate = date.to ? format(date.to, 'yyyy-MM-dd') : startDate;
+                const endDate = format(date.to, 'yyyy-MM-dd');
 
                 // Map selected status names back to IDs for the API request
                 const statusIds = selectedStatuses.map(name => {
@@ -268,13 +268,7 @@ export default function MultiCalendarPage() {
                     return statusObj ? statusObj.id : null;
                 }).filter(id => id !== null);
 
-                // const channelIds = selectedChannels.length > 0 ? selectedChannels.join(',') : null;
-                const channelIds = selectedChannels.map(name => {
-                    const channelObj = channels.find(c => c.name === name);
-                    return channelObj ? channelObj.id : null;
-                }).filter(id => id !== null).join(',');
-
-                const url = `multi-calendar?property_id=${selectedProperty}&start_date=${startDate}&end_date=${endDate}&statuses=${statusIds.join(',')}&channels=${channelIds || ''}`;
+                const url = `multi-calendar?property_id=${selectedProperty}&start_date=${startDate}&end_date=${endDate}&statuses=${statusIds.join(',')}`;
                 
                 const response = await api.get(url);
                 console.log("Calendar Data Response:", response);
@@ -298,7 +292,7 @@ export default function MultiCalendarPage() {
             }
         }
         fetchCalendarData();
-    }, [selectedProperty, date, selectedStatuses, selectedChannels, toast]);
+    }, [selectedProperty, date, selectedStatuses, toast]);
 
 
     const handleChannelToggle = (channelName) => {
@@ -350,22 +344,6 @@ export default function MultiCalendarPage() {
         )
     }
 
-    const handleDateSelect = (newRange) => {
-        // If a new 'from' date is selected, but 'to' is undefined (or if both are null,
-        // which shouldn't happen with the date-range library), we want to start a new selection.
-        // If the new range is a single date selection (newRange.from is set, but newRange.to is null)
-        // and the current state is a full range (date.from and date.to are set),
-        // we assume the user is starting a new range, so we should reset 'to' to null.
-
-        if (newRange.from && !newRange.to && date.from && date.to) {
-            // User clicked a day to start a new range. Clear the existing 'to' date.
-            setDate({ from: newRange.from, to: undefined });
-        } else {
-            // Standard behavior: update the state with the new range.
-            setDate(newRange);
-        }
-    }
-
     return (
         <div className="flex flex-col gap-4 p-4 bg-gray-50 dark:bg-gray-900 h-screen">
             {/* Filters */}
@@ -414,9 +392,9 @@ export default function MultiCalendarPage() {
             {/* Action Buttons & Date Navigation */}
             <div className="flex-shrink-0 flex items-center justify-between gap-4 bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm">
                 <div className="flex items-center gap-2 flex-wrap">
-                    {/* <Button variant="outline">Rate Update</Button>
+                    <Button variant="outline">Rate Update</Button>
                     <Button variant="destructive" className="bg-red-500 text-white">Block</Button>
-                    <Button variant="outline">Refresh</Button> */}
+                    <Button variant="outline">Refresh</Button>
                 </div>
                 <div className="flex items-center gap-2">
                     <Button variant="outline" size="icon" onClick={goToPreviousMonth}><ChevronLeft className="h-4 w-4" /></Button>
@@ -448,7 +426,7 @@ export default function MultiCalendarPage() {
                                 mode="range"
                                 defaultMonth={date?.from}
                                 selected={date}
-                                onSelect={handleDateSelect}
+                                onSelect={setDate}
                                 numberOfMonths={2}
                             />
                         </PopoverContent>

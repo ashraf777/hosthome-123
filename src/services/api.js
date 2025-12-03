@@ -6,8 +6,6 @@ async function request(endpoint, options = {}) {
     
     const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
 
-    // console.log(`API Request token: token=${token} to ${url} with options:`, options);
-    
     const headers = {
         'Accept': 'application/json',
         ...options.headers,
