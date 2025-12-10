@@ -1,112 +1,137 @@
+
 "use client";
 
-import { useState } from 'react';
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Trash2 } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import { api } from '@/services/api';
+import { useToast } from '@/hooks/use-toast';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { ArrowLeft, Edit, Trash2 } from 'lucide-react';
+import { ChecklistDialog } from '../checklist-dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
-const initialItems = [
-    'Arrange housekeeping cleaning schedule',
-    'Hot unit got arrange cleaning?',
-    'Make sure office cleaning, maxis rental, mvrifica rental, pvi2, pvi3 rentalco arrange 1 week 1 time',
-    'Reply all the airbnb, CD enquiries',
-    'Double check which unit haven send check out reminder by CD，need to send after 10pm',
-    'Put review for today’s check out guest',
-    'Update scarletz google sheet check in list for tomorrow arrival',
-    'Update outsome cleaning schedule & Make sure partime schedule all sent to them?',
-    'Double check if all today check in guest, check in guide sent and password? Any guest not replied in CD/no whatsapp pls send CI guide in Airbnb.',
-    'Arrange maintenance tomorrow’s work for ethanol. Make sure the timing which need to come at 11am need confirm time with guest.',
-    'Update royce front desk if guest check-in late, remind them to keep at lobby if they go home. And remind guest if front desk no card , ask guard help to scan the lift to go up and collect card from front desk tomorrow.',
-    'Before end shift double check back to back & check out list.',
-    'Before end shift double check need to reply booking, com and agoda message.',
-    'Before end shift Must check if there is last minute booking received today ? & must update at check out a schedule and check if already arrange for cleaner?(check host platform, OR/review if got last minute boking)',
-    'Double check night shift need to double check partime cleaner list is updated most latest one ? Back/check out add latest one?',
-    'Double check agile already update in whatsApp group for domsov about tomorrow guest arrival?',
-    'Tomorrow’s Cubic guest checkin list update Cubic WhatsApp group.',
-    'Make sure outsource and Partime reply their msg and say “OK”',
-    'Any Southkey guest check in late?',
-    'Update Agile Dormsp group for tomorrow arrival guest.',
-];
+export default function ChecklistDetailPage() {
+    const router = useRouter();
+    const params = useParams();
+    const { id } = params;
+    const { toast } = useToast();
+    const [checklist, setChecklist] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
-export default function EditChecklistPage() {
-    const [items, setItems] = useState(initialItems);
-    const [newItem, setNewItem] = useState('');
+    const fetchChecklist = () => {
+        setLoading(true);
+        api.getChecklist(id)
+            .then(response => {
+                setChecklist(response.data);
+            })
+            .catch(error => {
+                toast({ variant: "destructive", title: "Error", description: "Failed to fetch checklist details." });
+            })
+            .finally(() => {
+                setLoading(false);
+            });
+    }
 
-    const handleAddItem = () => {
-        if (newItem.trim() !== '') {
-            setItems([...items, newItem.trim()]);
-            setNewItem('');
+    useEffect(() => {
+        if (id) {
+            fetchChecklist();
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [id]);
+
+    const handleUpdate = () => {
+        fetchChecklist();
+    };
+
+    const handleDelete = async () => {
+        try {
+            await api.deleteChecklist(id);
+            toast({ title: "Success", description: "Checklist deleted successfully." });
+            router.push('/dashboard/task-management/checklist');
+        } catch (error) {
+            toast({ variant: "destructive", title: "Error", description: error.message });
         }
     };
 
-    const handleRemoveItem = (index) => {
-        const newItems = items.filter((_, i) => i !== index);
-        setItems(newItems);
-    };
+    if (loading) {
+        return <div className="p-4">Loading...</div>;
+    }
+
+    if (!checklist) {
+        return <div className="p-4">Checklist not found.</div>;
+    }
 
     return (
-        <div className="p-4 md:p-8 space-y-6">
-            <div className="flex justify-between items-center">
-                <h1 className="text-2xl font-bold">Create Checklist</h1>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                    <label className="font-medium">Host Name</label>
-                    <Select defaultValue="feel-home">
-                        <SelectTrigger>
-                            <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="feel-home">Feel Home Malaysia Sdn Bhd</SelectItem>
-                        </SelectContent>
-                    </Select>
-                </div>
-                <div className="space-y-2">
-                    <label className="font-medium">Checklist Name</label>
-                    <Input defaultValue="Night shift checklist!" />
-                </div>
-                <div className="space-y-2 md:col-span-2">
-                    <label className="font-medium">Property Applied</label>
-                    <Select>
-                        <SelectTrigger>
-                            <SelectValue placeholder="Select at least one property" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="agile">Agile, B-02-03</SelectItem>
-                            <SelectItem value="beta">Beta, C-05-01</SelectItem>
-                        </SelectContent>
-                    </Select>
+        <div className="p-4 md:p-6 lg:p-8">
+            <div className="flex justify-between items-center mb-6">
+                <Button onClick={() => router.back()} variant="ghost" className="flex items-center">
+                    <ArrowLeft className="mr-2 h-4 w-4" />
+                    Back to Checklists
+                </Button>
+                <div className="flex space-x-2">
+                    <Button onClick={() => setIsEditDialogOpen(true)} variant="outline">
+                        <Edit className="mr-2 h-4 w-4" />
+                        Edit
+                    </Button>
+                    <Button onClick={() => setIsDeleteDialogOpen(true)} variant="destructive">
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Delete
+                    </Button>
                 </div>
             </div>
 
-            <div className="space-y-4">
-                <h2 className="text-xl font-semibold">Item Name</h2>
-                {items.map((item, index) => (
-                    <div key={index} className="flex items-center gap-4">
-                        <Input value={item} readOnly className="flex-grow" />
-                        <Button variant="ghost" onClick={() => handleRemoveItem(index)}>
-                            <Trash2 className="h-5 w-5" />
-                        </Button>
+            <Card className="shadow-md">
+                <CardHeader>
+                    <div className="flex justify-between items-start">
+                        <div>
+                            <CardTitle className="text-2xl font-bold">{checklist.checklist_name}</CardTitle>
+                            <CardDescription className="pt-2">{checklist.description}</CardDescription>
+                        </div>
+                        {checklist.hosting_company_name && (
+                             <span className="text-sm font-medium bg-gray-100 text-gray-800 px-3 py-1 rounded-md">{checklist.hosting_company_name}</span>
+                        )}
                     </div>
-                ))}
-            </div>
+                </CardHeader>
+                <CardContent>
+                    <h3 className="text-xl font-semibold mb-4 border-t pt-4">Checklist Items</h3>
+                    {checklist.items && checklist.items.length > 0 ? (
+                        <div className="flex flex-wrap gap-3">
+                            {checklist.items.map(item => (
+                                <div key={item.id} className="bg-blue-100 text-blue-900 text-base font-medium px-4 py-2 rounded-lg flex items-center shadow-sm hover:shadow-md transition-shadow">
+                                    {item.item_description}
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <p className="text-gray-500 mt-4">This checklist has no items yet.</p>
+                    )}
+                </CardContent>
+            </Card>
 
-            <div className="flex items-center gap-4">
-                <Input
-                    value={newItem}
-                    onChange={(e) => setNewItem(e.target.value)}
-                    placeholder="Add new item"
-                    className="flex-grow"
-                />
-                <Button onClick={handleAddItem}>+ Add new item</Button>
-            </div>
+            <ChecklistDialog
+                isOpen={isEditDialogOpen}
+                onOpenChange={setIsEditDialogOpen}
+                onChecklistUpdated={handleUpdate}
+                checklist={checklist}
+            />
 
-            <div className="flex justify-end gap-4">
-                <Button variant="secondary">Save</Button>
-                <Button variant="destructive">Delete</Button>
-            </div>
+            <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Are you sure you want to delete this checklist?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This action cannot be undone. This will permanently delete the checklist and all of its items.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700">Delete</AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 }

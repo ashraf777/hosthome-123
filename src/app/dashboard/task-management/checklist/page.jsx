@@ -1,9 +1,12 @@
-import { ChecklistList } from "./checklist-list";
+
+'use client';
+
+import { ChecklistList } from './checklist-list';
 
 export default function ChecklistPage() {
-  return (
-    <div>
-      <ChecklistList />
-    </div>
-  );
+    return (
+        <div>
+            <ChecklistList />
+        </div>
+    );
 }

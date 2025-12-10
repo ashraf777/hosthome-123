@@ -1,42 +1,29 @@
 
 "use client";
 
-import { useState } from 'react';
-import { Button } from "@/components/ui/button";
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle, 
-  DialogTrigger 
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { TaskForm } from "./task-form";
-import { PlusCircle } from 'lucide-react';
 
-export function CreateTaskDialog({ onTaskCreate }) {
-  const [open, setOpen] = useState(false);
+export function CreateTaskDialog({ isOpen, onOpenChange, onTaskCreate, onTaskUpdate, task }) {
 
   const handleSubmit = (data) => {
-    console.log("New task data:", data);
-    // Here you would typically call an API to create the task
-    // For now, we'll just log it and pass it to the parent
-    onTaskCreate(data);
-    setOpen(false); // Close the dialog on successful submission
+    if (task) {
+      onTaskUpdate(data);
+    } else {
+      onTaskCreate(data);
+    }
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button>
-            <PlusCircle className="h-4 w-4 mr-2" />
-            Create New Task
-        </Button>
-      </DialogTrigger>
+    <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
-          <DialogTitle>Basic Information</DialogTitle>
+          <DialogTitle>{task ? 'Edit Task' : 'Create New Task'}</DialogTitle>
         </DialogHeader>
-        <TaskForm onSubmit={handleSubmit} />
+        <TaskForm 
+          onSubmit={handleSubmit} 
+          task={task} 
+        />
       </DialogContent>
     </Dialog>
   );
