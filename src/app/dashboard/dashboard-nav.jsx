@@ -55,7 +55,7 @@ export function DashboardNav() {
   const isAmenitiesActive = pathname.startsWith("/dashboard/amenities");
   const isBookingsActive = pathname.startsWith("/dashboard/booking");
   const isTaskManagementActive = pathname.startsWith("/dashboard/task-management");
-  const iscalendarActive = pathname.startsWith("/dashboard/calendar");
+  const isCalendarActive = pathname.startsWith("/dashboard/calendar");
   const isMultiCalendarActive = pathname.startsWith("/dashboard/multi-calendar");
 
   return (
@@ -86,8 +86,8 @@ export function DashboardNav() {
 
         <SidebarMenuItem>
             <Link href="/dashboard/calendar">
-                <SidebarMenuButton isActive={iscalendarActive} tooltip="Calendar">
-                    <Home className="text-sidebar-primary" />
+                <SidebarMenuButton isActive={isCalendarActive} tooltip="Calendar">
+                    <Calendar className="text-sidebar-primary" />
                     <span>Calendar</span>
                 </SidebarMenuButton>
             </Link>
@@ -96,7 +96,7 @@ export function DashboardNav() {
         <SidebarMenuItem>
             <Link href="/dashboard/multi-calendar">
                 <SidebarMenuButton isActive={isMultiCalendarActive} tooltip="Multi Calendar">
-                    <Home className="text-sidebar-primary" />
+                    <Cable className="text-sidebar-primary" />
                     <span>Multi Calendar</span>
                 </SidebarMenuButton>
             </Link>
