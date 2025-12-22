@@ -111,6 +111,8 @@ export default function CalendarPage() {
           api.get('channels'),
         ]);
 
+        console.log("Bookings response:", bookingsResponse);
+
         const bookingsData = bookingsResponse.data.data || bookingsResponse.data;
         const channelsData = channelsResponse.data.data || channelsResponse.data;
 

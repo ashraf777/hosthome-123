@@ -18,6 +18,16 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select"
+import { 
+    Dialog, 
+    DialogContent, 
+    DialogHeader, 
+    DialogTitle, 
+    DialogDescription, 
+    DialogFooter 
+} from "@/components/ui/dialog"
+import Link from "next/link";
+import { Badge } from "@/components/ui/badge"
 import {
     ChevronLeft,
     ChevronRight,
@@ -78,7 +88,7 @@ const statusColors = {
  * UnitRow Component (Memoized)
  * Renders a single unit's row in the calendar, calculating the span for multi-day bookings.
  */
-const UnitRow = memo(({ unit, daysInRange, selectedStatuses }) => {
+const UnitRow = memo(({ unit, daysInRange, selectedStatuses, onBookingClick }) => {
     const cells = [];
     let i = 0;
 
@@ -123,6 +133,9 @@ const UnitRow = memo(({ unit, daysInRange, selectedStatuses }) => {
             }
 
             const color = statusColors[statusId] || statusColors[1]; // Fallback to Confirmed
+            const guestName = booking.guest ? `${booking.guest.first_name} ${booking.guest.last_name}` : 'Guest';
+            const totalAmount = new Intl.NumberFormat('en-MY', { style: 'currency', currency: 'MYR' }).format(booking.total_amount);
+
             cells.push(
                 <td 
                     key={`${dayStr}-${unit.id}`} 
@@ -130,6 +143,7 @@ const UnitRow = memo(({ unit, daysInRange, selectedStatuses }) => {
                     className={`p-0 border-r border-t border-b`}
                 >
                     <div 
+                        onClick={() => onBookingClick(booking)}
                         className={cn(
                             "h-full w-full flex items-center justify-center text-xs p-1 rounded-md cursor-pointer m-[1px] overflow-hidden whitespace-nowrap text-ellipsis border", 
                             color.background, 
@@ -139,7 +153,17 @@ const UnitRow = memo(({ unit, daysInRange, selectedStatuses }) => {
                         title={`${unit.name} - ${statusName} (${booking.confirmation_code})`}
                     >
                         {/* Display booking code or status name (only on the first cell) */}
-                        {statusName}
+                        <div className="flex justify-between items-center w-full gap-2">
+                            <span className="font-bold truncate text-[10px] uppercase">
+                                {statusName}
+                            </span>
+                            <span className="font-semibold text-[11px] truncate">
+                                {guestName}
+                            </span>
+                            <span className="text-[10px] opacity-80 whitespace-nowrap">
+                                {totalAmount}
+                            </span>
+                        </div>
                     </div>
                 </td>
             );
@@ -199,6 +223,8 @@ export default function MultiCalendarPage() {
     const [loading, setLoading] = useState(true);
     const [calendarLoading, setCalendarLoading] = useState(false);
     const [expandedRoomTypes, setExpandedRoomTypes] = useState([]);
+
+    const [selectedBooking, setSelectedBooking] = useState(null);
 
     const daysInRange = useMemo(() => {
         // Ensure to include the 'to' date in the interval
@@ -493,6 +519,7 @@ export default function MultiCalendarPage() {
                                             unit={unit}
                                             daysInRange={daysInRange}
                                             selectedStatuses={selectedStatuses}
+                                            onBookingClick={setSelectedBooking}
                                         />
                                     ))}
                                 </React.Fragment>
@@ -501,6 +528,54 @@ export default function MultiCalendarPage() {
                     </table>
                 </div>
             </div>
+            <Dialog open={!!selectedBooking} onOpenChange={(open) => !open && setSelectedBooking(null)}>
+                <DialogContent className="max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>Booking Details</DialogTitle>
+                        <DialogDescription>
+                            Confirmation Code: {selectedBooking?.confirmation_code}
+                        </DialogDescription>
+                    </DialogHeader>
+                    {selectedBooking && (
+                        <div className="grid gap-4 py-4 text-sm">
+                            <div className="grid grid-cols-2">
+                                <span className="text-muted-foreground">Guest Name:</span>
+                                <span className="font-medium">
+                                    {selectedBooking.guest?.first_name} {selectedBooking.guest?.last_name}
+                                </span>
+                            </div>
+                            <div className="grid grid-cols-2">
+                                <span className="text-muted-foreground">Stay Dates:</span>
+                                <span className="font-medium">
+                                    {selectedBooking.check_in_date} to {selectedBooking.check_out_date}
+                                </span>
+                            </div>
+                            <div className="grid grid-cols-2">
+                                <span className="text-muted-foreground">Total Amount:</span>
+                                <span className="font-semibold text-green-600">
+                                    MYR {Number(selectedBooking.total_amount).toFixed(2)}
+                                </span>
+                            </div>
+                            <div className="grid grid-cols-2">
+                                <span className="text-muted-foreground">Status:</span>
+                                <div>
+                                    <Badge variant="outline">
+                                        {bookingStatuses.find(s => s.id === selectedBooking.status)?.name || 'N/A'}
+                                    </Badge>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setSelectedBooking(null)}>Close</Button>
+                        {selectedBooking && (
+                            <Link href={`/dashboard/booking/${selectedBooking.id}/edit`} passHref>
+                                <Button>Edit Booking</Button>
+                            </Link>
+                        )}
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     )
 }

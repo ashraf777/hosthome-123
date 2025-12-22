@@ -142,14 +142,16 @@ export function GlobalUnitForm({ isEditMode = false, unitId }) {
     setSubmitting(true)
     const { property_id, ...submissionValues } = values;
 
+    console.log("Submitting values:", values);
+
     try {
       if (isEditMode) {
-         await api.put(`units/${unitId}`, submissionValues);
+         await api.put(`units/${unitId}`, values);
          toast({ title: "Unit Updated", description: `The unit "${values.unit_identifier}" has been successfully updated.` });
          router.push('/dashboard/units');
          router.refresh();
       } else {
-        const response = await api.post('units', submissionValues);
+        const response = await api.post('units', values);
         toast({ title: "Unit Created", description: `The unit "${values.unit_identifier}" has been successfully created.`});
         setCreatedUnit(response.data);
       }
