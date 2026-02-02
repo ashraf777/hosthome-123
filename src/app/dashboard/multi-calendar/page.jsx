@@ -18,13 +18,13 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select"
-import { 
-    Dialog, 
-    DialogContent, 
-    DialogHeader, 
-    DialogTitle, 
-    DialogDescription, 
-    DialogFooter 
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogDescription,
+    DialogFooter
 } from "@/components/ui/dialog"
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge"
@@ -123,7 +123,7 @@ const UnitRow = memo(({ unit, daysInRange, selectedStatuses, onBookingClick }) =
             for (let j = i + 1; j < daysInRange.length; j++) {
                 const nextDayStr = format(daysInRange[j], 'yyyy-MM-dd');
                 const nextDayData = unit.dates?.[nextDayStr];
-                
+
                 // Crucial check: must have a booking AND the ID must match the starting booking ID
                 if (nextDayData?.booking && nextDayData.booking.id === bookingId) {
                     colSpan++;
@@ -137,16 +137,16 @@ const UnitRow = memo(({ unit, daysInRange, selectedStatuses, onBookingClick }) =
             const totalAmount = new Intl.NumberFormat('en-MY', { style: 'currency', currency: 'MYR' }).format(booking.total_amount);
 
             cells.push(
-                <td 
-                    key={`${dayStr}-${unit.id}`} 
-                    colSpan={colSpan} 
+                <td
+                    key={`${dayStr}-${unit.id}`}
+                    colSpan={colSpan}
                     className={`p-0 border-r border-t border-b`}
                 >
-                    <div 
+                    <div
                         onClick={() => onBookingClick(booking)}
                         className={cn(
-                            "h-full w-full flex items-center justify-center text-xs p-1 rounded-md cursor-pointer m-[1px] overflow-hidden whitespace-nowrap text-ellipsis border", 
-                            color.background, 
+                            "h-full w-full flex items-center justify-center text-xs p-1 rounded-md cursor-pointer m-[1px] overflow-hidden whitespace-nowrap text-ellipsis border",
+                            color.background,
                             color.text,
                             color.border,
                         )}
@@ -172,13 +172,13 @@ const UnitRow = memo(({ unit, daysInRange, selectedStatuses, onBookingClick }) =
             i += colSpan;
         } else {
             // Render a single empty cell (or non-booking status cell)
-            const isVacantClean = statusId === 9; 
+            const isVacantClean = statusId === 9;
             const isVacantDirty = statusId === 8;
             const cellText = isVacantClean ? 'VC' : (isVacantDirty ? 'VD' : '\u00A0'); // Non-breaking space
 
             cells.push(
-                <td 
-                    key={`${dayStr}-${unit.id}`} 
+                <td
+                    key={`${dayStr}-${unit.id}`}
                     className={`p-0 border-r w-[120px] min-w-[120px] h-full ${isSameDay(day, new Date()) ? 'bg-blue-50 dark:bg-blue-950' : ''}`}
                 >
                     <div className="h-full w-full p-1 text-center text-xs text-gray-400 dark:text-gray-600">
@@ -202,15 +202,15 @@ UnitRow.displayName = 'UnitRow';
 
 export default function MultiCalendarPage() {
     const { toast } = useToast();
-    
+
     // Adjusted initial date range to capture a full month cleanly
     const now = new Date();
     const [date, setDate] = useState({
         from: startOfMonth(now),
         // Calculate the end date as the last day of the next month (e.g., Nov 1 - Dec 31)
-        to: endOfMonth(addMonths(now, 1)), 
+        to: endOfMonth(addMonths(now, 1)),
     });
-    
+
     const [hosts, setHosts] = useState([]);
     const [properties, setProperties] = useState([]);
     const [channels, setChannels] = useState([]);
@@ -261,7 +261,7 @@ export default function MultiCalendarPage() {
                 setAllBookingStatuses(statusNames);
                 setSelectedStatuses(statusNames);
 
-                if (propertiesData.length > 0) setSelectedProperty(propertiesData[0].id);
+                if (propertiesData.length > 0) setSelectedProperty('all');
                 // Note: The original code sets selected channels to all channel names. Keeping this behavior.
                 if (channelsData.length > 0) setSelectedChannels(channelsData.map(ch => ch.name));
 
@@ -294,8 +294,18 @@ export default function MultiCalendarPage() {
                     return statusObj ? statusObj.id : null;
                 }).filter(id => id !== null);
 
-                const url = `multi-calendar?property_id=${selectedProperty}&start_date=${startDate}&end_date=${endDate}&statuses=${statusIds.join(',')}`;
-                
+                let url = `multi-calendar?start_date=${startDate}&end_date=${endDate}&statuses=${statusIds.join(',')}`;
+
+                if (selectedProperty === 'all') {
+                    // Fix: Backend likely needs explicit property IDs. Send all of them.
+                    const allIds = properties.map(p => p.id).join(',');
+                    if (allIds) {
+                        url += `&property_id=${allIds}`;
+                    }
+                } else {
+                    url += `&property_id=${selectedProperty}`;
+                }
+
                 const response = await api.get(url);
                 console.log("Calendar Data Response:", response);
                 const fetchedRoomTypes = response ?? [];
@@ -318,7 +328,7 @@ export default function MultiCalendarPage() {
             }
         }
         fetchCalendarData();
-    }, [selectedProperty, date, selectedStatuses, toast]);
+    }, [selectedProperty, date, selectedStatuses, toast, properties]);
 
 
     const handleChannelToggle = (channelName) => {
@@ -381,7 +391,10 @@ export default function MultiCalendarPage() {
                     </Select>
                     <Select value={selectedProperty} onValueChange={setSelectedProperty}>
                         <SelectTrigger><SelectValue placeholder="Select Property" /></SelectTrigger>
-                        <SelectContent>{(properties || []).map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent>
+                        <SelectContent>
+                            <SelectItem value="all">All Properties</SelectItem>
+                            {(properties || []).map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+                        </SelectContent>
                     </Select>
                 </div>
                 <div className="mb-4">
@@ -507,7 +520,7 @@ export default function MultiCalendarPage() {
                                                         </div>
                                                     ))}
                                                     {dayData?.rates && Object.keys(dayData.rates).length > 2 && (
-                                                         <div key="more" className="text-center text-xs text-red-500">+{Object.keys(dayData.rates).length - 2} more</div>
+                                                        <div key="more" className="text-center text-xs text-red-500">+{Object.keys(dayData.rates).length - 2} more</div>
                                                     )}
                                                 </td>
                                             )

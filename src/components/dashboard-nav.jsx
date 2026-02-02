@@ -3,7 +3,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { 
+import {
   Book,
   Cable,
   Calendar,
@@ -26,7 +26,9 @@ import {
   Sparkles,
   Paintbrush,
   List,
-  CheckSquare
+  CheckSquare,
+  Link2,
+  Server
 } from "lucide-react"
 import {
   Collapsible,
@@ -60,139 +62,139 @@ export function DashboardNav() {
 
   return (
     <SidebarMenu>
-        <SidebarMenuItem>
-          <Link href="/dashboard">
-            <SidebarMenuButton
-              isActive={pathname === "/dashboard"}
-              tooltip="Dashboard"
-            >
-              <LayoutDashboard className="text-sidebar-primary" />
-              <span>Dashboard</span>
-            </SidebarMenuButton>
-          </Link>
-        </SidebarMenuItem>
+      <SidebarMenuItem>
+        <Link href="/dashboard">
+          <SidebarMenuButton
+            isActive={pathname === "/dashboard"}
+            tooltip="Dashboard"
+          >
+            <LayoutDashboard className="text-sidebar-primary" />
+            <span>Dashboard</span>
+          </SidebarMenuButton>
+        </Link>
+      </SidebarMenuItem>
 
-        <SidebarMenuItem>
-          <Link href="/dashboard/booking">
-            <SidebarMenuButton
-              isActive={isBookingsActive}
-              tooltip="Reservations"
-            >
-              <Book className="text-sidebar-primary" />
-              <span>Reservations</span>
-            </SidebarMenuButton>
-          </Link>
-        </SidebarMenuItem>
+      <SidebarMenuItem>
+        <Link href="/dashboard/booking">
+          <SidebarMenuButton
+            isActive={isBookingsActive}
+            tooltip="Reservations"
+          >
+            <Book className="text-sidebar-primary" />
+            <span>Reservations</span>
+          </SidebarMenuButton>
+        </Link>
+      </SidebarMenuItem>
 
-        <SidebarMenuItem>
-            <Link href="/dashboard/calendar">
-                <SidebarMenuButton isActive={isCalendarActive} tooltip="Calendar">
-                    <Calendar className="text-sidebar-primary" />
-                    <span>Calendar</span>
-                </SidebarMenuButton>
-            </Link>
-        </SidebarMenuItem>
+      <SidebarMenuItem>
+        <Link href="/dashboard/calendar">
+          <SidebarMenuButton isActive={isCalendarActive} tooltip="Calendar">
+            <Calendar className="text-sidebar-primary" />
+            <span>Calendar</span>
+          </SidebarMenuButton>
+        </Link>
+      </SidebarMenuItem>
 
-        <SidebarMenuItem>
-            <Link href="/dashboard/multi-calendar">
-                <SidebarMenuButton isActive={isMultiCalendarActive} tooltip="Multi Calendar">
-                    <Cable className="text-sidebar-primary" />
-                    <span>Multi Calendar</span>
-                </SidebarMenuButton>
-            </Link>
-        </SidebarMenuItem>
+      <SidebarMenuItem>
+        <Link href="/dashboard/multi-calendar">
+          <SidebarMenuButton isActive={isMultiCalendarActive} tooltip="Multi Calendar">
+            <Cable className="text-sidebar-primary" />
+            <span>Multi Calendar</span>
+          </SidebarMenuButton>
+        </Link>
+      </SidebarMenuItem>
 
-        <SidebarMenuItem>
-            <Link href="/dashboard/listings">
-                <SidebarMenuButton isActive={isListingsActive} tooltip="Listings">
-                    <Home className="text-sidebar-primary" />
-                    <span>Listings</span>
-                </SidebarMenuButton>
-            </Link>
-        </SidebarMenuItem>
-        
-        <SidebarMenuItem>
-            <Link href="/dashboard/properties">
-                <SidebarMenuButton isActive={isPropertiesActive} tooltip="Properties">
-                    <Building className="text-sidebar-primary" />
-                    <span>Properties</span>
-                </SidebarMenuButton>
-            </Link>
-        </SidebarMenuItem>
+      <SidebarMenuItem>
+        <Link href="/dashboard/listings">
+          <SidebarMenuButton isActive={isListingsActive} tooltip="Listings">
+            <Home className="text-sidebar-primary" />
+            <span>Listings</span>
+          </SidebarMenuButton>
+        </Link>
+      </SidebarMenuItem>
 
-        <SidebarMenuItem>
-            <Link href="/dashboard/room-types">
-                <SidebarMenuButton isActive={isRoomTypesActive} tooltip="Room Types">
-                    <Bed className="text-sidebar-primary" />
-                    <span>Room Types</span>
-                </SidebarMenuButton>
-            </Link>
-        </SidebarMenuItem>
+      <SidebarMenuItem>
+        <Link href="/dashboard/properties">
+          <SidebarMenuButton isActive={isPropertiesActive} tooltip="Properties">
+            <Building className="text-sidebar-primary" />
+            <span>Properties</span>
+          </SidebarMenuButton>
+        </Link>
+      </SidebarMenuItem>
 
-        <SidebarMenuItem>
-            <Link href="/dashboard/units">
-                <SidebarMenuButton isActive={isUnitsActive} tooltip="Units">
-                    <KeyRound className="text-sidebar-primary" />
-                    <span>Units</span>
-                </SidebarMenuButton>
-            </Link>
-        </SidebarMenuItem>
-        
-        <SidebarMenuItem>
-            <Link href="/dashboard/amenities">
-                <SidebarMenuButton isActive={isAmenitiesActive} tooltip="Amenities">
-                    <Sparkles className="text-sidebar-primary" />
-                    <span>Amenities</span>
-                </SidebarMenuButton>
-            </Link>
-        </SidebarMenuItem>
+      <SidebarMenuItem>
+        <Link href="/dashboard/room-types">
+          <SidebarMenuButton isActive={isRoomTypesActive} tooltip="Room Types">
+            <Bed className="text-sidebar-primary" />
+            <span>Room Types</span>
+          </SidebarMenuButton>
+        </Link>
+      </SidebarMenuItem>
 
-        <Collapsible asChild>
+      <SidebarMenuItem>
+        <Link href="/dashboard/units">
+          <SidebarMenuButton isActive={isUnitsActive} tooltip="Units">
+            <KeyRound className="text-sidebar-primary" />
+            <span>Units</span>
+          </SidebarMenuButton>
+        </Link>
+      </SidebarMenuItem>
+
+      <SidebarMenuItem>
+        <Link href="/dashboard/amenities">
+          <SidebarMenuButton isActive={isAmenitiesActive} tooltip="Amenities">
+            <Sparkles className="text-sidebar-primary" />
+            <span>Amenities</span>
+          </SidebarMenuButton>
+        </Link>
+      </SidebarMenuItem>
+
+      <Collapsible asChild>
         <>
           <SidebarMenuItem>
             <CollapsibleTrigger asChild>
-                <SidebarMenuButton
+              <SidebarMenuButton
                 isActive={isTaskManagementActive}
                 isSubmenu
-                >
+              >
                 <Paintbrush className="text-sidebar-primary" />
                 <span>Task Management</span>
-                </SidebarMenuButton>
+              </SidebarMenuButton>
             </CollapsibleTrigger>
           </SidebarMenuItem>
 
           <CollapsibleContent asChild>
             <SidebarMenuSub>
               <SidebarMenuSubItem>
-                 <Link href="/dashboard/task-management/task-list">
-                    <SidebarMenuSubButton isActive={pathname.startsWith('/dashboard/task-management/task-list')}>
-                        <List className="h-4 w-4 mr-2" />
-                        Task List
-                    </SidebarMenuSubButton>
-                </Link>
-              </SidebarMenuSubItem>
-               <SidebarMenuSubItem>
-                 <Link href="/dashboard/task-management/checklist">
-                    <SidebarMenuSubButton isActive={pathname.startsWith('/dashboard/task-management/checklist')}>
-                        <CheckSquare className="h-4 w-4 mr-2" />
-                        Checklist
-                    </SidebarMenuSubButton>
+                <Link href="/dashboard/task-management/task-list">
+                  <SidebarMenuSubButton isActive={pathname.startsWith('/dashboard/task-management/task-list')}>
+                    <List className="h-4 w-4 mr-2" />
+                    Task List
+                  </SidebarMenuSubButton>
                 </Link>
               </SidebarMenuSubItem>
               <SidebarMenuSubItem>
-                 <Link href="/dashboard/task-management/cleaning-team">
-                    <SidebarMenuSubButton isActive={pathname.startsWith('/dashboard/task-management/cleaning-team')}>
-                        <Users className="h-4 w-4 mr-2" />
-                        Cleaning Team
-                    </SidebarMenuSubButton>
+                <Link href="/dashboard/task-management/checklist">
+                  <SidebarMenuSubButton isActive={pathname.startsWith('/dashboard/task-management/checklist')}>
+                    <CheckSquare className="h-4 w-4 mr-2" />
+                    Checklist
+                  </SidebarMenuSubButton>
                 </Link>
               </SidebarMenuSubItem>
               <SidebarMenuSubItem>
-                 <Link href="/dashboard/task-management/preset-task">
-                    <SidebarMenuSubButton isActive={pathname.startsWith('/dashboard/task-management/preset-task')}>
-                        <Settings className="h-4 w-4 mr-2" />
-                        Preset Task
-                    </SidebarMenuSubButton>
+                <Link href="/dashboard/task-management/cleaning-team">
+                  <SidebarMenuSubButton isActive={pathname.startsWith('/dashboard/task-management/cleaning-team')}>
+                    <Users className="h-4 w-4 mr-2" />
+                    Cleaning Team
+                  </SidebarMenuSubButton>
+                </Link>
+              </SidebarMenuSubItem>
+              <SidebarMenuSubItem>
+                <Link href="/dashboard/task-management/preset-task">
+                  <SidebarMenuSubButton isActive={pathname.startsWith('/dashboard/task-management/preset-task')}>
+                    <Settings className="h-4 w-4 mr-2" />
+                    Preset Task
+                  </SidebarMenuSubButton>
                 </Link>
               </SidebarMenuSubItem>
             </SidebarMenuSub>
@@ -200,23 +202,52 @@ export function DashboardNav() {
         </>
       </Collapsible>
 
-        <SidebarMenuItem>
-            <Link href="/dashboard/users">
-                <SidebarMenuButton isActive={isUserManagementActive} tooltip="User Management">
-                    <UserCog className="text-sidebar-primary" />
-                    <span>User Management</span>
-                </SidebarMenuButton>
-            </Link>
-        </SidebarMenuItem>
+      <SidebarMenuItem>
+        <Link href="/dashboard/users">
+          <SidebarMenuButton isActive={isUserManagementActive} tooltip="User Management">
+            <UserCog className="text-sidebar-primary" />
+            <span>User Management</span>
+          </SidebarMenuButton>
+        </Link>
+      </SidebarMenuItem>
 
-        <SidebarMenuItem>
-            <Link href="/dashboard/access-control">
-                <SidebarMenuButton isActive={isAccessControlActive} tooltip="Access Control">
-                    <ShieldCheck className="text-sidebar-primary" />
-                    <span>Access Control</span>
-                </SidebarMenuButton>
-            </Link>
-        </SidebarMenuItem>
+      <SidebarMenuItem>
+        <Link href="/dashboard/access-control">
+          <SidebarMenuButton isActive={isAccessControlActive} tooltip="Access Control">
+            <ShieldCheck className="text-sidebar-primary" />
+            <span>Access Control</span>
+          </SidebarMenuButton>
+        </Link>
+      </SidebarMenuItem>
+
+      <Collapsible asChild>
+        <>
+          <SidebarMenuItem>
+            <CollapsibleTrigger asChild>
+              <SidebarMenuButton
+                isActive={pathname.startsWith('/dashboard/connect')}
+                isSubmenu
+              >
+                <Link2 className="text-sidebar-primary" />
+                <span>Connect</span>
+              </SidebarMenuButton>
+            </CollapsibleTrigger>
+          </SidebarMenuItem>
+
+          <CollapsibleContent asChild>
+            <SidebarMenuSub>
+              <SidebarMenuSubItem>
+                <Link href="/dashboard/connect/bed24">
+                  <SidebarMenuSubButton isActive={pathname.startsWith('/dashboard/connect/bed24')}>
+                    <Server className="h-4 w-4 mr-2" />
+                    Bed24
+                  </SidebarMenuSubButton>
+                </Link>
+              </SidebarMenuSubItem>
+            </SidebarMenuSub>
+          </CollapsibleContent>
+        </>
+      </Collapsible>
     </SidebarMenu>
   )
 }
