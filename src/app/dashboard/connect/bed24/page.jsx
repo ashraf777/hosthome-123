@@ -54,8 +54,8 @@ export default function Bed24ConnectPage() {
         setIsLoading(true);
         setError("");
         try {
-            // Step 1: Exchange Refresh Token for Access Token
-            const tokenResponse = await fetch('https://beds24.com/api/v2/authentication/token', {
+            // Step 1: Exchange Refresh Token for Access Token (via Proxy)
+            const tokenResponse = await fetch('/api/bed24/token', {
                 method: 'GET',
                 headers: {
                     'accept': 'application/json',
@@ -64,15 +64,16 @@ export default function Bed24ConnectPage() {
             });
 
             if (!tokenResponse.ok) {
-                throw new Error("Failed to authenticate. Please check your Refresh Token.");
+                const errData = await tokenResponse.json().catch(() => ({}));
+                throw new Error(errData.error || "Failed to authenticate. Please check your Refresh Token.");
             }
 
             const tokenData = await tokenResponse.json();
             const newAccessToken = tokenData.token;
             setAccessToken(newAccessToken);
 
-            // Step 2: Fetch Properties using the Access Token
-            const propsResponse = await fetch('https://beds24.com/api/v2/properties', {
+            // Step 2: Fetch Properties using the Access Token (via Proxy)
+            const propsResponse = await fetch('/api/bed24/properties', {
                 method: 'GET',
                 headers: {
                     'accept': 'application/json',
@@ -81,7 +82,8 @@ export default function Bed24ConnectPage() {
             });
 
             if (!propsResponse.ok) {
-                throw new Error("Failed to fetch properties.");
+                const errData = await propsResponse.json().catch(() => ({}));
+                throw new Error(errData.error || "Failed to fetch properties.");
             }
 
             const propsData = await propsResponse.json();
