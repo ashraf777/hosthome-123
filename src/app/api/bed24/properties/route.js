@@ -8,7 +8,7 @@ export async function GET(request) {
     }
 
     try {
-        const response = await fetch('https://beds24.com/api/v2/properties', {
+        const response = await fetch('https://beds24.com/api/v2/properties?includeAllRooms=true', {
             method: 'GET',
             headers: {
                 'accept': 'application/json',

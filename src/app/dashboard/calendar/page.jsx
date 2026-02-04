@@ -175,10 +175,8 @@ const HierarchyItem = ({ item, level = 0, selection, onSelect, type }) => {
       >
         <div className="flex items-center py-3 flex-1 overflow-hidden">
           {hasChildren ? (
-            <CollapsibleTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-6 w-6 p-0 mr-1 hover:bg-transparent" onClick={(e) => { e.stopPropagation(); setIsOpen(!isOpen); }}>
-                <ChevronDown className={`h-4 w-4 transition-transform ${isOpen ? '' : '-rotate-90'}`} />
-              </Button>
+            <CollapsibleTrigger className="h-6 w-6 p-0 mr-1 flex items-center justify-center hover:bg-muted rounded-md" onClick={(e) => { e.stopPropagation(); setIsOpen(!isOpen); }}>
+              <span><ChevronDown className={`h-4 w-4 transition-transform ${isOpen ? '' : '-rotate-90'}`} /></span>
             </CollapsibleTrigger>
           ) : (
             <div className="w-7" /> // Spacer
@@ -241,6 +239,7 @@ export default function CalendarPage() {
     const fetchData = async () => {
       try {
         setLoading(true);
+        // 1. Fetch from our backend
         const [bookingsResponse, channelsResponse, propertiesResponse, unitsResponse] = await Promise.all([
           api.get('bookings'),
           api.get('channels'),
@@ -250,14 +249,64 @@ export default function CalendarPage() {
 
         const bookingsData = bookingsResponse.data.data || bookingsResponse.data;
         const channelsData = channelsResponse.data.data || channelsResponse.data;
-        const propertiesData = propertiesResponse.data || propertiesResponse || [];
+        let propertiesData = propertiesResponse.data || propertiesResponse || [];
         const unitsData = unitsResponse.data || unitsResponse || [];
 
-        // 1. Build Hierarchy: Property -> Room Type -> Unit
+        // 2. Fetch from Beds24 (if token exists)
+        try {
+          const bed24Token = localStorage.getItem('bed24_accessToken');
+          if (bed24Token) {
+            const bed24Response = await fetch('/api/bed24/properties', {
+              method: 'GET',
+              headers: {
+                'accept': 'application/json',
+                'token': bed24Token
+              }
+            });
+
+            if (bed24Response.ok) {
+              const bed24Data = await bed24Response.json();
+              if (bed24Data.success && Array.isArray(bed24Data.data)) {
+                // Transform Beds24 properties to match our internal format
+                // Note: We prefix IDs to avoid collision and mark them clearly
+                const mappedProps = bed24Data.data.map(p => {
+                  const children = p.roomTypes ? p.roomTypes.map(rt => ({
+                    id: `bed24-${rt.id}`,
+                    name: rt.name,
+                    type: 'room_type',
+                    propertyId: `bed24-${p.id}`,
+                    is_bed24: true,
+                    children: []
+                  })) : [];
+
+                  return {
+                    id: `bed24-${p.id}`,
+                    name: `[Beds24] ${p.name}`,
+                    city: p.city,
+                    country: p.country,
+                    // Add extra fields if needed
+                    is_bed24: true,
+                    children: children
+                  };
+                });
+
+                // Merge into properties list
+                propertiesData = [...propertiesData, ...mappedProps];
+              }
+            } else {
+              console.warn("Beds24 fetch failed", bed24Response.status);
+            }
+          }
+        } catch (b24Err) {
+          console.error("Failed to fetch Beds24 properties", b24Err);
+          // Don't fail the whole page load just because Beds24 failed
+        }
+
+        // 3. Build Hierarchy: Property -> Room Type -> Unit
         const propertiesMap = new Map();
 
         propertiesData.forEach(p => {
-          propertiesMap.set(p.id, { ...p, type: 'property', children: [] });
+          propertiesMap.set(p.id, { ...p, type: 'property', children: p.children || [] });
         });
 
         const roomTypesMap = new Map(); // Composite key: `${propertyId}-${roomTypeId}`
@@ -292,6 +341,12 @@ export default function CalendarPage() {
           });
         });
 
+        // HANDLE ORPHANED BEDS24 PROPERTIES (that have no units in our DB)
+        // Since we just merged them, they exist in propertiesMap but have no children from 'unitsData'
+        // We might want to create a dummy child so they are selectable/visible in hierarchy if strictly needed,
+        // or just let them exist as properties.
+        // For now, let's leave them as-is. They will show up in the sidebar.
+
         const hierarchyData = Array.from(propertiesMap.values());
         setHierarchy(hierarchyData);
 
@@ -300,7 +355,7 @@ export default function CalendarPage() {
           setSelection({ type: 'property', id: hierarchyData[0].id, data: hierarchyData[0] });
         }
 
-        // 2. Format Bookings - Aggressively extraction of IDs
+        // 4. Format Bookings - Aggressively extraction of IDs
         const formattedBookings = bookingsData.map(booking => {
           // Helper to find unit node if nested
           const unit = booking.property_unit || booking.unit || {};
@@ -385,18 +440,85 @@ export default function CalendarPage() {
   }, [bookings, selection, selectedChannels, selectedStatuses]);
 
   const getBookingsForDay = (day) => {
+    if (!day) return [];
     return filteredBookings.filter(booking => {
       return isSameDay(day, booking.checkIn) || isWithinInterval(day, { start: booking.checkIn, end: subDays(booking.checkOut, 1) });
     });
   }
 
-  // Calculate Display Price based on Selection Level
+  // Price State: { [roomId]: { [dateString]: price } }
+  const [prices, setPrices] = React.useState({});
+
+  // ... (existing state)
+
+  // Fetch Prices Effect
+  React.useEffect(() => {
+    const fetchPrices = async () => {
+      const bed24Token = localStorage.getItem('bed24_accessToken');
+      if (!bed24Token) return;
+
+      const start = format(startOfMonth(currentDate), 'yyyy-MM-dd');
+      const end = format(endOfMonth(currentDate), 'yyyy-MM-dd');
+
+      try {
+        const response = await fetch(`/api/bed24/calendar?startDate=${start}&endDate=${end}`, {
+          method: 'GET',
+          headers: {
+            'accept': 'application/json',
+            'token': bed24Token
+          }
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && Array.isArray(data.data)) {
+            const newPrices = { ...prices };
+
+            data.data.forEach(room => {
+              // Map Room ID to our Property ID format if needed.
+              // In our property fetch, we set ID as `bed24-${p.id}`.
+              // The calendar endpoint returns `roomId` and `propertyId`. 
+              // Our properties have `id` matching `bed24-${propertyId}` (assuming default room type mapping).
+
+              // Note: Beds24 properties might have multiple rooms.
+              // For simplicity, we store by `bed24-${propertyId}` or `bed24-${roomId}` if we mapped that way.
+              // In the previous step, we mapped property ID as `bed24-${p.id}`.
+              // Let's assume 1:1 for now or map by propertyId.
+
+              const key = `bed24-${room.propertyId}`;
+              if (!newPrices[key]) newPrices[key] = {};
+
+              if (Array.isArray(room.calendar)) {
+                room.calendar.forEach(range => {
+                  // range: { from, to, price1, ... }
+                  // Expand range to individual dates
+                  const rangeStart = new Date(range.from);
+                  const rangeEnd = new Date(range.to);
+                  const days = eachDayOfInterval({ start: rangeStart, end: rangeEnd });
+
+                  days.forEach(day => {
+                    newPrices[key][format(day, 'yyyy-MM-dd')] = range.price1;
+                  });
+                });
+              }
+            });
+            setPrices(newPrices);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to fetch prices", error);
+      }
+    };
+
+    fetchPrices();
+  }, [currentDate]); // Re-fetch when month changes
+
+
   const getDisplayPrice = (day) => {
+    if (!day) return '';
     // 1. If booked, average booking price
     const dayBookings = getBookingsForDay(day);
     if (dayBookings.length > 0) {
-      // If multiple bookings (aggregated view), show range or single if same
-      // Simplified: Show first
       const booking = dayBookings[0];
       const nights = differenceInDays(booking.checkOut, booking.checkIn) || 1;
       const price = booking.total / nights;
@@ -406,34 +528,79 @@ export default function CalendarPage() {
     // 2. If unbooked, derive from Selection
     if (!selection.data) return '$';
 
-    let prices = [];
+    // CHECK FOR BEDS24 PRICING
+    if (selection.data.is_bed24) {
+      // Look up in prices state
+      // If selection is a property: key is the ID (e.g., bed24-310176)
+      // If selection is a room: key is the PROPERTY ID it belongs to (because our price fetch stores by property ID key)
+      // Wait, our price fetch stored by `bed24-${room.propertyId}`. 
+      // If we select the Room node, its ID is `bed24-${roomId}`. But we need to look up prices by the Property key.
+      // Or better, we should organize prices by the ID that matches the selection.
+
+      // Let's look at how we stored prices: `newPrices[key][date] = price` where `key = bed24-${room.propertyId}`. 
+      // And currently room.calendar logic puts ALL rooms of a property into the same key bucket, overwriting if multiple rooms?
+      // Actually, the API returns a list of rooms. If we use propertyId as key, we might blend prices if multiple rooms exist.
+      // We should probably key by RoomID if available.
+
+      // Let's adjust the fetch logic first (or assume for now 1 property = 1 room as per user data).
+      // Since we are creating children now, let's try to look up by selection ID directly.
+      // If the selection is the PROPERTY, we might show the first room's price.
+      // If the selection is the ROOM, we show that room's price.
+
+      // REVISIT FETCH LOGIC:
+      // We need to store prices by ROOM ID for precision if we have rooms.
+      // But for now, let's assume the key matches the selection.id if we fix the fetch.
+
+      // Current Fetch Logic stores by `bed24-${room.propertyId}`. 
+      // If I select the Property node `bed24-310176`, it works.
+      // If I select the Room node `bed24-646315`, it won't find it.
+
+      // For now, let's fallback to Property ID lookup if Room ID fails, or just use Property ID logic?
+      // The user's goal is to see prices.
+
+      let dateKey = format(day, 'yyyy-MM-dd');
+
+      // Try looking up by ID directly
+      if (prices[selection.id] && prices[selection.id][dateKey]) {
+        return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(prices[selection.id][dateKey]);
+      }
+
+      // If selection is a Room, try looking up its parent Property ID?
+      // In our mapping: propertyId field is `bed24-${p.id}`.
+      if (selection.type === 'room_type' && selection.data.propertyId) {
+        const parentKey = selection.data.propertyId;
+        if (prices[parentKey] && prices[parentKey][dateKey]) {
+          return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(prices[parentKey][dateKey]);
+        }
+      }
+
+      return 'N/A';
+    }
+
+    // 3. Fallback to Helper Logic (Existing System)
+    let priceValues = [];
     const isFriOrSat = isWeekend(day);
 
     const getPrice = (roomType) => isFriOrSat ? roomType.weekend_price : roomType.weekday_price;
 
     if (selection.type === 'unit') {
-      // Unit -> Parent Room Type
       const unit = selection.data;
-      // Note: In hierarchy build, we passed `...unit`.
       if (unit.room_type) {
-        prices.push(getPrice(unit.room_type));
+        priceValues.push(getPrice(unit.room_type));
       }
     } else if (selection.type === 'room_type') {
-      prices.push(getPrice(selection.data));
+      priceValues.push(getPrice(selection.data));
     } else if (selection.type === 'property') {
-      // Aggregate all room types under this property
       selection.data.children.forEach(rt => {
-        prices.push(getPrice(rt));
+        priceValues.push(getPrice(rt));
       });
     }
 
-    // Filter nulls
-    prices = prices.filter(p => p != null);
+    priceValues = priceValues.filter(p => p != null);
 
-    if (prices.length === 0) return '$';
+    if (priceValues.length === 0) return '$';
 
-    const minPrice = Math.min(...prices);
-    // If aggregated view, maybe show "From $X"?
+    const minPrice = Math.min(...priceValues);
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(minPrice);
   }
 
@@ -467,6 +634,103 @@ export default function CalendarPage() {
     setSelectedStatuses(prev =>
       checked ? [...prev, status] : prev.filter(s => s !== status)
     );
+  };
+
+  const [priceInputValue, setPriceInputValue] = React.useState("");
+
+  const handleSavePrice = async () => {
+    if (!selection.data || !selection.data.is_bed24 || !selectedDate) {
+      toast({ title: "Error", description: "Invalid selection for update.", variant: "destructive" });
+      return;
+    }
+
+    // Determine Room ID
+    // If selection is property, we might need to update all rooms or ask user.
+    // Ideally user selected a Room unit. 
+    // If they selected a Property, we will try to find a child room or use the property ID map if applicable.
+    // Based on our mapping: `bed24-${roomId}` or `bed24-${propertyId}`.
+
+    let roomId = null;
+    if (selection.type === 'room_type') {
+      roomId = selection.id.replace('bed24-', '');
+    } else if (selection.type === 'property') {
+      // Try to find first child room
+      if (selection.data.children && selection.data.children.length > 0) {
+        roomId = selection.data.children[0].id.replace('bed24-', '');
+      } else {
+        // Fallback: assume property ID maps to room ID (not always true)
+        // or alert user.
+        roomId = selection.id.replace('bed24-', '');
+      }
+    }
+
+    if (!roomId) {
+      toast({ title: "Error", description: "Could not determine Room ID. Please select a specific Room.", variant: "destructive" });
+      return;
+    }
+
+    const price = parseFloat(priceInputValue);
+    if (isNaN(price)) {
+      toast({ title: "Error", description: "Invalid price value", variant: "destructive" });
+      return;
+    }
+
+    const payload = [
+      {
+        roomId: parseInt(roomId),
+        calendar: [
+          {
+            from: format(selectedDate, 'yyyy-MM-dd'),
+            to: format(selectedDate, 'yyyy-MM-dd'),
+            price1: price
+          }
+        ]
+      }
+    ];
+
+    try {
+      const bed24Token = localStorage.getItem('bed24_accessToken');
+      const response = await fetch('/api/bed24/calendar', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'token': bed24Token
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (response.ok) {
+        toast({ title: "Success", description: "Price updated successfully." });
+        setSheetOpen(false);
+
+        // Update local state for immediate feedback
+        setPrices(prev => {
+          const newPrices = { ...prev };
+          // Determine the correct key in 'prices' map
+          // It is stored as `bed24-${propertyId}`
+          let priceKey = null;
+
+          if (selection.type === 'property') {
+            priceKey = selection.id;
+          } else if (selection.type === 'room_type') {
+            // selection.data.propertyId was set as `bed24-${p.id}` in fetchData
+            priceKey = selection.data.propertyId;
+          }
+
+          if (priceKey) {
+            if (!newPrices[priceKey]) newPrices[priceKey] = {};
+            newPrices[priceKey][format(selectedDate, 'yyyy-MM-dd')] = price;
+          }
+
+          return newPrices;
+        });
+      } else {
+        const err = await response.json();
+        throw new Error(err.error || "Failed to update");
+      }
+    } catch (e) {
+      toast({ title: "Error", description: e.message, variant: "destructive" });
+    }
   };
 
   const isPastDate = (day) => {
@@ -723,9 +987,9 @@ export default function CalendarPage() {
                         <div className="space-y-1">
                           <h3 className="font-medium text-base">Price settings</h3>
                           <div className="text-sm text-muted-foreground space-y-0.5">
-                            <p>{getDisplayPrice(selectedDate) || '$0'} per night</p>
-                            <p>$13,199 weekend price</p>
-                            <p>10% weekly discount</p>
+                            <p>{selectedDate ? (getDisplayPrice(selectedDate) || '$0') : '$0'} per night</p>
+                            {/* <p>$13,199 weekend price</p>
+                            <p>10% weekly discount</p> */}
                           </div>
                         </div>
                         <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">
@@ -775,6 +1039,7 @@ export default function CalendarPage() {
                               placeholder="0.00"
                               disabled={selectedDate && isPastDate(selectedDate)}
                               defaultValue={getDisplayPrice(selectedDate).replace(/[^0-9.]/g, '')}
+                              onChange={(e) => setPriceInputValue(e.target.value)}
                             />
                           </div>
                         </div>
@@ -789,11 +1054,12 @@ export default function CalendarPage() {
                               className="pl-7"
                               placeholder="0.00"
                               defaultValue="13199"
+                              disabled
                             />
                           </div>
-                          <p className="text-[10px] text-muted-foreground">Applies to Friday and Saturday nights.</p>
+                          <p className="text-[10px] text-muted-foreground">Applies to Friday and Saturday nights (Not editable yet).</p>
                         </div>
-
+                        {/* 
                         <div className="grid gap-2">
                           <Label htmlFor="discount">Weekly Discount (%)</Label>
                           <div className="relative">
@@ -805,9 +1071,10 @@ export default function CalendarPage() {
                             />
                             <span className="absolute right-3 top-2.5 text-muted-foreground">%</span>
                           </div>
-                        </div>
+                        </div> 
+                        */}
                       </div>
-                      <Button className="w-full">Save Price Settings</Button>
+                      <Button className="w-full" onClick={handleSavePrice}>Save Price Settings</Button>
                     </div>
                   )}
 

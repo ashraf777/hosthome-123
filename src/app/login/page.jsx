@@ -74,9 +74,9 @@ export default function LoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
       <Card className="w-full max-w-sm">
         <CardHeader className="text-center">
-            <div className="flex justify-center items-center mb-4">
-              <Logo className="size-10 text-primary" />
-            </div>
+          <div className="flex justify-center items-center mb-4">
+            <Logo className="size-10 text-primary" />
+          </div>
           <CardTitle className="text-2xl">Welcome to HostHome</CardTitle>
           <CardDescription>
             Enter your credentials to access your dashboard.
@@ -124,7 +124,7 @@ export default function LoginPage() {
         </CardContent>
       </Card>
       <div className="absolute bottom-4 text-center text-sm text-muted-foreground">
-        (version: 1.0.12 Build 1)
+        (version: 1.0.13 Build 1)
       </div>
     </div>
   );

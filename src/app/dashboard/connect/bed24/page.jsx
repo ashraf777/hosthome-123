@@ -39,6 +39,7 @@ export default function Bed24ConnectPage() {
             setIsConnected(true);
             setRefreshToken(localStorage.getItem('bed24_refreshToken') || "");
             setAccessToken(localStorage.getItem('bed24_accessToken') || "");
+            /* 
             const storedProps = localStorage.getItem('bed24_properties');
             if (storedProps) {
                 try {
@@ -46,9 +47,50 @@ export default function Bed24ConnectPage() {
                 } catch (e) {
                     console.error("Failed to parse stored properties", e);
                 }
-            }
+            } 
+            */
         }
     }, []);
+
+    const fetchProperties = async (token) => {
+        setIsLoading(true);
+        setError("");
+        try {
+            const propsResponse = await fetch('/api/bed24/properties', {
+                method: 'GET',
+                headers: {
+                    'accept': 'application/json',
+                    'token': token
+                }
+            });
+
+            if (!propsResponse.ok) {
+                const errData = await propsResponse.json().catch(() => ({}));
+                throw new Error(errData.error || "Failed to fetch properties.");
+            }
+
+            const propsData = await propsResponse.json();
+
+            if (!propsData.success) {
+                throw new Error("API reported failure when fetching properties.");
+            }
+
+            const fetchedProperties = propsData.data || [];
+            setProperties(fetchedProperties);
+
+            // Update storage
+            // User requested to NOT store properties in local storage, only tokens.
+            // localStorage.setItem('bed24_properties', JSON.stringify(fetchedProperties));
+            return true;
+
+        } catch (err) {
+            console.error(err);
+            setError(err.message || "An unexpected error occurred during property fetch.");
+            return false;
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     const handleSave = async () => {
         setIsLoading(true);
@@ -72,42 +114,22 @@ export default function Bed24ConnectPage() {
             const newAccessToken = tokenData.token;
             setAccessToken(newAccessToken);
 
-            // Step 2: Fetch Properties using the Access Token (via Proxy)
-            const propsResponse = await fetch('/api/bed24/properties', {
-                method: 'GET',
-                headers: {
-                    'accept': 'application/json',
-                    'token': newAccessToken
-                }
-            });
-
-            if (!propsResponse.ok) {
-                const errData = await propsResponse.json().catch(() => ({}));
-                throw new Error(errData.error || "Failed to fetch properties.");
-            }
-
-            const propsData = await propsResponse.json();
-
-            if (!propsData.success) {
-                throw new Error("API reported failure when fetching properties.");
-            }
-
-            const fetchedProperties = propsData.data || [];
-            setProperties(fetchedProperties);
-
-            // Step 3: Save execution state
+            // Save authentication state immediately 
             localStorage.setItem('bed24_connected', 'true');
             localStorage.setItem('bed24_refreshToken', refreshToken);
             localStorage.setItem('bed24_accessToken', newAccessToken);
-            localStorage.setItem('bed24_properties', JSON.stringify(fetchedProperties));
 
-            setIsConnected(true);
+            // Step 2: Fetch Properties using the NEW Access Token
+            const success = await fetchProperties(newAccessToken);
+
+            if (success) {
+                setIsConnected(true);
+            }
 
         } catch (err) {
             console.error(err);
             setError(err.message || "An unexpected error occurred.");
-        } finally {
-            setIsLoading(false);
+            setIsLoading(false); // Ensure loading is cleared if we catch here
         }
     };
 
@@ -121,8 +143,16 @@ export default function Bed24ConnectPage() {
     };
 
     const handleSync = async () => {
-        // Re-run the save logic to refresh token and data
-        await handleSave();
+        // Only fetch properties using existing token
+        if (accessToken) {
+            await fetchProperties(accessToken);
+        } else {
+            // If no access token, we might need to re-auth, but per request we only want to sync logic here.
+            // If the token is expired, the user might need to re-save. 
+            // For now, let's assume if they are connected they have a token.
+            // If the token is invalid, fetchProperties will error, and they can see it.
+            setError("No access token available. Please reconnect.");
+        }
     };
 
 
