@@ -27,54 +27,102 @@ import {
 export default function Bed24ConnectPage() {
     const [isLoading, setIsLoading] = useState(false);
     const [isConnected, setIsConnected] = useState(false);
+    const [refreshToken, setRefreshToken] = useState("");
+    const [accessToken, setAccessToken] = useState("");
+    const [properties, setProperties] = useState([]);
+    const [error, setError] = useState("");
 
     // Load state from localStorage on mount
     React.useEffect(() => {
         const storedState = localStorage.getItem('bed24_connected');
         if (storedState === 'true') {
             setIsConnected(true);
+            setRefreshToken(localStorage.getItem('bed24_refreshToken') || "");
+            setAccessToken(localStorage.getItem('bed24_accessToken') || "");
+            const storedProps = localStorage.getItem('bed24_properties');
+            if (storedProps) {
+                try {
+                    setProperties(JSON.parse(storedProps));
+                } catch (e) {
+                    console.error("Failed to parse stored properties", e);
+                }
+            }
         }
     }, []);
 
-    const handleSave = () => {
+    const handleSave = async () => {
         setIsLoading(true);
-        // Simulate API call
-        setTimeout(() => {
-            setIsLoading(false);
-            setIsConnected(true);
+        setError("");
+        try {
+            // Step 1: Exchange Refresh Token for Access Token
+            const tokenResponse = await fetch('https://beds24.com/api/v2/authentication/token', {
+                method: 'GET',
+                headers: {
+                    'accept': 'application/json',
+                    'refreshToken': refreshToken
+                }
+            });
+
+            if (!tokenResponse.ok) {
+                throw new Error("Failed to authenticate. Please check your Refresh Token.");
+            }
+
+            const tokenData = await tokenResponse.json();
+            const newAccessToken = tokenData.token;
+            setAccessToken(newAccessToken);
+
+            // Step 2: Fetch Properties using the Access Token
+            const propsResponse = await fetch('https://beds24.com/api/v2/properties', {
+                method: 'GET',
+                headers: {
+                    'accept': 'application/json',
+                    'token': newAccessToken
+                }
+            });
+
+            if (!propsResponse.ok) {
+                throw new Error("Failed to fetch properties.");
+            }
+
+            const propsData = await propsResponse.json();
+
+            if (!propsData.success) {
+                throw new Error("API reported failure when fetching properties.");
+            }
+
+            const fetchedProperties = propsData.data || [];
+            setProperties(fetchedProperties);
+
+            // Step 3: Save execution state
             localStorage.setItem('bed24_connected', 'true');
-        }, 1500);
+            localStorage.setItem('bed24_refreshToken', refreshToken);
+            localStorage.setItem('bed24_accessToken', newAccessToken);
+            localStorage.setItem('bed24_properties', JSON.stringify(fetchedProperties));
+
+            setIsConnected(true);
+
+        } catch (err) {
+            console.error(err);
+            setError(err.message || "An unexpected error occurred.");
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     const handleReconfigure = () => {
         setIsConnected(false);
+        setAccessToken("");
+        setProperties([]);
         localStorage.removeItem('bed24_connected');
+        localStorage.removeItem('bed24_accessToken');
+        // We keep the refreshToken in state/storage convenience so they don't have to re-paste it entirely if they just want to refresh
     };
 
-    const mockProperties = [
-        { id: 101, name: "Sunset Villa - Ocean View", channel: "Airbnb", channelId: "ABNB-882392", status: "Live", lastSync: "10 mins ago" },
-        { id: 102, name: "Downtown Loft Apartment", channel: "Booking.com", channelId: "BKNG-29384", status: "Live", lastSync: "2 mins ago" },
-        { id: 103, name: "Mountain Cabin Retreat", channel: "Airbnb", channelId: "ABNB-992384", status: "Syncing", lastSync: "Just now" },
-        { id: 104, name: "Luxury City Condo", channel: "Expedia", channelId: "EXP-11223", status: "Error", lastSync: "1 day ago" },
-        { id: 105, name: "Cozy Studio by the Park", channel: "Airbnb", channelId: "ABNB-773822", status: "Live", lastSync: "1 hour ago" },
-    ];
-
-    const getChannelBadge = (channel) => {
-        switch (channel) {
-            case 'Airbnb': return <Badge variant="outline" className="border-red-200 bg-red-50 text-red-700">Airbnb</Badge>;
-            case 'Booking.com': return <Badge variant="outline" className="border-blue-200 bg-blue-50 text-blue-700">Booking.com</Badge>;
-            default: return <Badge variant="outline">{channel}</Badge>;
-        }
+    const handleSync = async () => {
+        // Re-run the save logic to refresh token and data
+        await handleSave();
     };
 
-    const getStatusBadge = (status) => {
-        switch (status) {
-            case 'Live': return <Badge className="bg-green-600">Live</Badge>;
-            case 'Syncing': return <Badge variant="secondary" className="animate-pulse">Syncing</Badge>;
-            case 'Error': return <Badge variant="destructive">Error</Badge>;
-            default: return <Badge variant="secondary">{status}</Badge>;
-        }
-    };
 
     return (
         <div className="flex flex-col gap-6 p-6">
@@ -95,32 +143,46 @@ export default function Bed24ConnectPage() {
                     <CardHeader>
                         <CardTitle>Configuration</CardTitle>
                         <CardDescription>
-                            Enter your Bed24 API credentials to connect your account.
+                            Enter your Bed24 Refresh Token to connect your account.
                         </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
                         <div className="grid gap-2">
-                            <Label htmlFor="token">API Token</Label>
+                            <Label htmlFor="refreshToken">Refresh Token</Label>
                             <Input
-                                id="token"
-                                placeholder="Enter your Bed24 API token"
+                                id="refreshToken"
+                                placeholder="Enter your Bed24 Refresh Token"
                                 disabled={isConnected || isLoading}
-                                defaultValue={isConnected ? "**********************" : ""}
+                                value={refreshToken}
+                                onChange={(e) => setRefreshToken(e.target.value)}
+                                type="password"
                             />
+                            <p className="text-xs text-muted-foreground">This token is used to generate temporary access tokens.</p>
                         </div>
-                        <div className="grid gap-2">
-                            <Label htmlFor="apiUrl">Bed24 API URL</Label>
-                            <Input
-                                id="apiUrl"
-                                placeholder="https://api.bed24.com/..."
-                                disabled={isConnected || isLoading}
-                                defaultValue={isConnected ? "https://api.bed24.com/v2/" : ""}
-                            />
-                        </div>
+
+                        {(isConnected || accessToken) && (
+                            <div className="grid gap-2">
+                                <Label htmlFor="accessToken">Access Token (Session)</Label>
+                                <Input
+                                    id="accessToken"
+                                    readOnly
+                                    disabled
+                                    value={accessToken}
+                                    className="font-mono text-xs bg-muted"
+                                />
+                                <p className="text-xs text-muted-foreground">This token is automatically generated and used for API requests.</p>
+                            </div>
+                        )}
+
+                        {error && (
+                            <div className="text-sm text-red-600 bg-red-50 p-2 rounded border border-red-200">
+                                {error}
+                            </div>
+                        )}
                     </CardContent>
                     <CardFooter>
                         {!isConnected ? (
-                            <Button onClick={handleSave} disabled={isLoading}>
+                            <Button onClick={handleSave} disabled={isLoading || !refreshToken}>
                                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                                 {isLoading ? "Connecting..." : "Save & Connect"}
                             </Button>
@@ -145,37 +207,47 @@ export default function Bed24ConnectPage() {
                         <div className="flex items-center justify-between">
                             <div>
                                 <h2 className="text-lg font-semibold">Imported Properties</h2>
-                                <p className="text-sm text-muted-foreground">Properties syndicated from your Bed24 account.</p>
+                                <p className="text-sm text-muted-foreground">Properties fetched from your Bed24 account.</p>
                             </div>
-                            <Button variant="outline" size="sm">
-                                <RefreshCw className="h-4 w-4 mr-2" />
+                            <Button variant="outline" size="sm" onClick={handleSync} disabled={isLoading}>
+                                <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
                                 Sync Now
                             </Button>
                         </div>
 
                         <Card>
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead className="pl-6">Property Name</TableHead>
-                                        <TableHead>Channel</TableHead>
-                                        <TableHead>Channel ID</TableHead>
-                                        <TableHead>Status</TableHead>
-                                        <TableHead className="text-right pr-6">Last Sync</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {mockProperties.map((property) => (
-                                        <TableRow key={property.id}>
-                                            <TableCell className="font-medium pl-6">{property.name}</TableCell>
-                                            <TableCell>{getChannelBadge(property.channel)}</TableCell>
-                                            <TableCell className="text-mono text-xs text-muted-foreground">{property.channelId}</TableCell>
-                                            <TableCell>{getStatusBadge(property.status)}</TableCell>
-                                            <TableCell className="text-right text-muted-foreground pr-6">{property.lastSync}</TableCell>
+                            {properties.length === 0 ? (
+                                <div className="p-8 text-center text-muted-foreground">
+                                    No properties found in this Bed24 account.
+                                </div>
+                            ) : (
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead className="pl-6">ID</TableHead>
+                                            <TableHead>Property Name</TableHead>
+                                            <TableHead>Location</TableHead>
+                                            <TableHead>Type</TableHead>
+                                            <TableHead className="text-right pr-6">Owner ID</TableHead>
                                         </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {properties.map((property) => (
+                                            <TableRow key={property.id}>
+                                                <TableCell className="font-mono text-xs pl-6">{property.id}</TableCell>
+                                                <TableCell className="font-medium">{property.name}</TableCell>
+                                                <TableCell>
+                                                    {property.city && property.country ? `${property.city}, ${property.country}` : 'N/A'}
+                                                </TableCell>
+                                                <TableCell className="capitalize">{property.propertyType || 'N/A'}</TableCell>
+                                                <TableCell className="text-right text-muted-foreground pr-6">
+                                                    {property.account?.ownerId || 'N/A'}
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            )}
                         </Card>
                     </div>
                 )}
