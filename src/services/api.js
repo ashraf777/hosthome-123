@@ -55,7 +55,7 @@ export const api = {
     post: (endpoint, body) => {
         const isFormData = body instanceof FormData;
         if (!body || isFormData) {
-             return request(endpoint, { method: 'POST', body: isFormData ? body : undefined });
+            return request(endpoint, { method: 'POST', body: isFormData ? body : undefined });
         }
         return request(endpoint, {
             method: 'POST',

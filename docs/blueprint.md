@@ -1,4 +1,4 @@
-# **App Name**: HostBoost
+# **App Name**: HostHome
 
 ## Core Features:
 

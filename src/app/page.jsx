@@ -1,5 +1,11 @@
-import { redirect } from 'next/navigation';
+import { GuestLayout } from '@/components/guest/GuestLayout';
+import { GuestHomePage } from '@/components/guest/GuestHomePage';
 
 export default function RootPage() {
-  redirect('/login');
+  return (
+    <GuestLayout>
+      <GuestHomePage />
+    </GuestLayout>
+  );
 }
+

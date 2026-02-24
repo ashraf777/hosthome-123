@@ -25,12 +25,12 @@ export default function DashboardLayout({
 
   if (loading || !token) {
     return (
-        <div className="flex h-screen items-center justify-center">
-            <div className="text-2xl font-semibold">Loading...</div>
-        </div>
+      <div className="flex h-screen items-center justify-center">
+        <div className="text-2xl font-semibold">Loading...</div>
+      </div>
     );
   }
-  
+
   return (
     <SidebarProvider defaultOpen={!isMobile}>
       <Sidebar
@@ -45,7 +45,7 @@ export default function DashboardLayout({
           >
             <Logo className="size-7 shrink-0 text-sidebar-primary" />
             <span className="text-lg font-semibold text-sidebar-foreground">
-              HostBoost
+              HostHome
             </span>
           </Link>
         </SidebarHeader>

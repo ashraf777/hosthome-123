@@ -2,11 +2,15 @@
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster.jsx"
 import { AuthProvider } from '@/providers/auth-provider.jsx';
+import { BookingProvider } from '@/providers/booking-provider.jsx';
 
 export const metadata = {
   title: 'HostHome',
   description: 'Boost your rental business with HostHome.',
-  viewport: 'width=device-width, initial-scale=1.0',
+  viewport: {
+    width: 'device-width',
+    initialScale: 1,
+  },
 };
 
 export default function RootLayout({
@@ -21,10 +25,13 @@ export default function RootLayout({
       </head>
       <body className="font-body antialiased">
         <AuthProvider>
-          {children}
+          <BookingProvider>
+            {children}
+          </BookingProvider>
         </AuthProvider>
         <Toaster />
       </body>
+
     </html>
   );
 }
