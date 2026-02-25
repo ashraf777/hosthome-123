@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
-import { ChevronLeft, CheckCircle2 } from "lucide-react"
+import { ChevronLeft, CheckCircle2, CreditCard, Wallet, Building2, ShieldCheck } from "lucide-react"
 import Link from "next/link"
 
 export default function CheckoutPage() {
@@ -102,9 +102,27 @@ export default function CheckoutPage() {
 
                                 <div className="pt-6">
                                     <h3 className="text-lg font-bold mb-4">Payment</h3>
-                                    <p className="text-sm text-muted-foreground mb-4">
-                                        This is a demo. No actual payment will be processed.
-                                    </p>
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
+                                        <div className="border-2 border-primary bg-primary/5 rounded-xl p-4 flex flex-col items-center gap-2 cursor-not-allowed opacity-80">
+                                            <CreditCard className="text-primary" size={24} />
+                                            <span className="text-xs font-bold text-center">Credit / Debit Card</span>
+                                        </div>
+                                        <div className="border-2 border-muted rounded-xl p-4 flex flex-col items-center gap-2 cursor-not-allowed grayscale opacity-50">
+                                            <Wallet className="text-muted-foreground" size={24} />
+                                            <span className="text-xs font-bold text-center">PayPal</span>
+                                        </div>
+                                        <div className="border-2 border-muted rounded-xl p-4 flex flex-col items-center gap-2 cursor-not-allowed grayscale opacity-50">
+                                            <Building2 className="text-muted-foreground" size={24} />
+                                            <span className="text-xs font-bold text-center">FPX / Bank</span>
+                                        </div>
+                                    </div>
+                                    <div className="bg-muted/30 border rounded-lg p-4 mb-6 flex items-start gap-3">
+                                        <ShieldCheck className="text-muted-foreground mt-0.5" size={18} />
+                                        <p className="text-xs text-muted-foreground">
+                                            <span className="font-bold block mb-1">Demo Mode Active</span>
+                                            This is a demonstration environment. No actual payment will be processed and no sensitive data will be stored.
+                                        </p>
+                                    </div>
                                     <Button type="submit" size="lg" className="w-full py-6 text-xl">
                                         Confirm Booking
                                     </Button>

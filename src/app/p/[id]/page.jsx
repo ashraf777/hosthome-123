@@ -98,7 +98,7 @@ export default function PropertyDetailPage() {
                 {/* Image Grid (Simplified for demo) */}
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-2 h-[300px] md:h-[450px] overflow-hidden rounded-xl mb-8">
                     <div className="relative col-span-1 md:col-span-2 h-full">
-                        <Image src={property.image} fill className="object-cover" alt={property.name} />
+                        <Image src={property.image || "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=800&q=80"} fill className="object-cover" alt={property.name} />
                     </div>
                     <div className="hidden md:grid grid-rows-2 gap-2 col-span-1 h-full">
                         <div className="relative h-full"><Image src="https://picsum.photos/seed/1/400/300" fill className="object-cover" alt="room" /></div>
