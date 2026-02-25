@@ -16,7 +16,7 @@ export const guestApi = {
             if (Array.isArray(data) && data.length > 0) {
                 return data.map(property => ({
                     ...property,
-                    room_types: MOCK_ROOM_TYPES[property.id] || []
+                    room_types: property.room_types || MOCK_ROOM_TYPES[property.id] || []
                 }));
             }
             console.warn('API returned empty/invalid properties, falling back to mock data.');
@@ -49,7 +49,9 @@ export const guestApi = {
             if (property && property.id) {
                 return {
                     ...property,
-                    room_types: Array.isArray(roomTypes) && roomTypes.length > 0 ? roomTypes : (MOCK_ROOM_TYPES[id] || [])
+                    room_types: (Array.isArray(roomTypes) && roomTypes.length > 0)
+                        ? roomTypes
+                        : (property.room_types || MOCK_ROOM_TYPES[id] || [])
                 };
             }
 
