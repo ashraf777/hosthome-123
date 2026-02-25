@@ -82,8 +82,8 @@ function PropertyCard({ property }) {
                     </div>
                     <p className="text-sm text-muted-foreground truncate">{property.address_line_1}</p>
                     <div className="mt-1 flex items-center gap-1">
-                        <span className="font-bold">${property.price_per_night || 200}</span>
-                        <span className="text-sm text-muted-foreground">night</span>
+                        <span className="font-bold">{property.room_types?.length || 0}</span>
+                        <span className="text-sm text-muted-foreground">rooms available</span>
                     </div>
                 </div>
             </div>

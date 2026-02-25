@@ -14,13 +14,22 @@ export const guestApi = {
             const response = await api.get('properties');
             const data = response?.data || response;
             if (Array.isArray(data) && data.length > 0) {
-                return data;
+                return data.map(property => ({
+                    ...property,
+                    room_types: MOCK_ROOM_TYPES[property.id] || []
+                }));
             }
             console.warn('API returned empty/invalid properties, falling back to mock data.');
-            return MOCK_PROPERTIES;
+            return MOCK_PROPERTIES.map(property => ({
+                ...property,
+                room_types: MOCK_ROOM_TYPES[property.id] || []
+            }));
         } catch (error) {
             console.error('Failed to fetch properties from API, falling back to mock data:', error);
-            return MOCK_PROPERTIES;
+            return MOCK_PROPERTIES.map(property => ({
+                ...property,
+                room_types: MOCK_ROOM_TYPES[property.id] || []
+            }));
         }
     },
 

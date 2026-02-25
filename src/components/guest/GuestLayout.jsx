@@ -41,9 +41,9 @@ export function GuestLayout({ children }) {
 
                     {/* User Nav */}
                     <div className="flex items-center gap-4">
-                        <Link href="/dashboard" className="hidden sm:block text-sm font-semibold hover:bg-accent px-4 py-2 rounded-full transition">
+                        {/* <Link href="/dashboard" className="hidden sm:block text-sm font-semibold hover:bg-accent px-4 py-2 rounded-full transition">
                             Host your home
-                        </Link>
+                        </Link> */}
 
                         <button
                             onClick={() => setIsCartOpen(true)}
@@ -57,12 +57,12 @@ export function GuestLayout({ children }) {
                             )}
                         </button>
 
-                        <div className="flex items-center border rounded-full p-2 gap-2 hover:shadow-md transition cursor-pointer">
+                        {/* <div className="flex items-center border rounded-full p-2 gap-2 hover:shadow-md transition cursor-pointer">
                             <Menu className="h-4 w-4" />
                             <div className="bg-muted-foreground/20 rounded-full p-1">
                                 <User className="h-5 w-5 text-muted-foreground" />
                             </div>
-                        </div>
+                        </div> */}
                     </div>
                 </div>
             </header>
@@ -79,7 +79,7 @@ export function GuestLayout({ children }) {
                         <h3 className="font-bold mb-4">Support</h3>
                         <ul className="space-y-2 text-sm text-muted-foreground">
                             <li>Help Center</li>
-                            <li>AirCover</li>
+                            <li>HostCover</li>
                             <li>Supporting people with disabilities</li>
                             <li>Cancellation options</li>
                         </ul>
@@ -87,7 +87,7 @@ export function GuestLayout({ children }) {
                     <div>
                         <h3 className="font-bold mb-4">Community</h3>
                         <ul className="space-y-2 text-sm text-muted-foreground">
-                            <li>Airbnb.org: disaster relief housing</li>
+                            <li>Disaster relief housing</li>
                             <li>Combatting discrimination</li>
                         </ul>
                     </div>
@@ -95,7 +95,7 @@ export function GuestLayout({ children }) {
                         <h3 className="font-bold mb-4">Hosting</h3>
                         <ul className="space-y-2 text-sm text-muted-foreground">
                             <li>Host your home</li>
-                            <li>AirCover for Hosts</li>
+                            <li>HostCover for Hosts</li>
                             <li>Hosting resources</li>
                             <li>Community forum</li>
                         </ul>
