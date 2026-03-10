@@ -9,7 +9,7 @@ import { guestApi } from "@/services/guest-api"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { MapPin, Users, Bed, Star, Share, Heart, Minus, Plus } from "lucide-react"
+import { MapPin, Users, Bed, Star, Share, Heart, Minus, Plus, ChevronLeft, ChevronRight } from "lucide-react"
 import { useBooking } from "@/providers/booking-provider"
 import { format } from "date-fns"
 import {
@@ -29,13 +29,34 @@ export default function PropertyDetailPage() {
     const [guests, setGuests] = React.useState(1)
     const [isChecking, setIsChecking] = React.useState(false)
     const [showDateError, setShowDateError] = React.useState(false)
+    const [availabilityMap, setAvailabilityMap] = React.useState(null)
     const roomListRef = React.useRef(null)
+
+    const [allPhotos, setAllPhotos] = React.useState([])
 
     React.useEffect(() => {
         const fetch = async () => {
             setLoading(true)
             const data = await guestApi.getPropertyDetails(id)
-            setProperty(data)
+            if (data) {
+                setProperty(data)
+
+                // Aggregate all photos from property, rooms, and units
+                let aggregatedPhotos = [...(data.photos || [])];
+                if (data.room_types) {
+                    data.room_types.forEach(rt => {
+                        aggregatedPhotos = [...aggregatedPhotos, ...(rt.photos || [])];
+                        if (rt.units) {
+                            rt.units.forEach(u => {
+                                aggregatedPhotos = [...aggregatedPhotos, ...(u.photos || [])];
+                            });
+                        }
+                    });
+                }
+
+                // Remove duplicates by ID if same photo added multiple times, or just keep all
+                setAllPhotos(aggregatedPhotos);
+            }
             setLoading(false)
         }
         fetch()
@@ -95,18 +116,32 @@ export default function PropertyDetailPage() {
                     </div>
                 </div>
 
-                {/* Image Grid (Simplified for demo) */}
+                {/* Image Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-2 h-[300px] md:h-[450px] overflow-hidden rounded-xl mb-8">
-                    <div className="relative col-span-1 md:col-span-2 h-full">
-                        <Image src={property.image || "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=800&q=80"} fill className="object-cover" alt={property.name} />
+                    <div className="relative col-span-1 md:col-span-2 h-full bg-muted flex items-center justify-center font-bold text-muted-foreground overflow-hidden">
+                        {allPhotos[0] ? <Image src={allPhotos[0].photo_path} fill className="object-cover" alt={property.name} /> : (
+                            <div className="absolute inset-0 bg-primary/10 flex items-center justify-center">
+                                <span className="text-4xl md:text-6xl font-black text-primary/20 tracking-widest uppercase rotate-[-20deg] select-none">
+                                    HostHome
+                                </span>
+                            </div>
+                        )}
                     </div>
                     <div className="hidden md:grid grid-rows-2 gap-2 col-span-1 h-full">
-                        <div className="relative h-full"><Image src="https://picsum.photos/seed/1/400/300" fill className="object-cover" alt="room" /></div>
-                        <div className="relative h-full"><Image src="https://picsum.photos/seed/2/400/300" fill className="object-cover" alt="room" /></div>
+                        <div className="relative h-full bg-muted flex items-center justify-center font-bold text-muted-foreground">
+                            {allPhotos[1] && <Image src={allPhotos[1].photo_path} fill className="object-cover" alt="Property Image 2" />}
+                        </div>
+                        <div className="relative h-full bg-muted flex items-center justify-center font-bold text-muted-foreground">
+                            {allPhotos[2] && <Image src={allPhotos[2].photo_path} fill className="object-cover" alt="Property Image 3" />}
+                        </div>
                     </div>
                     <div className="hidden md:grid grid-rows-2 gap-2 col-span-1 h-full">
-                        <div className="relative h-full"><Image src="https://picsum.photos/seed/3/400/300" fill className="object-cover" alt="room" /></div>
-                        <div className="relative h-full"><Image src="https://picsum.photos/seed/4/400/300" fill className="object-cover" alt="room" /></div>
+                        <div className="relative h-full bg-muted flex items-center justify-center font-bold text-muted-foreground">
+                            {allPhotos[3] && <Image src={allPhotos[3].photo_path} fill className="object-cover" alt="Property Image 4" />}
+                        </div>
+                        <div className="relative h-full bg-muted flex items-center justify-center font-bold text-muted-foreground">
+                            {allPhotos[4] && <Image src={allPhotos[4].photo_path} fill className="object-cover" alt="Property Image 5" />}
+                        </div>
                     </div>
                 </div>
 
@@ -126,7 +161,7 @@ export default function PropertyDetailPage() {
                             <h2 className="text-xl font-bold mb-6">Choose your rooms</h2>
                             <div className="flex flex-col gap-6">
                                 {property.room_types?.map((room) => (
-                                    <RoomCard key={room.id} room={room} property={property} />
+                                    <RoomCard key={room.id} room={room} property={property} dateRange={dateRange} availabilityMap={availabilityMap} />
                                 ))}
                                 {(!property.room_types || property.room_types.length === 0) && (
                                     <p className="text-muted-foreground italic">No specific room types listed for this property.</p>
@@ -226,18 +261,40 @@ export default function PropertyDetailPage() {
                             <Button
                                 className="w-full py-6 text-lg font-bold"
                                 disabled={isChecking}
-                                onClick={() => {
+                                onClick={async () => {
                                     if (!dateRange.from || !dateRange.to) {
                                         setShowDateError(true)
                                         return
                                     }
                                     setShowDateError(false)
                                     setIsChecking(true)
-                                    // Simulate API check
-                                    setTimeout(() => {
+                                    try {
+                                        const res = await guestApi.checkAvailability({
+                                            property_id: id,
+                                            check_in: format(dateRange.from, 'yyyy-MM-dd'),
+                                            check_out: format(dateRange.to, 'yyyy-MM-dd'),
+                                            guests: guests
+                                        })
+
+                                        // create a map of room_type_id -> available_units
+                                        const mapping = {}
+                                        if (res.room_types) {
+                                            res.room_types.forEach(rt => {
+                                                mapping[rt.room_type_id] = rt.available_units
+                                            })
+                                        }
+                                        setAvailabilityMap(mapping)
+
+                                        // scroll to rooms after a short delay for UX
+                                        setTimeout(() => {
+                                            roomListRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                                        }, 100)
+                                    } catch (err) {
+                                        console.error(err)
+                                        // Optional: show a toast error
+                                    } finally {
                                         setIsChecking(false)
-                                        roomListRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-                                    }, 1500)
+                                    }
                                 }}
                             >
                                 {isChecking ? "Checking..." : "Check Availability"}
@@ -252,7 +309,11 @@ export default function PropertyDetailPage() {
                                     Searching for available rooms...
                                 </p>
                             )}
-                            <p className="text-center text-[10px] text-muted-foreground">Demo: Checking mock availability for selected dates</p>
+                            {availabilityMap !== null && (
+                                <p className="text-center text-xs text-green-600 font-semibold mt-2">
+                                    Availability updated! Scroll down to select your room.
+                                </p>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -261,40 +322,142 @@ export default function PropertyDetailPage() {
     )
 }
 
-function RoomCard({ room, property }) {
-    const { addToCart } = useBooking()
+function RoomCard({ room, property, dateRange, availabilityMap }) {
+    const { cart, addToCart } = useBooking()
     const [isExpanded, setIsExpanded] = React.useState(false)
+    const [currentImageIndex, setCurrentImageIndex] = React.useState(0)
+
+    // Status Logic
+    const hasChecked = availabilityMap !== null
+    const availableUnits = hasChecked ? (availabilityMap[room.id] || 0) : 0
+    const isAvailable = hasChecked && availableUnits > 0
+
+    // Aggregate photos for the slider
+    const sliderPhotos = React.useMemo(() => {
+        let photos = [...(room.photos || [])];
+        if (room.units && Array.isArray(room.units)) {
+            room.units.forEach(u => {
+                photos = [...photos, ...(u.photos || [])];
+            });
+        }
+        return photos.slice(0, 5); // Limit to 5
+    }, [room]);
+
+    const nextImage = (e) => {
+        e.stopPropagation();
+        setCurrentImageIndex((prev) => (prev + 1) % sliderPhotos.length);
+    }
+
+    const prevImage = (e) => {
+        e.stopPropagation();
+        setCurrentImageIndex((prev) => (prev - 1 + sliderPhotos.length) % sliderPhotos.length);
+    }
+
+    // Merge amenities
+    const allAmenities = React.useMemo(() => {
+        const propAmenities = property?.amenities || [];
+        const roomAmenities = room?.amenities || [];
+        // deduplicate by name
+        const combined = [...propAmenities, ...roomAmenities];
+        const unique = [];
+        const seen = new Set();
+        for (const a of combined) {
+            const name = a.amenity_reference?.name || a.specific_name;
+            if (name && !seen.has(name)) {
+                seen.add(name);
+                unique.push({ ...a, display_name: name });
+            }
+        }
+        return unique;
+    }, [property, room]);
+
+    const sampleUnit = room.units && room.units.length > 0 ? room.units[0] : null;
 
     return (
         <div className="border rounded-xl overflow-hidden flex flex-col shadow-sm hover:shadow-md transition bg-background">
             <div className="flex flex-col sm:flex-row">
-                <div className="relative w-full sm:w-1/3 aspect-[4/3] sm:aspect-square">
-                    <Image src={room.image || "https://picsum.photos/seed/room/400/300"} fill className="object-cover" alt={room.name} />
+                <div className="relative w-full sm:w-1/3 aspect-[4/3] sm:aspect-square bg-muted flex items-center justify-center font-bold text-muted-foreground rounded-l-xl sm:rounded-l-xl sm:rounded-r-none overflow-hidden group">
+                    {sliderPhotos.length > 0 ? (
+                        <>
+                            <Image src={sliderPhotos[currentImageIndex].photo_path} fill className="object-cover" alt={`${room.name} image ${currentImageIndex + 1}`} />
+
+                            {/* Slider Controls */}
+                            {sliderPhotos.length > 1 && (
+                                <>
+                                    <button onClick={prevImage} className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/30 hover:bg-black/50 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <ChevronLeft size={20} />
+                                    </button>
+                                    <button onClick={nextImage} className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/30 hover:bg-black/50 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <ChevronRight size={20} />
+                                    </button>
+
+                                    {/* Dots */}
+                                    <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
+                                        {sliderPhotos.map((_, i) => (
+                                            <div key={i} className={`w-1.5 h-1.5 rounded-full ${i === currentImageIndex ? 'bg-white' : 'bg-white/50'}`} />
+                                        ))}
+                                    </div>
+                                </>
+                            )}
+                        </>
+                    ) : (
+                        <div className="absolute inset-0 bg-primary/10 flex items-center justify-center overflow-hidden">
+                            <span className="text-2xl md:text-3xl font-black text-primary/20 tracking-widest uppercase rotate-[-20deg] select-none">
+                                HostHome
+                            </span>
+                        </div>
+                    )}
                 </div>
                 <div className="p-6 flex-1 flex flex-col justify-between">
                     <div>
                         <div className="flex justify-between items-start mb-2">
                             <h3 className="text-lg font-bold">{room.name}</h3>
-                            <span className="text-lg font-bold text-primary">${room.weekday_price} <span className="text-xs font-normal text-muted-foreground">night</span></span>
+                            <div className="flex flex-col items-end">
+                                <span className="text-lg font-bold text-primary text-right">
+                                    ${room.weekday_price} <span className="text-[10px] md:text-xs font-normal text-muted-foreground whitespace-nowrap">/ night (Sun-Thu)</span>
+                                </span>
+                                {room.weekend_price && room.weekend_price !== room.weekday_price && (
+                                    <span className="text-sm font-semibold text-primary/80 text-right mt-[-4px]">
+                                        ${room.weekend_price} <span className="text-[10px] md:text-xs font-normal text-muted-foreground whitespace-nowrap">/ night (Fri-Sat)</span>
+                                    </span>
+                                )}
+                            </div>
                         </div>
                         <div className="flex flex-wrap gap-4 text-sm text-muted-foreground mb-4">
                             <span className="flex items-center gap-1 border-r pr-4"><Users size={16} /> Up to {room.max_adults + room.max_children} guests</span>
                             <span className="flex items-center gap-1"><Bed size={16} /> 1 Bed</span>
                         </div>
                         <p className="text-sm text-muted-foreground line-clamp-2">
-                            {room.description || "Enjoy a comfortable and modern stay in our curated rooms designed for your satisfaction."}
+                            {room.description || sampleUnit?.description || "Enjoy a comfortable and modern stay in our curated rooms designed for your satisfaction."}
                         </p>
                         <button
                             onClick={() => setIsExpanded(!isExpanded)}
-                            className="text-sm font-semibold underline mt-2 hover:text-primary transition-colors"
+                            className="text-sm font-bold underline mt-2 self-start"
                         >
-                            {isExpanded ? "Show less" : "Show room details"}
+                            {isExpanded ? "Hide details" : "Show room details"}
                         </button>
                     </div>
-                    <div className="mt-6 flex justify-end">
-                        <Button className="px-8" onClick={() => addToCart(room, property)}>
-                            Book now
-                        </Button>
+                    <div className="mt-4 flex flex-col gap-2">
+                        {hasChecked ? (
+                            isAvailable ? (
+                                <Button className="w-full" onClick={() => addToCart(room, property, dateRange)}>
+                                    Book
+                                    {/* ({availableUnits} left) */}
+                                </Button>
+                            ) : (
+                                <Button className="w-full" disabled variant="secondary">
+                                    Sold Out
+                                </Button>
+                            )
+                        ) : (
+                            <Button className="w-full" disabled variant="outline">
+                                Check Availability First
+                            </Button>
+                        )}
+
+                        {cart.find(c => c.id === room.id) && (
+                            <p className="text-xs text-center text-primary font-bold fade-in animate-in">Added to selection</p>
+                        )}
                     </div>
                 </div>
             </div>
@@ -302,22 +465,58 @@ function RoomCard({ room, property }) {
             {isExpanded && (
                 <div className="px-6 pb-6 pt-2 border-t bg-muted/10 animate-in fade-in slide-in-from-top-1 duration-200">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        <div>
-                            <h4 className="font-bold text-sm mb-3 underline">Room Description</h4>
-                            <p className="text-sm text-muted-foreground leading-relaxed">
-                                {room.description || "This room type offers a perfect blend of comfort and style. Equipped with modern amenities and high-quality furnishings, it ensures a relaxing stay for all types of travelers."}
-                            </p>
+                        <div className="space-y-6">
+                            <div>
+                                <h4 className="font-bold text-sm mb-3 underline">Room Description</h4>
+                                <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap">
+                                    {room.description || sampleUnit?.description || "This room type offers a perfect blend of comfort and style. Equipped with modern amenities and high-quality furnishings, it ensures a relaxing stay for all types of travelers."}
+                                </p>
+                            </div>
+
+                            {room.room_setup && room.room_setup.length > 0 && (
+                                <div>
+                                    <h4 className="font-bold text-sm mb-3 underline">Room Setup</h4>
+                                    <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1">
+                                        {room.room_setup.map((setup, idx) => (
+                                            <li key={idx} className="capitalize">
+                                                {setup.bed_type?.replace(/_/g, ' ')} {setup.count ? `x ${setup.count}` : ''}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            )}
+
+                            {sampleUnit && sampleUnit.about && (
+                                <div>
+                                    <h4 className="font-bold text-sm mb-3 underline">About this unit</h4>
+                                    <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap">
+                                        {sampleUnit.about}
+                                    </p>
+                                </div>
+                            )}
+
+                            {sampleUnit && sampleUnit.guest_access && (
+                                <div>
+                                    <h4 className="font-bold text-sm mb-3 underline">Guest Access</h4>
+                                    <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap">
+                                        {sampleUnit.guest_access}
+                                    </p>
+                                </div>
+                            )}
                         </div>
                         <div>
                             <h4 className="font-bold text-sm mb-3 underline">Amenities</h4>
-                            <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
-                                <span className="flex items-center gap-1">✓ High-speed WiFi</span>
-                                <span className="flex items-center gap-1">✓ Air conditioning</span>
-                                <span className="flex items-center gap-1">✓ Smart TV</span>
-                                <span className="flex items-center gap-1">✓ Mini fridge</span>
-                                <span className="flex items-center gap-1">✓ Coffee maker</span>
-                                <span className="flex items-center gap-1">✓ Dedicated workspace</span>
-                            </div>
+                            {allAmenities.length > 0 ? (
+                                <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
+                                    {allAmenities.map((amenity, idx) => (
+                                        <span key={idx} className="flex items-center gap-1">
+                                            ✓ {amenity.display_name}
+                                        </span>
+                                    ))}
+                                </div>
+                            ) : (
+                                <p className="text-sm text-muted-foreground italic">No amenities listed.</p>
+                            )}
                         </div>
                     </div>
                 </div>

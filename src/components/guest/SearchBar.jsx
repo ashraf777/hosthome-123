@@ -4,7 +4,7 @@
 import * as React from "react"
 import { Search, MapPin, Calendar, Users, ChevronDown } from "lucide-react"
 import { format } from "date-fns"
-import { MALAYSIAN_CITIES } from "@/lib/mock-data"
+import { guestApi } from "@/services/guest-api"
 import { Button } from "@/components/ui/button"
 import {
     Popover,
@@ -17,10 +17,34 @@ export function SearchBar({ onSearch }) {
     const [location, setLocation] = React.useState("")
     const [dateRange, setDateRange] = React.useState({ from: null, to: null })
     const [guests, setGuests] = React.useState(1)
+    const [availableCities, setAvailableCities] = React.useState([])
+
+    React.useEffect(() => {
+        const fetchCities = async () => {
+            try {
+                // Fetch all raw properties without filters to build the location list
+                const data = await guestApi.getProperties();
+                const cities = new Set(data?.map(p => p.city).filter(Boolean));
+                setAvailableCities(Array.from(cities));
+            } catch (err) {
+                console.error("Failed to fetch cities for search bar", err);
+            }
+        };
+        fetchCities();
+    }, []);
 
     const handleSearchClick = () => {
         onSearch({ location, ...dateRange, guests })
     }
+
+    const handleReset = () => {
+        setLocation("")
+        setDateRange({ from: null, to: null })
+        setGuests(1)
+        onSearch({ location: "", from: null, to: null, guests: 1 })
+    }
+
+    const hasFilters = location !== "" || dateRange.from !== null || guests > 1;
 
     return (
         <div className="flex flex-col md:flex-row items-center w-full">
@@ -37,15 +61,27 @@ export function SearchBar({ onSearch }) {
                     </PopoverTrigger>
                     <PopoverContent className="w-64 p-2" align="start">
                         <div className="grid gap-1">
-                            {MALAYSIAN_CITIES.map(city => (
-                                <button
-                                    key={city}
-                                    onClick={() => setLocation(city)}
-                                    className="text-left px-3 py-2 rounded-md hover:bg-muted text-sm transition"
-                                >
-                                    {city}
-                                </button>
-                            ))}
+                            {availableCities.length > 0 ? (
+                                <>
+                                    <button
+                                        onClick={() => setLocation("")}
+                                        className="text-left px-3 py-2 rounded-md hover:bg-muted text-sm font-semibold transition text-primary"
+                                    >
+                                        All Locations
+                                    </button>
+                                    {availableCities.map(city => (
+                                        <button
+                                            key={city}
+                                            onClick={() => setLocation(city)}
+                                            className="text-left px-3 py-2 rounded-md hover:bg-muted text-sm transition"
+                                        >
+                                            {city}
+                                        </button>
+                                    ))}
+                                </>
+                            ) : (
+                                <p className="text-sm p-4 text-muted-foreground text-center">Loading locations...</p>
+                            )}
                         </div>
                     </PopoverContent>
                 </Popover>
@@ -115,11 +151,21 @@ export function SearchBar({ onSearch }) {
             </div>
 
             {/* Search Button */}
-            <div className="px-4 py-2">
+            <div className="px-4 py-2 flex items-center gap-2">
+                {hasFilters && (
+                    <Button variant="ghost" onClick={handleReset} className="text-xs text-muted-foreground hover:text-foreground hidden md:flex">
+                        Clear
+                    </Button>
+                )}
                 <Button onClick={handleSearchClick} className="rounded-full w-full md:w-12 h-12 p-0 flex items-center justify-center">
                     <Search className="h-5 w-5" />
                     <span className="md:hidden ml-2 font-semibold">Search</span>
                 </Button>
+                {hasFilters && (
+                    <Button variant="outline" onClick={handleReset} className="md:hidden w-full mt-2">
+                        Clear Filters
+                    </Button>
+                )}
             </div>
         </div>
     )

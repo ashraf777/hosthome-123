@@ -74,7 +74,7 @@ export function GuestLayout({ children }) {
 
             {/* Footer */}
             <footer className="border-t py-12 bg-muted/30">
-                <div className="container mx-auto px-4 grid grid-cols-1 md:grid-cols-4 gap-8">
+                {/* <div className="container mx-auto px-4 grid grid-cols-1 md:grid-cols-4 gap-8">
                     <div>
                         <h3 className="font-bold mb-4">Support</h3>
                         <ul className="space-y-2 text-sm text-muted-foreground">
@@ -109,7 +109,7 @@ export function GuestLayout({ children }) {
                             <li>Investors</li>
                         </ul>
                     </div>
-                </div>
+                </div> */}
                 <div className="container mx-auto px-4 mt-8 pt-8 border-t flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-muted-foreground">
                     <p>© 2026 HostHome, Inc. · Privacy · Terms · Sitemap</p>
                     <div className="flex gap-4">

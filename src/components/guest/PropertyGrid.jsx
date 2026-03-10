@@ -16,19 +16,19 @@ export function PropertyGrid({ searchParams }) {
     React.useEffect(() => {
         const fetch = async () => {
             setLoading(true)
-            const data = await guestApi.getProperties()
+            const queryParams = {};
+            if (searchParams.location) queryParams.location = searchParams.location;
+            if (searchParams.from) queryParams.check_in = searchParams.from.toISOString().split('T')[0];
+            if (searchParams.to) queryParams.check_out = searchParams.to.toISOString().split('T')[0];
+            if (searchParams.guests) queryParams.guests = searchParams.guests;
 
-            // Filter based on search params (mock filter for demo)
-            let filtered = data;
-            if (searchParams.location) {
-                filtered = filtered.filter(p => p.city === searchParams.location)
-            }
+            const data = await guestApi.getProperties(queryParams);
 
-            setProperties(filtered)
+            setProperties(data || [])
             setLoading(false)
         }
         fetch()
-    }, [searchParams])
+    }, [searchParams.location, searchParams.from, searchParams.to, searchParams.guests])
 
     if (loading) {
         return (
@@ -69,7 +69,7 @@ function PropertyCard({ property }) {
             <div className="flex flex-col gap-2">
                 <div className="relative aspect-[4/3] w-full overflow-hidden rounded-xl">
                     <Image
-                        src={property.image || "https://picsum.photos/seed/prop/600/450"}
+                        src={property.photos && property.photos.length > 0 ? property.photos[0].photo_path : "https://picsum.photos/seed/prop/600/450"}
                         alt={property.name}
                         fill
                         className="object-cover transition group-hover:scale-105"
@@ -83,7 +83,7 @@ function PropertyCard({ property }) {
                     <p className="text-sm text-muted-foreground truncate">{property.address_line_1}</p>
                     <div className="mt-1 flex items-center gap-1">
                         <span className="font-bold">{property.room_types?.length || 0}</span>
-                        <span className="text-sm text-muted-foreground">rooms available</span>
+                        <span className="text-sm text-muted-foreground">room types available</span>
                     </div>
                 </div>
             </div>

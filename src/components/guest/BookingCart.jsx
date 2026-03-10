@@ -15,7 +15,7 @@ import { Trash2, ShoppingCart, ArrowRight } from "lucide-react"
 import Link from "next/link"
 
 export function BookingCart() {
-    const { cart, removeFromCart, total, isCartOpen, setIsCartOpen } = useBooking()
+    const { cart, removeFromCart, total, nights, isCartOpen, setIsCartOpen } = useBooking()
 
     return (
         <Sheet open={isCartOpen} onOpenChange={setIsCartOpen}>
@@ -62,7 +62,7 @@ export function BookingCart() {
                 {cart.length > 0 && (
                     <SheetFooter className="border-t pt-6 flex-col gap-4">
                         <div className="w-full flex justify-between items-center mb-2">
-                            <span className="text-lg font-bold">Total (per night)</span>
+                            <span className="text-lg font-bold">Total <span className="text-sm font-normal text-muted-foreground whitespace-nowrap hidden sm:inline-block">({nights} night{nights !== 1 ? 's' : ''})</span></span>
                             <span className="text-2xl font-bold">${total}</span>
                         </div>
                         <div className="flex flex-col gap-2 w-full">

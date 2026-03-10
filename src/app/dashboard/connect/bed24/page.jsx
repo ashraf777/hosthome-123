@@ -23,66 +23,92 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table"
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+    DialogFooter,
+} from "@/components/ui/dialog"
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select"
+import { api } from "@/services/api"
+import { useToast } from "@/hooks/use-toast"
 
 export default function Bed24ConnectPage() {
     const [isLoading, setIsLoading] = useState(false);
     const [isConnected, setIsConnected] = useState(false);
     const [refreshToken, setRefreshToken] = useState("");
-    const [accessToken, setAccessToken] = useState("");
+    const [accessToken, setAccessToken] = useState(""); // Kept for UI stability but hides actual token
     const [properties, setProperties] = useState([]);
     const [error, setError] = useState("");
+    const { toast } = useToast();
 
-    // Load state from localStorage on mount
+    // Modals State
+    const [importModalOpen, setImportModalOpen] = useState(false);
+    const [attachModalOpen, setAttachModalOpen] = useState(false);
+    const [selectedBeds24Id, setSelectedBeds24Id] = useState(null);
+    const [isActionLoading, setIsActionLoading] = useState(false);
+
+    // Dropdown Data
+    const [hostingCompanies, setHostingCompanies] = useState([]);
+    const [propertyOwners, setPropertyOwners] = useState([]);
+    const [localProperties, setLocalProperties] = useState([]);
+
+    // Form State
+    const [selectedCompanyId, setSelectedCompanyId] = useState("");
+    const [selectedOwnerId, setSelectedOwnerId] = useState("");
+    const [selectedLocalPropertyId, setSelectedLocalPropertyId] = useState("");
+
+    // Check backend connection status on mount
     React.useEffect(() => {
-        const storedState = localStorage.getItem('bed24_connected');
-        if (storedState === 'true') {
-            setIsConnected(true);
-            setRefreshToken(localStorage.getItem('bed24_refreshToken') || "");
-            setAccessToken(localStorage.getItem('bed24_accessToken') || "");
-            /* 
-            const storedProps = localStorage.getItem('bed24_properties');
-            if (storedProps) {
-                try {
-                    setProperties(JSON.parse(storedProps));
-                } catch (e) {
-                    console.error("Failed to parse stored properties", e);
+        const checkStatus = async () => {
+            try {
+                // Determine if we have a permanently stored invite key on the Laravel backend
+                const response = await api.get('beds24/status');
+                if (response.is_connected) {
+                    setIsConnected(true);
+                    setAccessToken("Managed securely by server");
+                    fetchProperties();
                 }
-            } 
-            */
-        }
+            } catch (err) {
+                console.error("Failed to check Beds24 status", err);
+            }
+        };
+
+        checkStatus();
     }, []);
 
-    const fetchProperties = async (token) => {
+    const fetchProperties = async () => {
         setIsLoading(true);
         setError("");
         try {
-            const propsResponse = await fetch('/api/bed24/properties', {
-                method: 'GET',
-                headers: {
-                    'accept': 'application/json',
-                    'token': token
-                }
-            });
+            // The Laravel backend handles injecting the rotating token automatically
+            const response = await api.get('beds24/properties');
 
-            if (!propsResponse.ok) {
-                const errData = await propsResponse.json().catch(() => ({}));
-                throw new Error(errData.error || "Failed to fetch properties.");
+            if (response.success === false) {
+                throw new Error(response.error || "API reported failure when fetching properties.");
             }
 
-            const propsData = await propsResponse.json();
+            // Beds24 returns an object with a `data` array in standard v2 properties output or a direct array
+            const fetchedProperties = response.data || response || [];
 
-            if (!propsData.success) {
-                throw new Error("API reported failure when fetching properties.");
+            // Note: If standard response object isn't an array but has no 'success' flag, we check length
+            if (Array.isArray(response)) {
+                setProperties(response);
+            } else if (Array.isArray(fetchedProperties)) {
+                setProperties(fetchedProperties);
+            } else {
+                setProperties([]);
             }
 
-            const fetchedProperties = propsData.data || [];
-            setProperties(fetchedProperties);
-
-            // Update storage
-            // User requested to NOT store properties in local storage, only tokens.
-            // localStorage.setItem('bed24_properties', JSON.stringify(fetchedProperties));
             return true;
-
         } catch (err) {
             console.error(err);
             setError(err.message || "An unexpected error occurred during property fetch.");
@@ -96,40 +122,25 @@ export default function Bed24ConnectPage() {
         setIsLoading(true);
         setError("");
         try {
-            // Step 1: Exchange Refresh Token for Access Token (via Proxy)
-            const tokenResponse = await fetch('/api/bed24/token', {
-                method: 'GET',
-                headers: {
-                    'accept': 'application/json',
-                    'refreshToken': refreshToken
-                }
+            // Send the Invite/Refresh Token directly to Laravel to test and persist
+            const response = await api.post('beds24/config', {
+                invite_key: refreshToken
             });
 
-            if (!tokenResponse.ok) {
-                const errData = await tokenResponse.json().catch(() => ({}));
-                throw new Error(errData.error || "Failed to authenticate. Please check your Refresh Token.");
+            if (!response.success) {
+                throw new Error(response.error || "Failed to authenticate. Please check your Refresh Token.");
             }
 
-            const tokenData = await tokenResponse.json();
-            const newAccessToken = tokenData.token;
-            setAccessToken(newAccessToken);
+            setIsConnected(true);
+            setAccessToken("Managed securely by server");
 
-            // Save authentication state immediately 
-            localStorage.setItem('bed24_connected', 'true');
-            localStorage.setItem('bed24_refreshToken', refreshToken);
-            localStorage.setItem('bed24_accessToken', newAccessToken);
-
-            // Step 2: Fetch Properties using the NEW Access Token
-            const success = await fetchProperties(newAccessToken);
-
-            if (success) {
-                setIsConnected(true);
-            }
+            // Automatically sync the first batch of properties using the brand new connection
+            await fetchProperties();
 
         } catch (err) {
             console.error(err);
             setError(err.message || "An unexpected error occurred.");
-            setIsLoading(false); // Ensure loading is cleared if we catch here
+            setIsLoading(false);
         }
     };
 
@@ -137,21 +148,95 @@ export default function Bed24ConnectPage() {
         setIsConnected(false);
         setAccessToken("");
         setProperties([]);
-        localStorage.removeItem('bed24_connected');
-        localStorage.removeItem('bed24_accessToken');
-        // We keep the refreshToken in state/storage convenience so they don't have to re-paste it entirely if they just want to refresh
+        setRefreshToken("");
+        // Optional: you could hit a delete config route here if needed, 
+        // but allowing overwrite on save is usually sufficient
     };
 
     const handleSync = async () => {
-        // Only fetch properties using existing token
-        if (accessToken) {
-            await fetchProperties(accessToken);
-        } else {
-            // If no access token, we might need to re-auth, but per request we only want to sync logic here.
-            // If the token is expired, the user might need to re-save. 
-            // For now, let's assume if they are connected they have a token.
-            // If the token is invalid, fetchProperties will error, and they can see it.
-            setError("No access token available. Please reconnect.");
+        await fetchProperties();
+    };
+
+    // Modal Triggers
+    const openImportModal = async (beds24Id) => {
+        setSelectedBeds24Id(beds24Id);
+        setImportModalOpen(true);
+        setIsActionLoading(true);
+        try {
+            const [companiesRes, ownersRes] = await Promise.all([
+                api.get('hosting-companies'),
+                api.get('property-owners')
+            ]);
+            setHostingCompanies(companiesRes.data || []);
+            setPropertyOwners(ownersRes.data || []);
+        } catch (err) {
+            toast({ variant: "destructive", title: "Error", description: "Failed to load companies or owners." });
+        } finally {
+            setIsActionLoading(false);
+        }
+    };
+
+    const openAttachModal = async (beds24Id) => {
+        setSelectedBeds24Id(beds24Id);
+        setAttachModalOpen(true);
+        setIsActionLoading(true);
+        try {
+            const localRes = await api.get('properties');
+            setLocalProperties(localRes.data || []);
+        } catch (err) {
+            toast({ variant: "destructive", title: "Error", description: "Failed to load local properties." });
+        } finally {
+            setIsActionLoading(false);
+        }
+    };
+
+    // Action Submissions
+    const handleImportSubmit = async () => {
+        if (!selectedCompanyId || !selectedOwnerId) {
+            toast({ variant: "destructive", title: "Required", description: "Please select both a Company and an Owner." });
+            return;
+        }
+
+        setIsActionLoading(true);
+        try {
+            await api.post('beds24/properties/import', {
+                beds24_property_id: selectedBeds24Id,
+                hosting_company_id: selectedCompanyId,
+                property_owner_id: selectedOwnerId
+            });
+            toast({ title: "Success", description: "Property imported successfully as a new Local Listing." });
+            setImportModalOpen(false);
+
+            // Instantly refresh the properties list to trigger the 'Imported' green badge
+            await fetchProperties();
+        } catch (err) {
+            toast({ variant: "destructive", title: "Import Failed", description: err.message });
+        } finally {
+            setIsActionLoading(false);
+        }
+    };
+
+    const handleAttachSubmit = async () => {
+        if (!selectedLocalPropertyId) {
+            toast({ variant: "destructive", title: "Required", description: "Please select a local property to attach." });
+            return;
+        }
+
+        setIsActionLoading(true);
+        try {
+            await api.post('beds24/properties/attach', {
+                beds24_property_id: selectedBeds24Id,
+                local_property_id: selectedLocalPropertyId
+            });
+            toast({ title: "Success", description: "Beds24 Property mapped to existing Local Listing." });
+            setAttachModalOpen(false);
+
+            // Instantly refresh the properties list to trigger the 'Imported' green badge
+            await fetchProperties();
+        } catch (err) {
+            toast({ variant: "destructive", title: "Attach Failed", description: err.message });
+        } finally {
+            setIsActionLoading(false);
         }
     };
 
@@ -260,7 +345,8 @@ export default function Bed24ConnectPage() {
                                             <TableHead>Property Name</TableHead>
                                             <TableHead>Location</TableHead>
                                             <TableHead>Type</TableHead>
-                                            <TableHead className="text-right pr-6">Owner ID</TableHead>
+                                            <TableHead className="text-right">Owner ID</TableHead>
+                                            <TableHead className="text-right pr-6">Actions</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
@@ -272,8 +358,25 @@ export default function Bed24ConnectPage() {
                                                     {property.city && property.country ? `${property.city}, ${property.country}` : 'N/A'}
                                                 </TableCell>
                                                 <TableCell className="capitalize">{property.propertyType || 'N/A'}</TableCell>
-                                                <TableCell className="text-right text-muted-foreground pr-6">
+                                                <TableCell className="text-right text-muted-foreground">
                                                     {property.account?.ownerId || 'N/A'}
+                                                </TableCell>
+                                                <TableCell className="text-right pr-6">
+                                                    {property.is_imported ? (
+                                                        <Badge variant="secondary" className="bg-green-100 text-green-800 border-none">
+                                                            <CheckCircle2 className="mr-1 h-3 w-3 inline" />
+                                                            Imported
+                                                        </Badge>
+                                                    ) : (
+                                                        <div className="flex justify-end gap-2">
+                                                            <Button variant="outline" size="sm" onClick={() => openImportModal(property.id)}>
+                                                                Import as New
+                                                            </Button>
+                                                            <Button variant="secondary" size="sm" onClick={() => openAttachModal(property.id)}>
+                                                                Attach
+                                                            </Button>
+                                                        </div>
+                                                    )}
                                                 </TableCell>
                                             </TableRow>
                                         ))}
@@ -284,6 +387,94 @@ export default function Bed24ConnectPage() {
                     </div>
                 )}
             </div>
+
+            {/* Import as New Modal */}
+            <Dialog open={importModalOpen} onOpenChange={setImportModalOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Import Beds24 Property as New</DialogTitle>
+                        <DialogDescription>
+                            Select the Hosting Company and Property Owner this new listing will belong to.
+                        </DialogDescription>
+                    </DialogHeader>
+                    {isActionLoading && (!hostingCompanies.length || !propertyOwners.length) ? (
+                        <div className="flex justify-center p-4"><Loader2 className="animate-spin" /></div>
+                    ) : (
+                        <div className="grid gap-4 py-4">
+                            <div className="grid gap-2">
+                                <Label>Hosting Company</Label>
+                                <Select onValueChange={setSelectedCompanyId} value={selectedCompanyId}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select Company" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {hostingCompanies.map(company => (
+                                            <SelectItem key={company.id} value={company.id.toString()}>{company.name}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className="grid gap-2">
+                                <Label>Property Owner</Label>
+                                <Select onValueChange={setSelectedOwnerId} value={selectedOwnerId}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select Owner" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {propertyOwners.map(owner => (
+                                            <SelectItem key={owner.id} value={owner.id.toString()}>{owner.full_name}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
+                    )}
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setImportModalOpen(false)}>Cancel</Button>
+                        <Button onClick={handleImportSubmit} disabled={isActionLoading}>
+                            {isActionLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Import Listing"}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Attach Modal */}
+            <Dialog open={attachModalOpen} onOpenChange={setAttachModalOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Attach to Existing Local Property</DialogTitle>
+                        <DialogDescription>
+                            Select an existing HostHome property to map the Beds24 rooms and calendar to.
+                        </DialogDescription>
+                    </DialogHeader>
+                    {isActionLoading && !localProperties.length ? (
+                        <div className="flex justify-center p-4"><Loader2 className="animate-spin" /></div>
+                    ) : (
+                        <div className="grid gap-4 py-4">
+                            <div className="grid gap-2">
+                                <Label>Local Property</Label>
+                                <Select onValueChange={setSelectedLocalPropertyId} value={selectedLocalPropertyId}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select local property" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {localProperties.map(prop => (
+                                            <SelectItem key={prop.id} value={prop.id.toString()}>{prop.name}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
+                    )}
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setAttachModalOpen(false)}>Cancel</Button>
+                        <Button onClick={handleAttachSubmit} disabled={isActionLoading}>
+                            {isActionLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Attach to Property"}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
         </div>
-    )
+    );
 }

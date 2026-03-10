@@ -1,6 +1,32 @@
 
 import { api } from './api';
-import { MOCK_PROPERTIES, MOCK_ROOM_TYPES } from '@/lib/mock-data';
+
+/**
+ * Helper to ensure image URLs are fully qualified.
+ */
+const formatImageUrl = (path) => {
+    if (!path) return null;
+    if (path.startsWith('http')) return path;
+    return `https://hosthomestaging.frenclub.com/storage/${path}`;
+};
+
+const formatPhotos = (photos) => {
+    if (!Array.isArray(photos)) return [];
+    return photos.map(p => ({ ...p, photo_path: formatImageUrl(p.photo_path) }));
+};
+
+const formatPropertyData = (property) => ({
+    ...property,
+    photos: formatPhotos(property.photos),
+    room_types: Array.isArray(property.room_types) ? property.room_types.map(rt => ({
+        ...rt,
+        photos: formatPhotos(rt.photos),
+        units: Array.isArray(rt.units) ? rt.units.map(u => ({
+            ...u,
+            photos: formatPhotos(u.photos)
+        })) : []
+    })) : []
+});
 
 /**
  * Guest-facing API service with mock fallbacks.
@@ -9,27 +35,17 @@ export const guestApi = {
     /**
      * Fetch all properties. Fallback to MOCK_PROPERTIES if API fails or returns empty.
      */
-    getProperties: async () => {
+    getProperties: async (params = {}) => {
         try {
-            const response = await api.get('properties');
-            const data = response?.data || response;
-            if (Array.isArray(data) && data.length > 0) {
-                return data.map(property => ({
-                    ...property,
-                    room_types: property.room_types || MOCK_ROOM_TYPES[property.id] || []
-                }));
+            const response = await api.get('guest/properties', { params });
+            const data = response?.data?.data || response?.data || response; // Handle pagination wrapper if present
+            if (Array.isArray(data)) {
+                return data.map(formatPropertyData);
             }
-            console.warn('API returned empty/invalid properties, falling back to mock data.');
-            return MOCK_PROPERTIES.map(property => ({
-                ...property,
-                room_types: MOCK_ROOM_TYPES[property.id] || []
-            }));
+            return [];
         } catch (error) {
-            console.error('Failed to fetch properties from API, falling back to mock data:', error);
-            return MOCK_PROPERTIES.map(property => ({
-                ...property,
-                room_types: MOCK_ROOM_TYPES[property.id] || []
-            }));
+            console.error('Failed to fetch properties from API:', error);
+            return [];
         }
     },
 
@@ -38,34 +54,40 @@ export const guestApi = {
      */
     getPropertyDetails: async (id) => {
         try {
-            // Try fetching specific property
-            const propResponse = await api.get(`properties/${id}`);
+            // The guest API show endpoint now includes room_types and amenities
+            const propResponse = await api.get(`guest/properties/${id}`);
             const property = propResponse?.data || propResponse;
 
-            // Try fetching room types for this property
-            const rtResponse = await api.get(`properties/${id}/room-types`);
-            const roomTypes = rtResponse?.data || rtResponse || [];
+            const roomTypes = property.room_types || [];
 
             if (property && property.id) {
-                return {
-                    ...property,
-                    room_types: (Array.isArray(roomTypes) && roomTypes.length > 0)
-                        ? roomTypes
-                        : (property.room_types || MOCK_ROOM_TYPES[id] || [])
-                };
+                return formatPropertyData(property);
             }
 
             throw new Error('Property not found');
         } catch (error) {
-            console.error(`Failed to fetch property ${id} from API, falling back to mock data:`, error);
-            const mockProp = MOCK_PROPERTIES.find(p => p.id === id);
-            if (mockProp) {
-                return {
-                    ...mockProp,
-                    room_types: MOCK_ROOM_TYPES[id] || []
-                };
-            }
+            console.error(`Failed to fetch property ${id} from API:`, error);
             return null;
+        }
+    },
+
+    // Check availability for specific dates
+    checkAvailability: async (params) => {
+        const query = new URLSearchParams(params).toString();
+        // The custom API client automatically throws if !response.ok and parses JSON
+        return await api.get(`guest/availability/check?${query}`);
+    },
+
+    /**
+     * Store a new booking
+     */
+    createBooking: async (bookingData) => {
+        try {
+            const response = await api.post('guest/bookings', bookingData);
+            return response?.data || response;
+        } catch (error) {
+            console.error('Failed to create booking:', error);
+            throw new Error(error.response?.data?.message || 'Failed to complete booking. Please try again.');
         }
     }
 };

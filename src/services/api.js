@@ -62,7 +62,22 @@ export const api = {
             body: JSON.stringify(body)
         });
     },
-    get: (endpoint) => request(endpoint, { method: 'GET' }),
+    get: (endpoint, options = {}) => {
+        let url = endpoint;
+        if (options.params) {
+            const queryParams = new URLSearchParams();
+            Object.entries(options.params).forEach(([key, value]) => {
+                if (value !== undefined && value !== null) {
+                    queryParams.append(key, value);
+                }
+            });
+            const queryString = queryParams.toString();
+            if (queryString) {
+                url += `?${queryString}`;
+            }
+        }
+        return request(url, { method: 'GET', ...options });
+    },
     put: (endpoint, body) => request(endpoint, { method: 'PUT', body: JSON.stringify(body) }),
     delete: (endpoint) => request(endpoint, { method: 'DELETE' }),
 

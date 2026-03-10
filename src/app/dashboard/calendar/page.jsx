@@ -40,7 +40,6 @@ import {
   isWithinInterval,
   subDays,
   differenceInDays,
-  isWeekend,
   isBefore,
   startOfDay
 } from "date-fns"
@@ -252,55 +251,7 @@ export default function CalendarPage() {
         let propertiesData = propertiesResponse.data || propertiesResponse || [];
         const unitsData = unitsResponse.data || unitsResponse || [];
 
-        // 2. Fetch from Beds24 (if token exists)
-        try {
-          const bed24Token = localStorage.getItem('bed24_accessToken');
-          if (bed24Token) {
-            const bed24Response = await fetch('/api/bed24/properties', {
-              method: 'GET',
-              headers: {
-                'accept': 'application/json',
-                'token': bed24Token
-              }
-            });
-
-            if (bed24Response.ok) {
-              const bed24Data = await bed24Response.json();
-              if (bed24Data.success && Array.isArray(bed24Data.data)) {
-                // Transform Beds24 properties to match our internal format
-                // Note: We prefix IDs to avoid collision and mark them clearly
-                const mappedProps = bed24Data.data.map(p => {
-                  const children = p.roomTypes ? p.roomTypes.map(rt => ({
-                    id: `bed24-${rt.id}`,
-                    name: rt.name,
-                    type: 'room_type',
-                    propertyId: `bed24-${p.id}`,
-                    is_bed24: true,
-                    children: []
-                  })) : [];
-
-                  return {
-                    id: `bed24-${p.id}`,
-                    name: `[Beds24] ${p.name}`,
-                    city: p.city,
-                    country: p.country,
-                    // Add extra fields if needed
-                    is_bed24: true,
-                    children: children
-                  };
-                });
-
-                // Merge into properties list
-                propertiesData = [...propertiesData, ...mappedProps];
-              }
-            } else {
-              console.warn("Beds24 fetch failed", bed24Response.status);
-            }
-          }
-        } catch (b24Err) {
-          console.error("Failed to fetch Beds24 properties", b24Err);
-          // Don't fail the whole page load just because Beds24 failed
-        }
+        // Beds24 properties are now natively synced to HostHome DB. Legacy over-the-wire fetch removed.
 
         // 3. Build Hierarchy: Property -> Room Type -> Unit
         const propertiesMap = new Map();
@@ -446,72 +397,8 @@ export default function CalendarPage() {
     });
   }
 
-  // Price State: { [roomId]: { [dateString]: price } }
-  const [prices, setPrices] = React.useState({});
+  // Daily pricing displays are now mapped natively against the DB.
 
-  // ... (existing state)
-
-  // Fetch Prices Effect
-  React.useEffect(() => {
-    const fetchPrices = async () => {
-      const bed24Token = localStorage.getItem('bed24_accessToken');
-      if (!bed24Token) return;
-
-      const start = format(startOfMonth(currentDate), 'yyyy-MM-dd');
-      const end = format(endOfMonth(currentDate), 'yyyy-MM-dd');
-
-      try {
-        const response = await fetch(`/api/bed24/calendar?startDate=${start}&endDate=${end}`, {
-          method: 'GET',
-          headers: {
-            'accept': 'application/json',
-            'token': bed24Token
-          }
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          if (data.success && Array.isArray(data.data)) {
-            const newPrices = { ...prices };
-
-            data.data.forEach(room => {
-              // Map Room ID to our Property ID format if needed.
-              // In our property fetch, we set ID as `bed24-${p.id}`.
-              // The calendar endpoint returns `roomId` and `propertyId`. 
-              // Our properties have `id` matching `bed24-${propertyId}` (assuming default room type mapping).
-
-              // Note: Beds24 properties might have multiple rooms.
-              // For simplicity, we store by `bed24-${propertyId}` or `bed24-${roomId}` if we mapped that way.
-              // In the previous step, we mapped property ID as `bed24-${p.id}`.
-              // Let's assume 1:1 for now or map by propertyId.
-
-              const key = `bed24-${room.propertyId}`;
-              if (!newPrices[key]) newPrices[key] = {};
-
-              if (Array.isArray(room.calendar)) {
-                room.calendar.forEach(range => {
-                  // range: { from, to, price1, ... }
-                  // Expand range to individual dates
-                  const rangeStart = new Date(range.from);
-                  const rangeEnd = new Date(range.to);
-                  const days = eachDayOfInterval({ start: rangeStart, end: rangeEnd });
-
-                  days.forEach(day => {
-                    newPrices[key][format(day, 'yyyy-MM-dd')] = range.price1;
-                  });
-                });
-              }
-            });
-            setPrices(newPrices);
-          }
-        }
-      } catch (error) {
-        console.error("Failed to fetch prices", error);
-      }
-    };
-
-    fetchPrices();
-  }, [currentDate]); // Re-fetch when month changes
 
 
   const getDisplayPrice = (day) => {
@@ -528,58 +415,10 @@ export default function CalendarPage() {
     // 2. If unbooked, derive from Selection
     if (!selection.data) return '$';
 
-    // CHECK FOR BEDS24 PRICING
-    if (selection.data.is_bed24) {
-      // Look up in prices state
-      // If selection is a property: key is the ID (e.g., bed24-310176)
-      // If selection is a room: key is the PROPERTY ID it belongs to (because our price fetch stores by property ID key)
-      // Wait, our price fetch stored by `bed24-${room.propertyId}`. 
-      // If we select the Room node, its ID is `bed24-${roomId}`. But we need to look up prices by the Property key.
-      // Or better, we should organize prices by the ID that matches the selection.
-
-      // Let's look at how we stored prices: `newPrices[key][date] = price` where `key = bed24-${room.propertyId}`. 
-      // And currently room.calendar logic puts ALL rooms of a property into the same key bucket, overwriting if multiple rooms?
-      // Actually, the API returns a list of rooms. If we use propertyId as key, we might blend prices if multiple rooms exist.
-      // We should probably key by RoomID if available.
-
-      // Let's adjust the fetch logic first (or assume for now 1 property = 1 room as per user data).
-      // Since we are creating children now, let's try to look up by selection ID directly.
-      // If the selection is the PROPERTY, we might show the first room's price.
-      // If the selection is the ROOM, we show that room's price.
-
-      // REVISIT FETCH LOGIC:
-      // We need to store prices by ROOM ID for precision if we have rooms.
-      // But for now, let's assume the key matches the selection.id if we fix the fetch.
-
-      // Current Fetch Logic stores by `bed24-${room.propertyId}`. 
-      // If I select the Property node `bed24-310176`, it works.
-      // If I select the Room node `bed24-646315`, it won't find it.
-
-      // For now, let's fallback to Property ID lookup if Room ID fails, or just use Property ID logic?
-      // The user's goal is to see prices.
-
-      let dateKey = format(day, 'yyyy-MM-dd');
-
-      // Try looking up by ID directly
-      if (prices[selection.id] && prices[selection.id][dateKey]) {
-        return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(prices[selection.id][dateKey]);
-      }
-
-      // If selection is a Room, try looking up its parent Property ID?
-      // In our mapping: propertyId field is `bed24-${p.id}`.
-      if (selection.type === 'room_type' && selection.data.propertyId) {
-        const parentKey = selection.data.propertyId;
-        if (prices[parentKey] && prices[parentKey][dateKey]) {
-          return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(prices[parentKey][dateKey]);
-        }
-      }
-
-      return 'N/A';
-    }
-
     // 3. Fallback to Helper Logic (Existing System)
     let priceValues = [];
-    const isFriOrSat = isWeekend(day);
+    const isFriOrSat = [5, 6].includes(day.getDay()); // 5 = Friday, 6 = Saturday
+
 
     const getPrice = (roomType) => isFriOrSat ? roomType.weekend_price : roomType.weekday_price;
 
@@ -639,33 +478,20 @@ export default function CalendarPage() {
   const [priceInputValue, setPriceInputValue] = React.useState("");
 
   const handleSavePrice = async () => {
-    if (!selection.data || !selection.data.is_bed24 || !selectedDate) {
-      toast({ title: "Error", description: "Invalid selection for update.", variant: "destructive" });
+    if (!selection.data || !selectedDate) {
+      toast({ title: "Error", description: "Invalid selection for update. Please select a room.", variant: "destructive" });
       return;
     }
 
-    // Determine Room ID
-    // If selection is property, we might need to update all rooms or ask user.
-    // Ideally user selected a Room unit. 
-    // If they selected a Property, we will try to find a child room or use the property ID map if applicable.
-    // Based on our mapping: `bed24-${roomId}` or `bed24-${propertyId}`.
-
-    let roomId = null;
+    let roomTypeId = null;
     if (selection.type === 'room_type') {
-      roomId = selection.id.replace('bed24-', '');
-    } else if (selection.type === 'property') {
-      // Try to find first child room
-      if (selection.data.children && selection.data.children.length > 0) {
-        roomId = selection.data.children[0].id.replace('bed24-', '');
-      } else {
-        // Fallback: assume property ID maps to room ID (not always true)
-        // or alert user.
-        roomId = selection.id.replace('bed24-', '');
-      }
+      roomTypeId = selection.id;
+    } else if (selection.type === 'unit') {
+      roomTypeId = selection.data.room_type_id;
     }
 
-    if (!roomId) {
-      toast({ title: "Error", description: "Could not determine Room ID. Please select a specific Room.", variant: "destructive" });
+    if (!roomTypeId) {
+      toast({ title: "Error", description: "Could not determine Room Type. Please select a Room Type or Unit on the left.", variant: "destructive" });
       return;
     }
 
@@ -675,63 +501,26 @@ export default function CalendarPage() {
       return;
     }
 
-    const payload = [
-      {
-        roomId: parseInt(roomId),
-        calendar: [
-          {
-            from: format(selectedDate, 'yyyy-MM-dd'),
-            to: format(selectedDate, 'yyyy-MM-dd'),
-            price1: price
-          }
-        ]
-      }
-    ];
-
     try {
-      const bed24Token = localStorage.getItem('bed24_accessToken');
-      const response = await fetch('/api/bed24/calendar', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'token': bed24Token
-        },
-        body: JSON.stringify(payload)
+      const response = await api.post('beds24/calendar/price', {
+        room_type_id: roomTypeId,
+        date: format(selectedDate, 'yyyy-MM-dd'),
+        price: price
       });
 
-      if (response.ok) {
-        toast({ title: "Success", description: "Price updated successfully." });
+      if (response.success) {
+        toast({ title: "Success", description: "Price synced successfully across HostHome and Beds24." });
         setSheetOpen(false);
-
-        // Update local state for immediate feedback
-        setPrices(prev => {
-          const newPrices = { ...prev };
-          // Determine the correct key in 'prices' map
-          // It is stored as `bed24-${propertyId}`
-          let priceKey = null;
-
-          if (selection.type === 'property') {
-            priceKey = selection.id;
-          } else if (selection.type === 'room_type') {
-            // selection.data.propertyId was set as `bed24-${p.id}` in fetchData
-            priceKey = selection.data.propertyId;
-          }
-
-          if (priceKey) {
-            if (!newPrices[priceKey]) newPrices[priceKey] = {};
-            newPrices[priceKey][format(selectedDate, 'yyyy-MM-dd')] = price;
-          }
-
-          return newPrices;
-        });
+        // Force a soft reload or let the user click another block to see changes
+        setTimeout(() => window.location.reload(), 1000);
       } else {
-        const err = await response.json();
-        throw new Error(err.error || "Failed to update");
+        throw new Error(response.error || "Failed to update price");
       }
     } catch (e) {
-      toast({ title: "Error", description: e.message, variant: "destructive" });
+      toast({ title: "Error", description: e.message || "Failed to sync price", variant: "destructive" });
     }
   };
+
 
   const isPastDate = (day) => {
     return isBefore(day, startOfDay(new Date()));
@@ -1074,7 +863,17 @@ export default function CalendarPage() {
                         </div> 
                         */}
                       </div>
-                      <Button className="w-full" onClick={handleSavePrice}>Save Price Settings</Button>
+
+                      {selectedDate && (
+                        <div className="text-[11px] leading-tight text-amber-700 bg-amber-50 p-2.5 rounded border border-amber-200/50 flex gap-2 items-start mt-2">
+                          <span className="text-amber-500">⚠️</span>
+                          <p>
+                            Saving will update the HostHome rate and push to Beds24 for <strong>ALL matching {[5, 6].includes(selectedDate.getDay()) ? "Weekends (Fri/Sat)" : "Weekdays (Sun-Thu)"}</strong> in {format(selectedDate, "MMMM yyyy")}.
+                          </p>
+                        </div>
+                      )}
+
+                      <Button className="w-full mt-4" onClick={handleSavePrice}>Save Price Settings</Button>
                     </div>
                   )}
 
