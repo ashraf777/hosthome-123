@@ -197,8 +197,7 @@ export function BookingForm({ isEditMode = false, bookingId }) {
     const newPaymentAmount = form.watch("new_payment_amount") || 0;
 
     const bookingType = form.watch("booking_type");
-    const depositNotCollected = form.watch("deposit_not_collected");
-    const arePriceFieldsDisabled = bookingType === 'Blocked' || depositNotCollected;
+    const arePriceFieldsDisabled = bookingType === 'Blocked';
 
 
     const numberOfNights = useMemo(() => {
