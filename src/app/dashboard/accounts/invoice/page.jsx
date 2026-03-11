@@ -13,9 +13,9 @@ import { Badge } from "@/components/ui/badge";
 
 export default function InvoicePage() {
   const invoices = [
-    { id: "INV-G-001", guest: "Olivia Martin", date: "2024-07-18", amount: "$599.00", status: "Sent" },
-    { id: "INV-G-002", guest: "Jackson Lee", date: "2024-07-22", amount: "$250.00", status: "Draft" },
-    { id: "INV-G-003", guest: "William Kim", date: "2024-07-12", amount: "$300.00", status: "Paid" },
+    { id: "INV-G-001", guest: "Olivia Martin", date: "2024-07-18", amount: "RM 599.00", status: "Sent" },
+    { id: "INV-G-002", guest: "Jackson Lee", date: "2024-07-22", amount: "RM 250.00", status: "Draft" },
+    { id: "INV-G-003", guest: "William Kim", date: "2024-07-12", amount: "RM 300.00", status: "Paid" },
   ];
 
   const getStatusBadgeVariant = (status) => {
@@ -75,12 +75,12 @@ export default function InvoicePage() {
                     <Badge variant={getStatusBadgeVariant(invoice.status)}>{invoice.status}</Badge>
                   </TableCell>
                   <TableCell className="text-right">
-                     <Button variant="ghost" size="icon" title="Send">
-                        <Send className="h-4 w-4" />
-                     </Button>
-                     <Button variant="ghost" size="icon" title="Download">
-                        <Download className="h-4 w-4" />
-                     </Button>
+                    <Button variant="ghost" size="icon" title="Send">
+                      <Send className="h-4 w-4" />
+                    </Button>
+                    <Button variant="ghost" size="icon" title="Download">
+                      <Download className="h-4 w-4" />
+                    </Button>
                   </TableCell>
                 </TableRow>
               ))}

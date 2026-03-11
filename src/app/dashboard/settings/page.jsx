@@ -26,7 +26,7 @@ export default function SettingsPage() {
               <CardDescription>Manage your system's general configuration.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-               <div className="space-y-2">
+              <div className="space-y-2">
                 <Label htmlFor="site-name">Property Management System Name</Label>
                 <Input id="site-name" defaultValue="HostHome" />
                 <p className="text-sm text-muted-foreground">This is the name that appears throughout the system.</p>
@@ -38,88 +38,88 @@ export default function SettingsPage() {
                     <SelectValue placeholder="Select currency" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="usd">USD ($)</SelectItem>
+                    <SelectItem value="myr">MYR (RM)</SelectItem>
                     <SelectItem value="eur">EUR (€)</SelectItem>
                     <SelectItem value="gbp">GBP (£)</SelectItem>
                     <SelectItem value="jpy">JPY (¥)</SelectItem>
                   </SelectContent>
                 </Select>
-                 <p className="text-sm text-muted-foreground">This will be the default currency for all financial data.</p>
+                <p className="text-sm text-muted-foreground">This will be the default currency for all financial data.</p>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="timezone">Timezone</Label>
                 <Select defaultValue="utc-5">
-                    <SelectTrigger className="w-full md:w-1/2">
-                        <SelectValue placeholder="Select a timezone" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="utc-8">Pacific Time (UTC-08:00)</SelectItem>
-                        <SelectItem value="utc-7">Mountain Time (UTC-07:00)</SelectItem>
-                        <SelectItem value="utc-6">Central Time (UTC-06:00)</SelectItem>
-                        <SelectItem value="utc-5">Eastern Time (UTC-05:00)</SelectItem>
-                    </SelectContent>
+                  <SelectTrigger className="w-full md:w-1/2">
+                    <SelectValue placeholder="Select a timezone" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="utc-8">Pacific Time (UTC-08:00)</SelectItem>
+                    <SelectItem value="utc-7">Mountain Time (UTC-07:00)</SelectItem>
+                    <SelectItem value="utc-6">Central Time (UTC-06:00)</SelectItem>
+                    <SelectItem value="utc-5">Eastern Time (UTC-05:00)</SelectItem>
+                  </SelectContent>
                 </Select>
               </div>
-               <Button>Save Changes</Button>
+              <Button>Save Changes</Button>
             </CardContent>
           </Card>
         </TabsContent>
-         <TabsContent value="appearance">
+        <TabsContent value="appearance">
           <Card>
             <CardHeader>
               <CardTitle>Appearance</CardTitle>
               <CardDescription>Customize the look and feel of your dashboard.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-                <div className="flex items-center justify-between rounded-lg border p-4">
-                    <div>
-                        <Label>Theme</Label>
-                        <p className="text-sm text-muted-foreground">Select a light or dark theme for your dashboard.</p>
-                    </div>
-                     <Select defaultValue="system">
-                        <SelectTrigger className="w-[180px]">
-                            <SelectValue placeholder="Select theme" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="light">Light</SelectItem>
-                            <SelectItem value="dark">Dark</SelectItem>
-                            <SelectItem value="system">System</SelectItem>
-                        </SelectContent>
-                    </Select>
+              <div className="flex items-center justify-between rounded-lg border p-4">
+                <div>
+                  <Label>Theme</Label>
+                  <p className="text-sm text-muted-foreground">Select a light or dark theme for your dashboard.</p>
                 </div>
-                 <Button>Save Changes</Button>
+                <Select defaultValue="system">
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Select theme" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="light">Light</SelectItem>
+                    <SelectItem value="dark">Dark</SelectItem>
+                    <SelectItem value="system">System</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button>Save Changes</Button>
             </CardContent>
           </Card>
         </TabsContent>
-         <TabsContent value="notifications">
+        <TabsContent value="notifications">
           <Card>
             <CardHeader>
               <CardTitle>Notification Settings</CardTitle>
               <CardDescription>Manage how you receive notifications.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-                <div className="flex items-center justify-between rounded-lg border p-4">
-                    <div>
-                        <Label>New Booking</Label>
-                        <p className="text-sm text-muted-foreground">Receive an email when a new booking is made.</p>
-                    </div>
-                    <Switch defaultChecked />
+              <div className="flex items-center justify-between rounded-lg border p-4">
+                <div>
+                  <Label>New Booking</Label>
+                  <p className="text-sm text-muted-foreground">Receive an email when a new booking is made.</p>
                 </div>
-                <div className="flex items-center justify-between rounded-lg border p-4">
-                    <div>
-                        <Label>Booking Cancellation</Label>
-                        <p className="text-sm text-muted-foreground">Receive an email when a booking is cancelled.</p>
-                    </div>
-                    <Switch defaultChecked />
+                <Switch defaultChecked />
+              </div>
+              <div className="flex items-center justify-between rounded-lg border p-4">
+                <div>
+                  <Label>Booking Cancellation</Label>
+                  <p className="text-sm text-muted-foreground">Receive an email when a booking is cancelled.</p>
                 </div>
-                 <div className="flex items-center justify-between rounded-lg border p-4">
-                    <div>
-                        <Label>Guest Message</Label>
-                        <p className="text-sm text-muted-foreground">Receive an email when a guest sends a new message.</p>
-                    </div>
-                    <Switch />
+                <Switch defaultChecked />
+              </div>
+              <div className="flex items-center justify-between rounded-lg border p-4">
+                <div>
+                  <Label>Guest Message</Label>
+                  <p className="text-sm text-muted-foreground">Receive an email when a guest sends a new message.</p>
                 </div>
-                 <Button>Save Changes</Button>
+                <Switch />
+              </div>
+              <Button>Save Changes</Button>
             </CardContent>
           </Card>
         </TabsContent>
@@ -130,20 +130,20 @@ export default function SettingsPage() {
               <CardDescription>Manage your account's security settings.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-                 <div className="flex items-center justify-between rounded-lg border p-4">
-                    <div>
-                        <Label>Two-Factor Authentication (2FA)</Label>
-                        <p className="text-sm text-muted-foreground">Add an extra layer of security to your account.</p>
-                    </div>
-                    <Button variant="outline">Enable 2FA</Button>
+              <div className="flex items-center justify-between rounded-lg border p-4">
+                <div>
+                  <Label>Two-Factor Authentication (2FA)</Label>
+                  <p className="text-sm text-muted-foreground">Add an extra layer of security to your account.</p>
                 </div>
-                 <div className="flex items-center justify-between rounded-lg border p-4">
-                    <div>
-                        <Label>Login History</Label>
-                        <p className="text-sm text-muted-foreground">View recent login activity on your account.</p>
-                    </div>
-                    <Button variant="outline">View History</Button>
+                <Button variant="outline">Enable 2FA</Button>
+              </div>
+              <div className="flex items-center justify-between rounded-lg border p-4">
+                <div>
+                  <Label>Login History</Label>
+                  <p className="text-sm text-muted-foreground">View recent login activity on your account.</p>
                 </div>
+                <Button variant="outline">View History</Button>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>

@@ -114,7 +114,7 @@ export function GuestLayout({ children }) {
                     <p>© 2026 HostHome, Inc. · Privacy · Terms · Sitemap</p>
                     <div className="flex gap-4">
                         <span>English (US)</span>
-                        <span>$ USD</span>
+                        <span>RM MYR</span>
                     </div>
                 </div>
             </footer>

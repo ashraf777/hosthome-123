@@ -60,11 +60,11 @@ const chartConfig = {
 }
 
 const tableData = [
-    { id: 'BK-001', property: 'Beachside Villa', checkIn: '2024-07-01', checkOut: '2024-07-04', revenue: 450, channel: 'Airbnb'},
-    { id: 'BK-002', property: 'Cozy Downtown Apartment', checkIn: '2024-07-02', checkOut: '2024-07-03', revenue: 120, channel: 'Booking.com'},
-    { id: 'BK-003', property: 'Mountain Cabin Retreat', checkIn: '2024-07-04', checkOut: '2024-07-08', revenue: 750, channel: 'Direct'},
-    { id: 'BK-004', property: 'Beachside Villa', checkIn: '2024-07-05', checkOut: '2024-07-09', revenue: 600, channel: 'Expedia'},
-    { id: 'BK-005', property: 'Urban Studio Loft', checkIn: '2024-07-06', checkOut: '2024-07-07', revenue: 95, channel: 'Airbnb'},
+  { id: 'BK-001', property: 'Beachside Villa', checkIn: '2024-07-01', checkOut: '2024-07-04', revenue: 450, channel: 'Airbnb' },
+  { id: 'BK-002', property: 'Cozy Downtown Apartment', checkIn: '2024-07-02', checkOut: '2024-07-03', revenue: 120, channel: 'Booking.com' },
+  { id: 'BK-003', property: 'Mountain Cabin Retreat', checkIn: '2024-07-04', checkOut: '2024-07-08', revenue: 750, channel: 'Direct' },
+  { id: 'BK-004', property: 'Beachside Villa', checkIn: '2024-07-05', checkOut: '2024-07-09', revenue: 600, channel: 'Expedia' },
+  { id: 'BK-005', property: 'Urban Studio Loft', checkIn: '2024-07-06', checkOut: '2024-07-07', revenue: 95, channel: 'Airbnb' },
 ]
 
 export default function ReportingPage() {
@@ -86,7 +86,7 @@ export default function ReportingPage() {
           Gain insights into your property management performance.
         </p>
       </div>
-      
+
       <Card>
         <CardHeader>
           <CardTitle>Report Generator</CardTitle>
@@ -132,7 +132,7 @@ export default function ReportingPage() {
                 </PopoverContent>
               </Popover>
             </div>
-             <Select defaultValue="booking-analysis">
+            <Select defaultValue="booking-analysis">
               <SelectTrigger>
                 <SelectValue placeholder="Select a report type" />
               </SelectTrigger>
@@ -155,8 +155,8 @@ export default function ReportingPage() {
               </SelectContent>
             </Select>
             <Button onClick={handleGenerateReport}>
-                <BarChart2 className="mr-2" />
-                Generate Report
+              <BarChart2 className="mr-2" />
+              Generate Report
             </Button>
           </div>
         </CardContent>
@@ -164,107 +164,107 @@ export default function ReportingPage() {
 
       {showReport && (
         <div className="flex flex-col gap-6">
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                 <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
-                        <span className="text-muted-foreground">$</span>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">$3,455</div>
-                        <p className="text-xs text-muted-foreground">+5.2% from last period</p>
-                    </CardContent>
-                </Card>
-                 <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Total Bookings</CardTitle>
-                        <span className="text-muted-foreground">#</span>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">25</div>
-                        <p className="text-xs text-muted-foreground">+10 from last period</p>
-                    </CardContent>
-                </Card>
-                 <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Avg. Daily Rate</CardTitle>
-                        <span className="text-muted-foreground">ADR</span>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">$138.20</div>
-                         <p className="text-xs text-muted-foreground">-1.5% from last period</p>
-                    </CardContent>
-                </Card>
-                 <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Occupancy Rate</CardTitle>
-                        <span className="text-muted-foreground">%</span>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">88%</div>
-                         <p className="text-xs text-muted-foreground">+3% from last period</p>
-                    </CardContent>
-                </Card>
-            </div>
-
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             <Card>
-                <CardHeader className="flex flex-row items-center justify-between">
-                    <div>
-                        <CardTitle>Booking Analysis Report</CardTitle>
-                        <CardDescription>
-                            Displaying results for July 1, 2024 - July 7, 2024
-                        </CardDescription>
-                    </div>
-                     <Button variant="outline">
-                        <Download className="mr-2"/>
-                        Download
-                    </Button>
-                </CardHeader>
-                <CardContent className="flex flex-col gap-8">
-                     <ChartContainer config={chartConfig} className="h-[300px] w-full">
-                        <ResponsiveContainer>
-                            <BarChart data={chartData}>
-                                <XAxis dataKey="date" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => format(new Date(value), 'MMM d')} />
-                                <YAxis yAxisId="left" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `$${value}`} />
-                                <YAxis yAxisId="right" orientation="right" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
-                                <Tooltip
-                                    cursor={false}
-                                    content={<ChartTooltipContent 
-                                    formatter={(value, name) => (name === "revenue" ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0 }).format(value) : value)}
-                                    />} 
-                                />
-                                <Bar yAxisId="left" dataKey="revenue" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-                                <Bar yAxisId="right" dataKey="bookings" fill="hsl(var(--secondary))" radius={[4, 4, 0, 0]} />
-                            </BarChart>
-                        </ResponsiveContainer>
-                    </ChartContainer>
-
-                     <Table>
-                        <TableHeader>
-                        <TableRow>
-                            <TableHead>Booking ID</TableHead>
-                            <TableHead>Property</TableHead>
-                            <TableHead>Check-in</TableHead>
-                            <TableHead>Check-out</TableHead>
-                             <TableHead>Channel</TableHead>
-                            <TableHead className="text-right">Revenue</TableHead>
-                        </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                        {tableData.map((row) => (
-                            <TableRow key={row.id}>
-                                <TableCell className="font-medium">{row.id}</TableCell>
-                                <TableCell>{row.property}</TableCell>
-                                <TableCell>{row.checkIn}</TableCell>
-                                <TableCell>{row.checkOut}</TableCell>
-                                <TableCell>{row.channel}</TableCell>
-                                <TableCell className="text-right font-medium">{new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(row.revenue)}</TableCell>
-                            </TableRow>
-                        ))}
-                        </TableBody>
-                    </Table>
-                </CardContent>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
+                <span className="text-muted-foreground">$</span>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">RM 3,455</div>
+                <p className="text-xs text-muted-foreground">+5.2% from last period</p>
+              </CardContent>
             </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Bookings</CardTitle>
+                <span className="text-muted-foreground">#</span>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">25</div>
+                <p className="text-xs text-muted-foreground">+10 from last period</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Avg. Daily Rate</CardTitle>
+                <span className="text-muted-foreground">ADR</span>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">RM 138.20</div>
+                <p className="text-xs text-muted-foreground">-1.5% from last period</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Occupancy Rate</CardTitle>
+                <span className="text-muted-foreground">%</span>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">88%</div>
+                <p className="text-xs text-muted-foreground">+3% from last period</p>
+              </CardContent>
+            </Card>
+          </div>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>Booking Analysis Report</CardTitle>
+                <CardDescription>
+                  Displaying results for July 1, 2024 - July 7, 2024
+                </CardDescription>
+              </div>
+              <Button variant="outline">
+                <Download className="mr-2" />
+                Download
+              </Button>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-8">
+              <ChartContainer config={chartConfig} className="h-[300px] w-full">
+                <ResponsiveContainer>
+                  <BarChart data={chartData}>
+                    <XAxis dataKey="date" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => format(new Date(value), 'MMM d')} />
+                    <YAxis yAxisId="left" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `RM ${value}`} />
+                    <YAxis yAxisId="right" orientation="right" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
+                    <Tooltip
+                      cursor={false}
+                      content={<ChartTooltipContent
+                        formatter={(value, name) => (name === "revenue" ? new Intl.NumberFormat('en-MY', { style: 'currency', currency: 'MYR', minimumFractionDigits: 0 }).format(value) : value)}
+                      />}
+                    />
+                    <Bar yAxisId="left" dataKey="revenue" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                    <Bar yAxisId="right" dataKey="bookings" fill="hsl(var(--secondary))" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </ChartContainer>
+
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Booking ID</TableHead>
+                    <TableHead>Property</TableHead>
+                    <TableHead>Check-in</TableHead>
+                    <TableHead>Check-out</TableHead>
+                    <TableHead>Channel</TableHead>
+                    <TableHead className="text-right">Revenue</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {tableData.map((row) => (
+                    <TableRow key={row.id}>
+                      <TableCell className="font-medium">{row.id}</TableCell>
+                      <TableCell>{row.property}</TableCell>
+                      <TableCell>{row.checkIn}</TableCell>
+                      <TableCell>{row.checkOut}</TableCell>
+                      <TableCell>{row.channel}</TableCell>
+                      <TableCell className="text-right font-medium">{new Intl.NumberFormat('en-MY', { style: 'currency', currency: 'MYR' }).format(row.revenue)}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
         </div>
       )}
     </div>

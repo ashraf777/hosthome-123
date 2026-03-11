@@ -414,11 +414,11 @@ function RoomCard({ room, property, dateRange, availabilityMap }) {
                             <h3 className="text-lg font-bold">{room.name}</h3>
                             <div className="flex flex-col items-end">
                                 <span className="text-lg font-bold text-primary text-right">
-                                    ${room.weekday_price} <span className="text-[10px] md:text-xs font-normal text-muted-foreground whitespace-nowrap">/ night (Sun-Thu)</span>
+                                    RM {room.weekday_price} <span className="text-[10px] md:text-xs font-normal text-muted-foreground whitespace-nowrap">/ night (Sun-Thu)</span>
                                 </span>
                                 {room.weekend_price && room.weekend_price !== room.weekday_price && (
                                     <span className="text-sm font-semibold text-primary/80 text-right mt-[-4px]">
-                                        ${room.weekend_price} <span className="text-[10px] md:text-xs font-normal text-muted-foreground whitespace-nowrap">/ night (Fri-Sat)</span>
+                                        RM {room.weekend_price} <span className="text-[10px] md:text-xs font-normal text-muted-foreground whitespace-nowrap">/ night (Fri-Sat)</span>
                                     </span>
                                 )}
                             </div>

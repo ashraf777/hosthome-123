@@ -4,8 +4,11 @@ import * as React from "react"
 import {
   format, isToday, isTomorrow, addDays, isWithinInterval, startOfDay, parseISO
 } from "date-fns"
-import { Download, Calendar as CalendarIcon } from "lucide-react"
+import { Download, Calendar as CalendarIcon, Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import Link from "next/link"
+
+import { api } from "@/services/api"
 
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
@@ -44,114 +47,56 @@ const bookingStatuses = [
   { id: 12, name: 'Walk In' }
 ];
 
-// 2. DYNAMIC MAP DATA GENERATION
-const generateMockBookings = () => {
-  const today = new Date();
-  const fmt = (d) => format(d, 'yyyy-MM-dd');
-
-  return [
-    {
-      id: "5690914668",
-      platform: "Booking.com",
-      property: "The Pano",
-      roomType: "The Pano A-13-03",
-      unitName: "The Pano A-13-03",
-      cleaningStatus: "No Task Available",
-      statusId: 1,
-      guest: "Steven Na",
-      checkIn: fmt(today),
-      checkOut: fmt(addDays(today, 1)),
-      contact: "+60 2035640799",
-    },
-    {
-      id: "86DC5AN39",
-      platform: "Airbnb",
-      property: "MAU A-18-04",
-      roomType: "MAU A-18-04",
-      unitName: "MAU A-18-04",
-      cleaningStatus: "No Task Available",
-      statusId: 6,
-      guest: "Ahmad Noor Ikmal",
-      checkIn: fmt(today),
-      checkOut: fmt(addDays(today, 2)),
-      contact: "60176058432",
-    },
-    {
-      id: "ZQBE2RZWY",
-      platform: "Airbnb",
-      property: "Majestic Residence",
-      roomType: "Majestic 13-01 L",
-      unitName: "Majestic 13-01 L",
-      cleaningStatus: "No Task Available",
-      statusId: 1,
-      guest: "Mohd Zulhafizie Bin",
-      checkIn: fmt(addDays(today, 1)), // Tomorrow
-      checkOut: fmt(addDays(today, 3)),
-      contact: "60145086365",
-    },
-    {
-      id: "HM-29384",
-      platform: "Agoda",
-      property: "Opus Residences",
-      roomType: "Opus 2-Bedroom",
-      unitName: "Opus 12-05",
-      cleaningStatus: "Clean",
-      statusId: 5, // Inquiry
-      guest: "Sarah Johnson",
-      checkIn: fmt(addDays(today, 3)),
-      checkOut: fmt(addDays(today, 5)),
-      contact: "+1 555 0123",
-    },
-    {
-      id: "HM-99221",
-      platform: "Direct",
-      property: "Pavilion Suites",
-      roomType: "King Suite",
-      unitName: "Pavilion 08-01",
-      cleaningStatus: "Dirty",
-      statusId: 1,
-      guest: "David Chen",
-      checkIn: fmt(addDays(today, 5)),
-      checkOut: fmt(addDays(today, 8)),
-      contact: "+65 9123 4567",
-    },
-    {
-      id: "HM-OLD-01",
-      platform: "Airbnb",
-      property: "CitizenM Tower",
-      roomType: "City View",
-      unitName: "CM-101",
-      cleaningStatus: "Dirty",
-      statusId: 4, // Checking out
-      guest: "Robert Fox",
-      checkIn: fmt(addDays(today, -3)),
-      checkOut: fmt(today),
-      contact: "+1 202 555 0199",
-    },
-    {
-      id: "HM-STAY-02",
-      platform: "Booking.com",
-      property: "Vortex Suites",
-      roomType: "Family Suite",
-      unitName: "VX-88",
-      cleaningStatus: "Clean",
-      statusId: 3, // Checked In / Hosting
-      guest: "Jenny Wilson",
-      checkIn: fmt(addDays(today, -2)),
-      checkOut: fmt(addDays(today, 2)), // Staying through today/tomorrow
-      contact: "+44 1632 960888",
-    }
-  ];
-};
-
-const ALL_BOOKINGS = generateMockBookings();
-
 export default function DashboardPage() {
   const [activeRange, setActiveRange] = React.useState("Today")
   const [date, setDate] = React.useState({
     from: new Date(),
     to: addDays(new Date(), 7),
   })
+
+  const [ALL_BOOKINGS, setAllBookings] = React.useState([])
+  const [loading, setLoading] = React.useState(true)
+
+  React.useEffect(() => {
+    const fetchBookings = async () => {
+      try {
+        const res = await api.get('bookings');
+        if (res && res.data) {
+          const mapped = res.data.map(b => {
+            // Handle guest name
+            let guestName = "Unknown Guest";
+            if (b.guest) {
+              guestName = `${b.guest.first_name || ''} ${b.guest.last_name || ''}`.trim();
+            }
+
+            // Handle string or integer statuses
+            let sId = parseInt(b.status) || 1;
+
+            return {
+              id: b.confirmation_code || b.id.toString(),
+              originalId: b.id,
+              platform: b.channel?.name || "Direct",
+              property: b.property?.name || "Unknown Property",
+              roomType: b.room_type?.name || "Unknown Room",
+              unitName: b.property_unit?.unit_identifier || b.property_unit?.name || "N/A",
+              cleaningStatus: b.property_unit?.status === 1 ? "Clean" : (b.property_unit?.status === 0 ? "Dirty" : "N/A"),
+              statusId: sId,
+              guest: guestName,
+              checkIn: b.check_in_date ? b.check_in_date.split('T')[0] : "N/A",
+              checkOut: b.check_out_date ? b.check_out_date.split('T')[0] : "N/A",
+              contact: b.guest?.phone || "N/A",
+            };
+          });
+          setAllBookings(mapped);
+        }
+      } catch (err) {
+        console.error("Failed to load dashboard bookings", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchBookings();
+  }, []);
 
   // Helper to find status name for CSV
   const getStatusName = (id) => bookingStatuses.find(s => s.id === id)?.name || "Unknown";
@@ -261,7 +206,9 @@ export default function DashboardPage() {
                 <TableRow key={booking.id}>
                   <TableCell className="font-medium pl-4">
                     <div className="flex flex-col">
-                      <span className="text-cyan-600">{booking.id}</span>
+                      <Link href={`/dashboard/booking/${booking.originalId}/edit`} className="text-cyan-600 hover:underline">
+                        {booking.id}
+                      </Link>
                       <span className="text-[10px] text-slate-400">({booking.platform})</span>
                     </div>
                   </TableCell>
@@ -335,48 +282,57 @@ export default function DashboardPage() {
         </Popover>
       </div>
 
-      {/* 2. TOP CARDS */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        {[
-          { label: "Check-in", val: filteredCheckIns.length },
-          { label: "Check-out", val: filteredCheckOuts.length },
-          { label: "Hosting", val: filteredHosting.length },
-          { label: "All", val: ALL_BOOKINGS.length }
-        ].map((stat) => (
-          <Card key={stat.label} className="border-none shadow-sm">
-            <CardContent className="flex flex-col items-center justify-center py-8">
-              <span className="text-slate-500 font-medium text-lg mb-1">{stat.label}</span>
-              <span className="text-4xl font-bold text-slate-800">{stat.val}</span>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      {loading ? (
+        <div className="flex flex-col items-center justify-center p-20 text-muted-foreground">
+          <Loader2 className="h-8 w-8 animate-spin mb-4" />
+          <p>Loading your dashboard...</p>
+        </div>
+      ) : (
+        <>
+          {/* 2. TOP CARDS */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            {[
+              { label: "Check-in", val: filteredCheckIns.length },
+              { label: "Check-out", val: filteredCheckOuts.length },
+              { label: "Hosting", val: filteredHosting.length },
+              { label: "All", val: ALL_BOOKINGS.length }
+            ].map((stat) => (
+              <Card key={stat.label} className="border-none shadow-sm">
+                <CardContent className="flex flex-col items-center justify-center py-8">
+                  <span className="text-slate-500 font-medium text-lg mb-1">{stat.label}</span>
+                  <span className="text-4xl font-bold text-slate-800">{stat.val}</span>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
 
-      {/* 3. TABS & FULL TABLES */}
-      <Tabs defaultValue="check-in" className="w-full">
-        <TabsList className="bg-transparent border-b w-full justify-start h-auto p-0 gap-10">
-          <TabsTrigger value="check-in" className="border-b-2 border-transparent data-[state=active]:border-cyan-500 py-4 px-1 text-cyan-600 font-medium">Check-in</TabsTrigger>
-          <TabsTrigger value="check-out" className="border-b-2 border-transparent data-[state=active]:border-cyan-500 py-4 px-1 text-slate-500 data-[state=active]:text-cyan-600 font-medium">Check-out</TabsTrigger>
-          <TabsTrigger value="hosting" className="border-b-2 border-transparent data-[state=active]:border-cyan-500 py-4 px-1 text-slate-500 data-[state=active]:text-cyan-600 font-medium">Hosting</TabsTrigger>
-          <TabsTrigger value="all" className="border-b-2 border-transparent data-[state=active]:border-cyan-500 py-4 px-1 text-slate-500 data-[state=active]:text-cyan-600 font-medium">All</TabsTrigger>
-        </TabsList>
+          {/* 3. TABS & FULL TABLES */}
+          <Tabs defaultValue="check-in" className="w-full">
+            <TabsList className="bg-transparent border-b w-full justify-start h-auto p-0 gap-10">
+              <TabsTrigger value="check-in" className="border-b-2 border-transparent data-[state=active]:border-cyan-500 py-4 px-1 text-cyan-600 font-medium">Check-in</TabsTrigger>
+              <TabsTrigger value="check-out" className="border-b-2 border-transparent data-[state=active]:border-cyan-500 py-4 px-1 text-slate-500 data-[state=active]:text-cyan-600 font-medium">Check-out</TabsTrigger>
+              <TabsTrigger value="hosting" className="border-b-2 border-transparent data-[state=active]:border-cyan-500 py-4 px-1 text-slate-500 data-[state=active]:text-cyan-600 font-medium">Hosting</TabsTrigger>
+              <TabsTrigger value="all" className="border-b-2 border-transparent data-[state=active]:border-cyan-500 py-4 px-1 text-slate-500 data-[state=active]:text-cyan-600 font-medium">All</TabsTrigger>
+            </TabsList>
 
-        <TabsContent value="check-in">
-          <BookingTable data={filteredCheckIns} title="Guest Check-in" />
-        </TabsContent>
+            <TabsContent value="check-in">
+              <BookingTable data={filteredCheckIns} title="Guest Check-in" />
+            </TabsContent>
 
-        <TabsContent value="check-out">
-          <BookingTable data={filteredCheckOuts} title="Guest Check-out" />
-        </TabsContent>
+            <TabsContent value="check-out">
+              <BookingTable data={filteredCheckOuts} title="Guest Check-out" />
+            </TabsContent>
 
-        <TabsContent value="hosting">
-          <BookingTable data={filteredHosting} title="Currently Hosting" />
-        </TabsContent>
+            <TabsContent value="hosting">
+              <BookingTable data={filteredHosting} title="Currently Hosting" />
+            </TabsContent>
 
-        <TabsContent value="all">
-          <BookingTable data={ALL_BOOKINGS} title="All Bookings" />
-        </TabsContent>
-      </Tabs>
+            <TabsContent value="all">
+              <BookingTable data={ALL_BOOKINGS} title="All Bookings" />
+            </TabsContent>
+          </Tabs>
+        </>
+      )}
     </div>
   )
 }

@@ -283,11 +283,11 @@ export default function CheckoutPage() {
                                 </div>
                                 <div className="flex justify-between items-center text-sm text-muted-foreground">
                                     <span>Service fee</span>
-                                    <span>$0.00</span>
+                                    <span>RM 0.00</span>
                                 </div>
                                 <div className="flex justify-between items-center text-xl font-bold mt-2">
-                                    <span>Total (USD)</span>
-                                    <span>${total}</span>
+                                    <span>Total (MYR)</span>
+                                    <span>RM {total}</span>
                                 </div>
                             </CardFooter>
                         </Card>

@@ -223,6 +223,7 @@ export default function MultiCalendarPage() {
     const [loading, setLoading] = useState(true);
     const [calendarLoading, setCalendarLoading] = useState(false);
     const [expandedRoomTypes, setExpandedRoomTypes] = useState([]);
+    const [refreshTrigger, setRefreshTrigger] = useState(false);
 
     const [selectedBooking, setSelectedBooking] = useState(null);
 
@@ -294,7 +295,13 @@ export default function MultiCalendarPage() {
                     return statusObj ? statusObj.id : null;
                 }).filter(id => id !== null);
 
-                let url = `multi-calendar?start_date=${startDate}&end_date=${endDate}&statuses=${statusIds.join(',')}`;
+                // Map selected channels back to IDs
+                const channelIds = selectedChannels.map(name => {
+                    const channelObj = channels.find(c => c.name === name);
+                    return channelObj ? channelObj.id : null;
+                }).filter(id => id !== null);
+
+                let url = `multi-calendar?start_date=${startDate}&end_date=${endDate}&statuses=${statusIds.join(',')}&channels=${channelIds.join(',')}`;
 
                 if (selectedProperty === 'all') {
                     // Fix: Backend likely needs explicit property IDs. Send all of them.
@@ -328,7 +335,7 @@ export default function MultiCalendarPage() {
             }
         }
         fetchCalendarData();
-    }, [selectedProperty, date, selectedStatuses, toast, properties]);
+    }, [selectedProperty, date, selectedStatuses, selectedChannels, refreshTrigger, toast, properties, channels]);
 
 
     const handleChannelToggle = (channelName) => {
@@ -431,9 +438,7 @@ export default function MultiCalendarPage() {
             {/* Action Buttons & Date Navigation */}
             <div className="flex-shrink-0 flex items-center justify-between gap-4 bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm">
                 <div className="flex items-center gap-2 flex-wrap">
-                    <Button variant="outline">Rate Update</Button>
-                    <Button variant="destructive" className="bg-red-500 text-white">Block</Button>
-                    <Button variant="outline">Refresh</Button>
+                    <Button variant="outline" onClick={() => setRefreshTrigger(prev => !prev)}>Refresh</Button>
                 </div>
                 <div className="flex items-center gap-2">
                     <Button variant="outline" size="icon" onClick={goToPreviousMonth}><ChevronLeft className="h-4 w-4" /></Button>

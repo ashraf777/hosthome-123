@@ -125,7 +125,7 @@ export function PricingForm() {
                 )}
               />
               <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                 <FormField
+                <FormField
                   control={form.control}
                   name="country"
                   render={({ field }) => (
@@ -138,7 +138,7 @@ export function PricingForm() {
                     </FormItem>
                   )}
                 />
-                 <FormField
+                <FormField
                   control={form.control}
                   name="city"
                   render={({ field }) => (
@@ -151,7 +151,7 @@ export function PricingForm() {
                     </FormItem>
                   )}
                 />
-                 <FormField
+                <FormField
                   control={form.control}
                   name="neighborhood"
                   render={({ field }) => (
@@ -175,7 +175,7 @@ export function PricingForm() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Property Type</FormLabel>
-                       <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Select type" />
@@ -186,7 +186,7 @@ export function PricingForm() {
                           <SelectItem value="House">House</SelectItem>
                           <SelectItem value="Villa">Villa</SelectItem>
                           <SelectItem value="Condo">Condo</SelectItem>
-                           <SelectItem value="Townhouse">Townhouse</SelectItem>
+                          <SelectItem value="Townhouse">Townhouse</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -239,7 +239,7 @@ export function PricingForm() {
               />
 
               <Separator />
-              
+
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <FormField
                   control={form.control}
@@ -280,7 +280,7 @@ export function PricingForm() {
               </div>
 
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                 <FormField
+                <FormField
                   control={form.control}
                   name="occupancyRate"
                   render={({ field }) => (
@@ -308,8 +308,8 @@ export function PricingForm() {
                 />
               </div>
 
-               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                 <FormField
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <FormField
                   control={form.control}
                   name="competitorPrices"
                   render={({ field }) => (
@@ -318,7 +318,7 @@ export function PricingForm() {
                       <FormControl>
                         <Input placeholder="e.g., 140, 160, 155" {...field} />
                       </FormControl>
-                       <FormDescription>Separate prices with a comma.</FormDescription>
+                      <FormDescription>Separate prices with a comma.</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -329,7 +329,7 @@ export function PricingForm() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Booking Window</FormLabel>
-                       <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Select booking window" />
@@ -338,7 +338,7 @@ export function PricingForm() {
                         <SelectContent>
                           <SelectItem value="Last minute">Last minute</SelectItem>
                           <SelectItem value="1-3 months in advance">1-3 months in advance</SelectItem>
-                           <SelectItem value="3+ months in advance">3+ months in advance</SelectItem>
+                          <SelectItem value="3+ months in advance">3+ months in advance</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -382,7 +382,7 @@ export function PricingForm() {
                 <div>
                   <p className="text-sm text-muted-foreground">Suggested Nightly Rate</p>
                   <p className="text-5xl font-bold text-primary">
-                    {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0 }).format(result.suggestedPrice)}
+                    {new Intl.NumberFormat('en-MY', { style: 'currency', currency: 'MYR', minimumFractionDigits: 0 }).format(result.suggestedPrice)}
                   </p>
                 </div>
                 <div>

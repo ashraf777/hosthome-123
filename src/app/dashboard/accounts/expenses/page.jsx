@@ -13,10 +13,10 @@ import { Badge } from "@/components/ui/badge";
 
 export default function ExpensesPage() {
   const expenses = [
-    { id: "EXP-001", date: "2024-07-10", category: "Maintenance", amount: "$120.00", property: "Cozy Downtown Apartment" },
-    { id: "EXP-002", date: "2024-07-12", category: "Utilities", amount: "$85.50", property: "Beachside Villa" },
-    { id: "EXP-003", date: "2024-07-15", category: "Supplies", amount: "$45.00", property: "Cozy Downtown Apartment" },
-    { id: "EXP-004", date: "2024-07-20", category: "Cleaning", amount: "$75.00", property: "Mountain Cabin Retreat" },
+    { id: "EXP-001", date: "2024-07-10", category: "Maintenance", amount: "RM 120.00", property: "Cozy Downtown Apartment" },
+    { id: "EXP-002", date: "2024-07-12", category: "Utilities", amount: "RM 85.50", property: "Beachside Villa" },
+    { id: "EXP-003", date: "2024-07-15", category: "Supplies", amount: "RM 45.00", property: "Cozy Downtown Apartment" },
+    { id: "EXP-004", date: "2024-07-20", category: "Cleaning", amount: "RM 75.00", property: "Mountain Cabin Retreat" },
   ];
 
   return (
@@ -35,14 +35,14 @@ export default function ExpensesPage() {
               </CardDescription>
             </div>
             <div className="flex gap-2">
-                <Button variant="outline">
-                    <SlidersHorizontal className="mr-2" />
-                    Filter
-                </Button>
-                <Button>
-                    <Plus className="mr-2" />
-                    Add Expense
-                </Button>
+              <Button variant="outline">
+                <SlidersHorizontal className="mr-2" />
+                Filter
+              </Button>
+              <Button>
+                <Plus className="mr-2" />
+                Add Expense
+              </Button>
             </div>
           </div>
         </CardHeader>

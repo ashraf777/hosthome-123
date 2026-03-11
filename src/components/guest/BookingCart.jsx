@@ -43,7 +43,7 @@ export function BookingCart() {
                                     <div className="flex-1">
                                         <h4 className="font-bold">{item.name}</h4>
                                         <p className="text-sm text-muted-foreground mb-1">{item.propertyName}</p>
-                                        <span className="text-sm font-semibold">${item.weekday_price || item.price} <span className="text-xs font-normal">/ night</span></span>
+                                        <span className="text-sm font-semibold">RM {item.weekday_price || item.price} <span className="text-xs font-normal">/ night</span></span>
                                     </div>
                                     <Button
                                         variant="ghost"
@@ -63,7 +63,7 @@ export function BookingCart() {
                     <SheetFooter className="border-t pt-6 flex-col gap-4">
                         <div className="w-full flex justify-between items-center mb-2">
                             <span className="text-lg font-bold">Total <span className="text-sm font-normal text-muted-foreground whitespace-nowrap hidden sm:inline-block">({nights} night{nights !== 1 ? 's' : ''})</span></span>
-                            <span className="text-2xl font-bold">${total}</span>
+                            <span className="text-2xl font-bold">RM {total}</span>
                         </div>
                         <div className="flex flex-col gap-2 w-full">
                             <Link href="/checkout" className="w-full" onClick={() => setIsCartOpen(false)}>

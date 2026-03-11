@@ -13,12 +13,12 @@ import { Badge } from "@/components/ui/badge";
 
 export default function PayoutPage() {
   const payouts = [
-    { id: "PAY-001", date: "2024-07-16", method: "Bank Transfer", amount: "$1,850.50", status: "Completed" },
-    { id: "PAY-002", date: "2024-07-23", method: "Bank Transfer", amount: "$975.00", status: "In Progress" },
-    { id: "PAY-003", date: "2024-07-09", method: "Bank Transfer", amount: "$2,300.00", status: "Completed" },
+    { id: "PAY-001", date: "2024-07-16", method: "Bank Transfer", amount: "RM 1,850.50", status: "Completed" },
+    { id: "PAY-002", date: "2024-07-23", method: "Bank Transfer", amount: "RM 975.00", status: "In Progress" },
+    { id: "PAY-003", date: "2024-07-09", method: "Bank Transfer", amount: "RM 2,300.00", status: "Completed" },
   ];
 
-    const getStatusBadgeVariant = (status) => {
+  const getStatusBadgeVariant = (status) => {
     switch (status) {
       case 'Completed':
         return 'default';
@@ -45,14 +45,14 @@ export default function PayoutPage() {
               </CardDescription>
             </div>
             <div className="flex gap-2">
-                <Button variant="outline">
-                    <Link className="mr-2" />
-                    Connect Payout Method
-                </Button>
-                 <Button variant="outline">
-                    <Settings className="mr-2" />
-                    Payout Settings
-                </Button>
+              <Button variant="outline">
+                <Link className="mr-2" />
+                Connect Payout Method
+              </Button>
+              <Button variant="outline">
+                <Settings className="mr-2" />
+                Payout Settings
+              </Button>
             </div>
           </div>
         </CardHeader>
@@ -73,7 +73,7 @@ export default function PayoutPage() {
                   <TableCell className="font-medium">{payout.id}</TableCell>
                   <TableCell>{payout.date}</TableCell>
                   <TableCell>{payout.method}</TableCell>
-                   <TableCell>
+                  <TableCell>
                     <Badge variant={getStatusBadgeVariant(payout.status)}>{payout.status}</Badge>
                   </TableCell>
                   <TableCell className="text-right font-semibold">{payout.amount}</TableCell>

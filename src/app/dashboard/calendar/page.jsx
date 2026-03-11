@@ -409,7 +409,7 @@ export default function CalendarPage() {
       const booking = dayBookings[0];
       const nights = differenceInDays(booking.checkOut, booking.checkIn) || 1;
       const price = booking.total / nights;
-      return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(price);
+      return new Intl.NumberFormat('en-MY', { style: 'currency', currency: 'MYR', maximumFractionDigits: 0 }).format(price);
     }
 
     // 2. If unbooked, derive from Selection
@@ -440,7 +440,7 @@ export default function CalendarPage() {
     if (priceValues.length === 0) return '$';
 
     const minPrice = Math.min(...priceValues);
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(minPrice);
+    return new Intl.NumberFormat('en-MY', { style: 'currency', currency: 'MYR', maximumFractionDigits: 0 }).format(minPrice);
   }
 
   const handleDayClick = (day) => {
@@ -753,7 +753,7 @@ export default function CalendarPage() {
                     <div className="col-span-2">
                       <span className="text-muted-foreground block mb-1">Total Payout</span>
                       <span className="font-medium text-lg text-green-600">
-                        {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(selectedBooking.total)}
+                        {new Intl.NumberFormat('en-MY', { style: 'currency', currency: 'MYR' }).format(selectedBooking.total)}
                       </span>
                     </div>
                   </div>
@@ -776,7 +776,7 @@ export default function CalendarPage() {
                         <div className="space-y-1">
                           <h3 className="font-medium text-base">Price settings</h3>
                           <div className="text-sm text-muted-foreground space-y-0.5">
-                            <p>{selectedDate ? (getDisplayPrice(selectedDate) || '$0') : '$0'} per night</p>
+                            <p>{selectedDate ? (getDisplayPrice(selectedDate) || 'RM 0') : 'RM 0'} per night</p>
                             {/* <p>$13,199 weekend price</p>
                             <p>10% weekly discount</p> */}
                           </div>

@@ -42,13 +42,13 @@ export function Overview() {
             fontSize={12}
             tickLine={false}
             axisLine={false}
-            tickFormatter={(value) => `$${value}`}
+            tickFormatter={(value) => `RM ${value}`}
           />
           <Tooltip
             cursor={false}
-            content={<ChartTooltipContent 
-              formatter={(value) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0 }).format(value)}
-            />} 
+            content={<ChartTooltipContent
+              formatter={(value) => new Intl.NumberFormat('en-MY', { style: 'currency', currency: 'MYR', minimumFractionDigits: 0 }).format(value)}
+            />}
           />
           <Bar dataKey="revenue" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
         </BarChart>

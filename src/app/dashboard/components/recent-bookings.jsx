@@ -90,7 +90,7 @@ export function RecentBookings() {
               <Badge variant={getBadgeVariant(booking.status)}>{booking.status}</Badge>
             </TableCell>
             <TableCell className="text-right">
-              {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(booking.amount)}
+              {new Intl.NumberFormat('en-MY', { style: 'currency', currency: 'MYR' }).format(booking.amount)}
             </TableCell>
           </TableRow>
         ))}
