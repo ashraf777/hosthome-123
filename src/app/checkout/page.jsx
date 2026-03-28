@@ -29,6 +29,7 @@ export default function CheckoutPage() {
     })
     const [isSubmitted, setIsSubmitted] = React.useState(false)
     const [isSubmitting, setIsSubmitting] = React.useState(false)
+    const [bookingToken, setBookingToken] = React.useState(null)
     const [error, setError] = React.useState(null)
 
     const handleInputChange = (e) => {
@@ -82,7 +83,11 @@ export default function CheckoutPage() {
                 rooms: parsedRooms
             };
 
-            await guestApi.createBooking(bookingData);
+            const response = await guestApi.createBooking(bookingData);
+            
+            if (response && response.guest_portal_token) {
+                setBookingToken(response.guest_portal_token);
+            }
 
             setIsSubmitted(true)
             clearCart()
@@ -98,16 +103,28 @@ export default function CheckoutPage() {
         return (
             <GuestLayout>
                 <div className="container mx-auto px-4 py-20 flex flex-col items-center text-center">
-                    <div className="bg-primary/10 p-6 rounded-full text-primary mb-6">
+                    <div className="bg-primary/10 p-6 rounded-full text-primary mb-6 animate-in zoom-in slide-in-from-bottom-4">
                         <CheckCircle2 size={64} />
                     </div>
                     <h1 className="text-3xl font-bold mb-4">Booking Confirmed!</h1>
                     <p className="text-muted-foreground max-w-md mb-8">
-                        Thank you for your booking, {formData.firstName}. We've sent a confirmation email to {formData.email}.
+                        Thank you for your booking, <strong>{formData.firstName}</strong>. We've sent a confirmation email to {formData.email}.
                     </p>
-                    <Link href="/">
-                        <Button size="lg">Return to Home</Button>
-                    </Link>
+                    
+                    <div className="flex flex-col sm:flex-row gap-4 w-full justify-center max-w-md">
+                        {bookingToken && (
+                            <Link href={`/guest/booking/${bookingToken}`} className="w-full sm:w-1/2">
+                                <Button size="lg" className="w-full bg-indigo-600 hover:bg-indigo-700">
+                                    Manage My Booking
+                                </Button>
+                            </Link>
+                        )}
+                        <Link href="/" className={bookingToken ? "w-full sm:w-1/2" : ""}>
+                            <Button size="lg" variant={bookingToken ? "outline" : "default"} className="w-full">
+                                Return to Home
+                            </Button>
+                        </Link>
+                    </div>
                 </div>
             </GuestLayout>
         )
