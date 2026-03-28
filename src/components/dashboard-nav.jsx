@@ -28,7 +28,8 @@ import {
   List,
   CheckSquare,
   Link2,
-  Server
+  Server,
+  FileText
 } from "lucide-react"
 import {
   Collapsible,
@@ -59,6 +60,7 @@ export function DashboardNav() {
   const isTaskManagementActive = pathname.startsWith("/dashboard/task-management");
   const isCalendarActive = pathname.startsWith("/dashboard/calendar");
   const isMultiCalendarActive = pathname.startsWith("/dashboard/multi-calendar");
+  const isMessagingActive = pathname.startsWith("/dashboard/messaging");
 
   return (
     <SidebarMenu>
@@ -154,6 +156,43 @@ export function DashboardNav() {
           <SidebarMenuItem>
             <CollapsibleTrigger asChild>
               <SidebarMenuButton
+                isActive={isMessagingActive}
+                isSubmenu
+              >
+                <MessageCircle className="text-sidebar-primary" />
+                <span>Guest Messaging</span>
+              </SidebarMenuButton>
+            </CollapsibleTrigger>
+          </SidebarMenuItem>
+
+          <CollapsibleContent asChild>
+            <SidebarMenuSub>
+              <SidebarMenuSubItem>
+                <SidebarMenuSubButton asChild isActive={pathname.startsWith('/dashboard/messaging/inbox')}>
+                  <Link href="/dashboard/messaging/inbox">
+                    <MessageCircle className="h-4 w-4 mr-2" />
+                    <span>Inbox</span>
+                  </Link>
+                </SidebarMenuSubButton>
+              </SidebarMenuSubItem>
+              <SidebarMenuSubItem>
+                <SidebarMenuSubButton asChild isActive={pathname.startsWith('/dashboard/messaging/templates')}>
+                  <Link href="/dashboard/messaging/templates">
+                    <FileText className="h-4 w-4 mr-2" />
+                    <span>Templates</span>
+                  </Link>
+                </SidebarMenuSubButton>
+              </SidebarMenuSubItem>
+            </SidebarMenuSub>
+          </CollapsibleContent>
+        </>
+      </Collapsible>
+
+      <Collapsible asChild>
+        <>
+          <SidebarMenuItem>
+            <CollapsibleTrigger asChild>
+              <SidebarMenuButton
                 isActive={isTaskManagementActive}
                 isSubmenu
               >
@@ -166,36 +205,36 @@ export function DashboardNav() {
           <CollapsibleContent asChild>
             <SidebarMenuSub>
               <SidebarMenuSubItem>
-                <Link href="/dashboard/task-management/task-list">
-                  <SidebarMenuSubButton isActive={pathname.startsWith('/dashboard/task-management/task-list')}>
+                <SidebarMenuSubButton asChild isActive={pathname.startsWith('/dashboard/task-management/task-list')}>
+                  <Link href="/dashboard/task-management/task-list">
                     <List className="h-4 w-4 mr-2" />
-                    Task List
-                  </SidebarMenuSubButton>
-                </Link>
+                    <span>Task List</span>
+                  </Link>
+                </SidebarMenuSubButton>
               </SidebarMenuSubItem>
               <SidebarMenuSubItem>
-                <Link href="/dashboard/task-management/checklist">
-                  <SidebarMenuSubButton isActive={pathname.startsWith('/dashboard/task-management/checklist')}>
+                <SidebarMenuSubButton asChild isActive={pathname.startsWith('/dashboard/task-management/checklist')}>
+                  <Link href="/dashboard/task-management/checklist">
                     <CheckSquare className="h-4 w-4 mr-2" />
-                    Checklist
-                  </SidebarMenuSubButton>
-                </Link>
+                    <span>Checklist</span>
+                  </Link>
+                </SidebarMenuSubButton>
               </SidebarMenuSubItem>
               <SidebarMenuSubItem>
-                <Link href="/dashboard/task-management/cleaning-team">
-                  <SidebarMenuSubButton isActive={pathname.startsWith('/dashboard/task-management/cleaning-team')}>
+                <SidebarMenuSubButton asChild isActive={pathname.startsWith('/dashboard/task-management/cleaning-team')}>
+                  <Link href="/dashboard/task-management/cleaning-team">
                     <Users className="h-4 w-4 mr-2" />
-                    Cleaning Team
-                  </SidebarMenuSubButton>
-                </Link>
+                    <span>Cleaning Team</span>
+                  </Link>
+                </SidebarMenuSubButton>
               </SidebarMenuSubItem>
               <SidebarMenuSubItem>
-                <Link href="/dashboard/task-management/preset-task">
-                  <SidebarMenuSubButton isActive={pathname.startsWith('/dashboard/task-management/preset-task')}>
+                <SidebarMenuSubButton asChild isActive={pathname.startsWith('/dashboard/task-management/preset-task')}>
+                  <Link href="/dashboard/task-management/preset-task">
                     <Settings className="h-4 w-4 mr-2" />
-                    Preset Task
-                  </SidebarMenuSubButton>
-                </Link>
+                    <span>Preset Task</span>
+                  </Link>
+                </SidebarMenuSubButton>
               </SidebarMenuSubItem>
             </SidebarMenuSub>
           </CollapsibleContent>
@@ -237,12 +276,12 @@ export function DashboardNav() {
           <CollapsibleContent asChild>
             <SidebarMenuSub>
               <SidebarMenuSubItem>
-                <Link href="/dashboard/connect/bed24">
-                  <SidebarMenuSubButton isActive={pathname.startsWith('/dashboard/connect/bed24')}>
+                <SidebarMenuSubButton asChild isActive={pathname.startsWith('/dashboard/connect/bed24')}>
+                  <Link href="/dashboard/connect/bed24">
                     <Server className="h-4 w-4 mr-2" />
-                    Bed24
-                  </SidebarMenuSubButton>
-                </Link>
+                    <span>Bed24</span>
+                  </Link>
+                </SidebarMenuSubButton>
               </SidebarMenuSubItem>
             </SidebarMenuSub>
           </CollapsibleContent>

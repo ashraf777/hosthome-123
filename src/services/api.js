@@ -98,4 +98,20 @@ export const api = {
     addChecklistItem: (checklistId, itemData) => request(`checklists/${checklistId}/items`, { method: 'POST', body: JSON.stringify(itemData) }),
     updateChecklistItem: (checklistId, itemId, itemData) => request(`checklists/${checklistId}/items/${itemId}`, { method: 'PUT', body: JSON.stringify(itemData) }),
     deleteChecklistItem: (checklistId, itemId) => request(`checklists/${checklistId}/items/${itemId}`, { method: 'DELETE' }),
+
+    // Guest Messaging & Templates
+    getMessageTemplates: () => request('message-templates'),
+    createMessageTemplate: (data) => request('message-templates', { method: 'POST', body: JSON.stringify(data) }),
+    updateMessageTemplate: (id, data) => request(`message-templates/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    deleteMessageTemplate: (id) => request(`message-templates/${id}`, { method: 'DELETE' }),
+    runMessageAutomations: () => request('message-templates/run-automations', { method: 'POST' }),
+
+    getInboxMessages: (page = 1) => request(`messages?page=${page}`),
+    getBookingThread: (bookingId) => request(`messages/${bookingId}/thread`),
+    sendMessage: (bookingId, data) => request(`messages/${bookingId}/send`, { method: 'POST', body: JSON.stringify(data) }),
+
+    // Magic Link Guest Portal (Public)
+    getGuestPortalSummary: (token) => request(`guest-portal/${token}`),
+    getGuestPortalMessages: (token) => request(`guest-portal/${token}/messages`),
+    sendGuestPortalMessage: (token, data) => request(`guest-portal/${token}/messages`, { method: 'POST', body: JSON.stringify(data) }),
 };
