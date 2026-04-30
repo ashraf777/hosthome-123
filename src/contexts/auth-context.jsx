@@ -21,7 +21,11 @@ export function AuthProviderContext({ children }) {
             setUser(response.data);
         } catch (error) {
             console.error("Failed to fetch user", error);
-            localStorage.removeItem('access_token');
+            try {
+                if (typeof window !== 'undefined' && window.localStorage && typeof window.localStorage.removeItem === 'function') {
+                    window.localStorage.removeItem('access_token');
+                }
+            } catch (e) {}
             setToken(null);
             setUser(null);
             router.replace('/login');
@@ -31,7 +35,12 @@ export function AuthProviderContext({ children }) {
     }, [router]);
 
     useEffect(() => {
-        const storedToken = localStorage.getItem('access_token');
+        let storedToken = null;
+        try {
+            if (typeof window !== 'undefined' && window.localStorage && typeof window.localStorage.getItem === 'function') {
+                storedToken = window.localStorage.getItem('access_token');
+            }
+        } catch (e) {}
         if (storedToken) {
             setToken(storedToken);
             fetchUser(storedToken);
@@ -43,7 +52,11 @@ export function AuthProviderContext({ children }) {
     const login = async (email, password) => {
         const response = await api.post('login', { email, password });
         if (response.access_token) {
-            localStorage.setItem('access_token', response.access_token);
+            try {
+                if (typeof window !== 'undefined' && window.localStorage && typeof window.localStorage.setItem === 'function') {
+                    window.localStorage.setItem('access_token', response.access_token);
+                }
+            } catch (e) {}
             setToken(response.access_token);
             setUser(response.user);
         } else {
@@ -57,7 +70,11 @@ export function AuthProviderContext({ children }) {
         } catch (error) {
             console.error("Logout API call failed, logging out client-side.", error);
         } finally {
-            localStorage.removeItem('access_token');
+            try {
+                if (typeof window !== 'undefined' && window.localStorage && typeof window.localStorage.removeItem === 'function') {
+                    window.localStorage.removeItem('access_token');
+                }
+            } catch (e) {}
             setToken(null);
             setUser(null);
             toast({ title: "Logged Out", description: "You have been successfully logged out." });

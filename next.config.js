@@ -1,4 +1,19 @@
 /** @type {import('next').NextConfig} */
+
+if (typeof global !== 'undefined') {
+  const isLocalStorageBroken = !global.localStorage || typeof global.localStorage.getItem !== 'function';
+  if (isLocalStorageBroken) {
+    global.localStorage = {
+      getItem: () => null,
+      setItem: () => {},
+      removeItem: () => {},
+      clear: () => {},
+      length: 0,
+      key: () => null,
+    };
+  }
+}
+
 const nextConfig = {
   /* config options here */
   typescript: {

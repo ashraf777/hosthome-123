@@ -7,10 +7,11 @@ import { BookingProvider } from '@/providers/booking-provider.jsx';
 export const metadata = {
   title: 'HostHome',
   description: 'Boost your rental business with HostHome.',
-  viewport: {
-    width: 'device-width',
-    initialScale: 1,
-  },
+};
+
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
 };
 
 export default function RootLayout({

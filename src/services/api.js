@@ -4,7 +4,16 @@ const BASE_URL = 'https://hosthomestaging.frenclub.com/api';
 async function request(endpoint, options = {}) {
     const url = `${BASE_URL}/${endpoint}`;
 
-    const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
+    let token = null;
+    if (typeof window !== 'undefined') {
+        try {
+            token = window.localStorage && typeof window.localStorage.getItem === 'function' 
+                ? window.localStorage.getItem('access_token') 
+                : null;
+        } catch (e) {
+            token = null;
+        }
+    }
 
     const headers = {
         'Accept': 'application/json',
