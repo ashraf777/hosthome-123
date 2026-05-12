@@ -95,6 +95,7 @@ export function CreateListingWizard() {
     // Store created unit IDs from step 4
     if (currentStep === 3) {
       newFormData.createdUnitIds = data.createdUnitIds || [];
+      console.log("Captured Unit IDs in Wizard:", newFormData.createdUnitIds);
     }
     
     setFormData(newFormData);
@@ -155,6 +156,7 @@ export function CreateListingWizard() {
           />
         )
       case 4:
+        console.log("Rendering StepFinalizeOwner with:", { propertyId: formData.propertyId, createdUnitIds: formData.createdUnitIds });
         return (
            <StepFinalizeOwner
             onBack={handleBack}

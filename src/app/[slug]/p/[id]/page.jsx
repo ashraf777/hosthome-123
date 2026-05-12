@@ -20,7 +20,7 @@ import {
 import { Calendar as CalendarComponent } from "@/components/ui/calendar"
 
 export default function PropertyDetailPage() {
-    const { id } = useParams()
+    const { slug, id } = useParams()
     const router = useRouter()
     const { addToCart } = useBooking()
     const [property, setProperty] = React.useState(null)
@@ -37,7 +37,7 @@ export default function PropertyDetailPage() {
     React.useEffect(() => {
         const fetch = async () => {
             setLoading(true)
-            const data = await guestApi.getPropertyDetails(id)
+            const data = await guestApi.getPropertyDetails(slug, id)
             if (data) {
                 setProperty(data)
 
@@ -60,7 +60,7 @@ export default function PropertyDetailPage() {
             setLoading(false)
         }
         fetch()
-    }, [id])
+    }, [slug, id])
 
     if (loading) {
         return (
@@ -88,7 +88,7 @@ export default function PropertyDetailPage() {
             <GuestLayout>
                 <div className="container mx-auto px-4 py-20 text-center">
                     <h1 className="text-2xl font-bold">Property not found</h1>
-                    <Button onClick={() => router.push('/')} className="mt-4">Go Back Home</Button>
+                    <Button onClick={() => router.push(`/${slug}`)} className="mt-4">Go Back Home</Button>
                 </div>
             </GuestLayout>
         )
@@ -269,7 +269,7 @@ export default function PropertyDetailPage() {
                                     setShowDateError(false)
                                     setIsChecking(true)
                                     try {
-                                        const res = await guestApi.checkAvailability({
+                                        const res = await guestApi.checkAvailability(slug, {
                                             property_id: id,
                                             check_in: format(dateRange.from, 'yyyy-MM-dd'),
                                             check_out: format(dateRange.to, 'yyyy-MM-dd'),

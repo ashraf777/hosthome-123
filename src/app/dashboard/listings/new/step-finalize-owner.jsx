@@ -54,6 +54,8 @@ export function StepFinalizeOwner({ onBack, onFinish, initialData, propertyId, c
     setIsSubmitting(true);
     const ownerId = data.owner_user_id ? Number(data.owner_user_id) : null;
 
+    console.log("Submitting Final Step:", { propertyId, createdUnitIds, ownerId });
+
     try {
         // 1. Update owner for all newly created units
         if (ownerId && createdUnitIds && createdUnitIds.length > 0) {
@@ -71,9 +73,28 @@ export function StepFinalizeOwner({ onBack, onFinish, initialData, propertyId, c
         }
         
         // 3. Finalize and redirect
-        router.push("/dashboard/listings");
-        router.refresh();
-        toast({ title: "Wizard Complete!", description: "The new listing has been successfully created and activated." });
+        let targetUnitId = createdUnitIds && createdUnitIds.length > 0 ? createdUnitIds[0] : null;
+
+        // Fallback: If for some reason createdUnitIds is missing, try to find a unit for this property
+        if (!targetUnitId && propertyId) {
+            try {
+                const unitsRes = await api.get(`units?property_id=${propertyId}`);
+                const units = unitsRes.data || unitsRes;
+                if (units && units.length > 0) {
+                    targetUnitId = units[0].id;
+                }
+            } catch (err) {
+                console.error("Fallback fetch failed:", err);
+            }
+        }
+
+        if (targetUnitId) {
+            toast({ title: "Wizard Complete!", description: "Redirecting to listing details..." });
+            router.push(`/dashboard/listings/${targetUnitId}/edit?tab=property`);
+        } else {
+            toast({ variant: "destructive", title: "Redirect Notice", description: "No units found. Returning to listings list." });
+            router.push("/dashboard/listings");
+        }
 
     } catch (error) {
         toast({ variant: "destructive", title: "Finalization Failed", description: error.message || "An error occurred during the final step." });

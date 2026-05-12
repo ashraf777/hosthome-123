@@ -3,6 +3,7 @@
 
 import * as React from "react"
 import Link from "next/link"
+import { useParams } from "next/navigation"
 import { Search, User, Menu, Home, ShoppingCart } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
@@ -10,6 +11,7 @@ import { BookingCart } from "./BookingCart"
 import { useBooking } from "@/providers/booking-provider"
 
 export function GuestLayout({ children }) {
+    const { slug } = useParams()
     const { cart, setIsCartOpen } = useBooking()
 
     return (
@@ -19,7 +21,7 @@ export function GuestLayout({ children }) {
             <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
                 <div className="container mx-auto px-4 h-20 flex items-center justify-between">
                     {/* Logo */}
-                    <Link href="/" className="flex items-center gap-2">
+                    <Link href={`/${slug}`} className="flex items-center gap-2">
                         <div className="bg-primary p-2 rounded-lg">
                             <Home className="h-6 w-6 text-primary-foreground" />
                         </div>

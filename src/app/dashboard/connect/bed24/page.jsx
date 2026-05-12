@@ -39,6 +39,7 @@ import {
     SelectValue,
 } from "@/components/ui/select"
 import { api } from "@/services/api"
+import { useAuth } from "@/contexts/auth-context"
 import { useToast } from "@/hooks/use-toast"
 
 export default function Bed24ConnectPage() {
@@ -48,6 +49,7 @@ export default function Bed24ConnectPage() {
     const [accessToken, setAccessToken] = useState(""); // Kept for UI stability but hides actual token
     const [properties, setProperties] = useState([]);
     const [error, setError] = useState("");
+    const { user } = useAuth();
     const { toast } = useToast();
 
     // Modals State
@@ -163,11 +165,9 @@ export default function Bed24ConnectPage() {
         setImportModalOpen(true);
         setIsActionLoading(true);
         try {
-            const [companiesRes, ownersRes] = await Promise.all([
-                api.get('hosting-companies'),
+            const [ownersRes] = await Promise.all([
                 api.get('property-owners')
             ]);
-            setHostingCompanies(companiesRes.data || []);
             setPropertyOwners(ownersRes.data || []);
         } catch (err) {
             toast({ variant: "destructive", title: "Error", description: "Failed to load companies or owners." });
@@ -192,8 +192,9 @@ export default function Bed24ConnectPage() {
 
     // Action Submissions
     const handleImportSubmit = async () => {
-        if (!selectedCompanyId || !selectedOwnerId) {
-            toast({ variant: "destructive", title: "Required", description: "Please select both a Company and an Owner." });
+        const finalCompanyId = user?.hosting_company_id;
+        if (!finalCompanyId || !selectedOwnerId) {
+            toast({ variant: "destructive", title: "Required", description: "Please select a Property Owner." });
             return;
         }
 
@@ -201,7 +202,7 @@ export default function Bed24ConnectPage() {
         try {
             await api.post('beds24/properties/import', {
                 beds24_property_id: selectedBeds24Id,
-                hosting_company_id: selectedCompanyId,
+                hosting_company_id: finalCompanyId,
                 property_owner_id: selectedOwnerId
             });
             toast({ title: "Success", description: "Property imported successfully as a new Local Listing." });
@@ -401,19 +402,7 @@ export default function Bed24ConnectPage() {
                         <div className="flex justify-center p-4"><Loader2 className="animate-spin" /></div>
                     ) : (
                         <div className="grid gap-4 py-4">
-                            <div className="grid gap-2">
-                                <Label>Hosting Company</Label>
-                                <Select onValueChange={setSelectedCompanyId} value={selectedCompanyId}>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Select Company" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {hostingCompanies.map(company => (
-                                            <SelectItem key={company.id} value={company.id.toString()}>{company.name}</SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
+
                             <div className="grid gap-2">
                                 <Label>Property Owner</Label>
                                 <Select onValueChange={setSelectedOwnerId} value={selectedOwnerId}>

@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
+import { useAuth } from '@/contexts/auth-context';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -33,6 +34,7 @@ const formSchema = z.object({
 
 export function ChecklistDialog({ isOpen, onOpenChange, onChecklistCreated, onChecklistUpdated, checklist }) {
     const { toast } = useToast();
+    const { user } = useAuth();
     const [hostingCompanies, setHostingCompanies] = useState([]);
 
     const form = useForm({
@@ -58,7 +60,7 @@ export function ChecklistDialog({ isOpen, onOpenChange, onChecklistCreated, onCh
                 });
             } else {
                 form.reset({
-                    hosting_company_id: '',
+                    hosting_company_id: user?.hosting_company_id?.toString() || '',
                     checklist_name: '',
                     description: '',
                     items: [{ item_description: '' }],
@@ -125,30 +127,7 @@ export function ChecklistDialog({ isOpen, onOpenChange, onChecklistCreated, onCh
                 </DialogHeader>
                 <Form {...form}>
                     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                        <FormField
-                            control={form.control}
-                            name="hosting_company_id"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Hosting Company</FormLabel>
-                                    <Select onValueChange={field.onChange} value={field.value}>
-                                        <FormControl>
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="Select a hosting company" />
-                                            </SelectTrigger>
-                                        </FormControl>
-                                        <SelectContent>
-                                            {hostingCompanies.map(company => (
-                                                <SelectItem key={company.id} value={company.id.toString()}>
-                                                    {company.name}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
+
 
                         <FormField
                             control={form.control}

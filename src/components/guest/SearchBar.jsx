@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/popover"
 import { Calendar as CalendarComponent } from "@/components/ui/calendar"
 
-export function SearchBar({ onSearch }) {
+export function SearchBar({ onSearch, slug }) {
     const [location, setLocation] = React.useState("")
     const [dateRange, setDateRange] = React.useState({ from: null, to: null })
     const [guests, setGuests] = React.useState(1)
@@ -23,7 +23,7 @@ export function SearchBar({ onSearch }) {
         const fetchCities = async () => {
             try {
                 // Fetch all raw properties without filters to build the location list
-                const data = await guestApi.getProperties();
+                const data = await guestApi.getProperties(slug);
                 const cities = new Set(data?.map(p => p.city).filter(Boolean));
                 setAvailableCities(Array.from(cities));
             } catch (err) {

@@ -1,5 +1,6 @@
 
 const BASE_URL = 'https://hosthomestaging.frenclub.com/api';
+// const BASE_URL = 'http://localhost:8001/api';
 
 async function request(endpoint, options = {}) {
     const url = `${BASE_URL}/${endpoint}`;
@@ -7,8 +8,8 @@ async function request(endpoint, options = {}) {
     let token = null;
     if (typeof window !== 'undefined') {
         try {
-            token = window.localStorage && typeof window.localStorage.getItem === 'function' 
-                ? window.localStorage.getItem('access_token') 
+            token = window.localStorage && typeof window.localStorage.getItem === 'function'
+                ? window.localStorage.getItem('access_token')
                 : null;
         } catch (e) {
             token = null;
@@ -38,6 +39,15 @@ async function request(endpoint, options = {}) {
     const response = await fetch(url, config);
 
     if (!response.ok) {
+        if (response.status === 401) {
+            // Handle Unauthorized globally
+            if (typeof window !== 'undefined') {
+                localStorage.removeItem('access_token');
+                window.location.href = '/login';
+            }
+            throw new Error('Session expired. Please log in again.');
+        }
+
         const errorData = await response.json().catch(() => ({ message: 'An unknown error occurred.' }));
         // Handle validation errors from Laravel
         if (response.status === 422 && errorData.errors) {

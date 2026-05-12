@@ -3,6 +3,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import { useAuth } from "@/contexts/auth-context"
 import {
   Book,
   Cable,
@@ -45,6 +46,16 @@ import { cn } from "@/lib/utils"
 
 export function DashboardNav() {
   const pathname = usePathname()
+  const { user, loading } = useAuth()
+  
+  if (loading || !user) return null;
+
+  const role = user?.role?.name || "";
+  const roleName = role.toLowerCase();
+
+  const isStaff = roleName.includes("staff") || roleName.includes("cleaner");
+  const isHostManager = roleName.includes("host manager");
+  const isAdmin = roleName.includes("admin");
 
   const isListingsActive = pathname.startsWith("/dashboard/listings");
   const isPropertiesActive = pathname.startsWith("/dashboard/properties");
@@ -72,80 +83,88 @@ export function DashboardNav() {
         </Link>
       </SidebarMenuItem>
 
-      <SidebarMenuItem>
-        <Link href="/dashboard/booking">
-          <SidebarMenuButton
-            isActive={isBookingsActive}
-            tooltip="Reservations"
-          >
-            <Book className="text-sidebar-primary" />
-            <span>Reservations</span>
-          </SidebarMenuButton>
-        </Link>
-      </SidebarMenuItem>
+      {!isStaff && (
+        <>
+          <SidebarMenuItem>
+            <Link href="/dashboard/booking">
+              <SidebarMenuButton
+                isActive={isBookingsActive}
+                tooltip="Reservations"
+              >
+                <Book className="text-sidebar-primary" />
+                <span>Reservations</span>
+              </SidebarMenuButton>
+            </Link>
+          </SidebarMenuItem>
 
-      <SidebarMenuItem>
-        <Link href="/dashboard/calendar">
-          <SidebarMenuButton isActive={isCalendarActive} tooltip="Calendar">
-            <Calendar className="text-sidebar-primary" />
-            <span>Calendar</span>
-          </SidebarMenuButton>
-        </Link>
-      </SidebarMenuItem>
+          <SidebarMenuItem>
+            <Link href="/dashboard/calendar">
+              <SidebarMenuButton isActive={isCalendarActive} tooltip="Calendar">
+                <Calendar className="text-sidebar-primary" />
+                <span>Calendar</span>
+              </SidebarMenuButton>
+            </Link>
+          </SidebarMenuItem>
 
-      <SidebarMenuItem>
-        <Link href="/dashboard/multi-calendar">
-          <SidebarMenuButton isActive={isMultiCalendarActive} tooltip="Multi Calendar">
-            <Cable className="text-sidebar-primary" />
-            <span>Multi Calendar</span>
-          </SidebarMenuButton>
-        </Link>
-      </SidebarMenuItem>
+          <SidebarMenuItem>
+            <Link href="/dashboard/multi-calendar">
+              <SidebarMenuButton isActive={isMultiCalendarActive} tooltip="Multi Calendar">
+                <Cable className="text-sidebar-primary" />
+                <span>Multi Calendar</span>
+              </SidebarMenuButton>
+            </Link>
+          </SidebarMenuItem>
+        </>
+      )}
 
-      <SidebarMenuItem>
-        <Link href="/dashboard/listings">
-          <SidebarMenuButton isActive={isListingsActive} tooltip="Listings">
-            <Home className="text-sidebar-primary" />
-            <span>Listings</span>
-          </SidebarMenuButton>
-        </Link>
-      </SidebarMenuItem>
+      {!isStaff && (
+        <>
+          <SidebarMenuItem>
+            <Link href="/dashboard/listings">
+              <SidebarMenuButton isActive={isListingsActive} tooltip="Listings">
+                <Home className="text-sidebar-primary" />
+                <span>Listings</span>
+              </SidebarMenuButton>
+            </Link>
+          </SidebarMenuItem>
 
-      <SidebarMenuItem>
-        <Link href="/dashboard/properties">
-          <SidebarMenuButton isActive={isPropertiesActive} tooltip="Properties">
-            <Building className="text-sidebar-primary" />
-            <span>Properties</span>
-          </SidebarMenuButton>
-        </Link>
-      </SidebarMenuItem>
+          <SidebarMenuItem>
+            <Link href="/dashboard/properties">
+              <SidebarMenuButton isActive={isPropertiesActive} tooltip="Properties">
+                <Building className="text-sidebar-primary" />
+                <span>Properties</span>
+              </SidebarMenuButton>
+            </Link>
+          </SidebarMenuItem>
 
-      <SidebarMenuItem>
-        <Link href="/dashboard/room-types">
-          <SidebarMenuButton isActive={isRoomTypesActive} tooltip="Room Types">
-            <Bed className="text-sidebar-primary" />
-            <span>Room Types</span>
-          </SidebarMenuButton>
-        </Link>
-      </SidebarMenuItem>
+          <SidebarMenuItem>
+            <Link href="/dashboard/room-types">
+              <SidebarMenuButton isActive={isRoomTypesActive} tooltip="Room Types">
+                <Bed className="text-sidebar-primary" />
+                <span>Room Types</span>
+              </SidebarMenuButton>
+            </Link>
+          </SidebarMenuItem>
 
-      <SidebarMenuItem>
-        <Link href="/dashboard/units">
-          <SidebarMenuButton isActive={isUnitsActive} tooltip="Units">
-            <KeyRound className="text-sidebar-primary" />
-            <span>Units</span>
-          </SidebarMenuButton>
-        </Link>
-      </SidebarMenuItem>
+          <SidebarMenuItem>
+            <Link href="/dashboard/units">
+              <SidebarMenuButton isActive={isUnitsActive} tooltip="Units">
+                <KeyRound className="text-sidebar-primary" />
+                <span>Units</span>
+              </SidebarMenuButton>
+            </Link>
+          </SidebarMenuItem>
 
-      <SidebarMenuItem>
-        <Link href="/dashboard/amenities">
-          <SidebarMenuButton isActive={isAmenitiesActive} tooltip="Amenities">
-            <Sparkles className="text-sidebar-primary" />
-            <span>Amenities</span>
-          </SidebarMenuButton>
-        </Link>
-      </SidebarMenuItem>
+          <SidebarMenuItem>
+            <Link href="/dashboard/amenities">
+              <SidebarMenuButton isActive={isAmenitiesActive} tooltip="Amenities">
+                <Sparkles className="text-sidebar-primary" />
+                <span>Amenities</span>
+              </SidebarMenuButton>
+            </Link>
+          </SidebarMenuItem>
+        </>
+      )}
 
       <Collapsible asChild>
         <SidebarMenuItem>
@@ -197,23 +216,54 @@ export function DashboardNav() {
         </SidebarMenuItem>
       </Collapsible>
 
-      <SidebarMenuItem>
-        <Link href="/dashboard/users">
-          <SidebarMenuButton isActive={isUserManagementActive} tooltip="User Management">
-            <UserCog className="text-sidebar-primary" />
-            <span>User Management</span>
-          </SidebarMenuButton>
-        </Link>
-      </SidebarMenuItem>
+      {!isStaff && (
+        <>
+          <SidebarMenuItem>
+            <Link href="/dashboard/users">
+              <SidebarMenuButton isActive={isUserManagementActive} tooltip="User Management">
+                <UserCog className="text-sidebar-primary" />
+                <span>User Management</span>
+              </SidebarMenuButton>
+            </Link>
+          </SidebarMenuItem>
 
-      <SidebarMenuItem>
-        <Link href="/dashboard/access-control">
-          <SidebarMenuButton isActive={isAccessControlActive} tooltip="Access Control">
-            <ShieldCheck className="text-sidebar-primary" />
-            <span>Access Control</span>
-          </SidebarMenuButton>
-        </Link>
-      </SidebarMenuItem>
+          <SidebarMenuItem>
+            <Link href="/dashboard/access-control">
+              <SidebarMenuButton isActive={isAccessControlActive} tooltip="Access Control">
+                <ShieldCheck className="text-sidebar-primary" />
+                <span>Access Control</span>
+              </SidebarMenuButton>
+            </Link>
+          </SidebarMenuItem>
+        </>
+      )}
+
+      {isAdmin && (
+         <Collapsible asChild>
+          <SidebarMenuItem>
+            <CollapsibleTrigger asChild>
+              <SidebarMenuButton
+                isActive={pathname.startsWith('/dashboard/connect')}
+                isSubmenu
+              >
+                <Cable className="text-sidebar-primary" />
+                <span>Connect</span>
+              </SidebarMenuButton>
+            </CollapsibleTrigger>
+            <CollapsibleContent asChild>
+              <SidebarMenuSub>
+                <SidebarMenuSubItem>
+                  <Link href="/dashboard/connect/bed24">
+                    <SidebarMenuSubButton isActive={pathname.startsWith('/dashboard/connect/bed24')}>
+                      Bed24
+                    </SidebarMenuSubButton>
+                  </Link>
+                </SidebarMenuSubItem>
+              </SidebarMenuSub>
+            </CollapsibleContent>
+          </SidebarMenuItem>
+        </Collapsible>
+      )}
 
       {/* 
       const navItems = [

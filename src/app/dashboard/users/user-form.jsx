@@ -6,6 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { Loader2, UserPlus } from "lucide-react"
 import { useRouter } from "next/navigation"
+import { useAuth } from "@/contexts/auth-context"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -39,7 +40,7 @@ const userRegisterSchema = z.object({
   name: z.string().min(2, "Name is required."),
   email: z.string().email("Invalid email address."),
   password: z.string().min(8, "Password must be at least 8 characters."),
-  hosting_company_id: z.coerce.number().default(1),
+  hosting_company_id: z.coerce.number().optional(),
   role_id: z.coerce.number({ required_error: "Please select a role." }),
 });
 
@@ -51,6 +52,7 @@ const userEditSchema = z.object({
 
 
 export function UserForm({ isEditMode = false, userId }) {
+  const { user } = useAuth()
   const [submitting, setSubmitting] = useState(false)
   const [loading, setLoading] = useState(true);
   const [roles, setRoles] = useState([]);
@@ -103,7 +105,10 @@ export function UserForm({ isEditMode = false, userId }) {
         toast({ title: "User Updated", description: "The user's role has been successfully updated." });
       } else {
         // We are creating a new user (registering)
-        const registerValues = values;
+        const registerValues = {
+          ...values,
+          hosting_company_id: user?.hosting_company_id
+        };
         await api.post('register', registerValues);
         toast({ title: "User Created", description: "The new user has been successfully created." });
       }

@@ -3,6 +3,7 @@
 
 import { useEffect, useState, useCallback } from "react"
 import { useForm } from "react-hook-form"
+import { useAuth } from "@/contexts/auth-context"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { Loader2, Home, PlusCircle } from "lucide-react"
@@ -68,6 +69,7 @@ export function ListingForm({ isEditMode = false, listingId }) {
   const [propertyTypes, setPropertyTypes] = useState([])
   const [amenities, setAmenities] = useState({});
   const [isCreateOwnerOpen, setCreateOwnerOpen] = useState(false)
+  const { user } = useAuth()
   const { toast } = useToast()
   const router = useRouter()
 
@@ -473,6 +475,7 @@ export function ListingForm({ isEditMode = false, listingId }) {
         isOpen={isCreateOwnerOpen}
         onClose={() => setCreateOwnerOpen(false)}
         onSuccess={handleNewOwnerSuccess}
+        hostingCompanyId={user?.hosting_company_id}
     />
     </>
   )

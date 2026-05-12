@@ -2,6 +2,7 @@
 "use client"
 
 import * as React from "react"
+import { useAuth } from "@/contexts/auth-context"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
@@ -34,6 +35,7 @@ const ownerSchema = z.object({
 
 export function CreatePropertyOwnerDialog({ isOpen, onClose, onSuccess, hostingCompanyId }) {
   const [isSubmitting, setIsSubmitting] = React.useState(false)
+  const { user } = useAuth()
   const { toast } = useToast()
 
   const form = useForm({
@@ -51,7 +53,9 @@ export function CreatePropertyOwnerDialog({ isOpen, onClose, onSuccess, hostingC
   }, [isOpen, form]);
 
   const handleCreateOwner = async (values) => {
-    if (!hostingCompanyId) {
+    const finalHostingCompanyId = hostingCompanyId || user?.hosting_company_id;
+    
+    if (!finalHostingCompanyId) {
        toast({
         variant: "destructive",
         title: "Error",
@@ -65,7 +69,7 @@ export function CreatePropertyOwnerDialog({ isOpen, onClose, onSuccess, hostingC
       const payload = { 
         ...values, 
         status: 1,
-        hosting_company_id: hostingCompanyId
+        hosting_company_id: finalHostingCompanyId
       };
       const response = await api.post("property-owners", payload)
       toast({

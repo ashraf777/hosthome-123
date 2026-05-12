@@ -3,6 +3,7 @@
 
 import * as React from "react"
 import Link from "next/link"
+import { useSearchParams } from "next/navigation"
 import { api } from "@/services/api"
 import { useToast } from "@/hooks/use-toast"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -13,11 +14,13 @@ import { UnitEditTab } from "./unit-edit-tab"
 import { RoomTypeEditTab } from "./room-type-edit-tab"
 import { PropertyEditTab } from "./property-edit-tab"
 
-export default function EditListingPage({ params }) {
+function EditListingContent({ params }) {
   const { id: unitId } = params;
   const [loading, setLoading] = React.useState(true)
   const [unitData, setUnitData] = React.useState(null)
-  const [activeTab, setActiveTab] = React.useState("unit")
+  const searchParams = useSearchParams()
+  const initialTab = searchParams.get("tab") || "unit"
+  const [activeTab, setActiveTab] = React.useState(initialTab)
   const { toast } = useToast()
 
   const fetchData = React.useCallback(async () => {
@@ -98,4 +101,13 @@ export default function EditListingPage({ params }) {
        )}
     </div>
   )
+}
+
+export default async function EditListingPage({ params }) {
+    const resolvedParams = await params;
+    return (
+        <React.Suspense fallback={<div>Loading...</div>}>
+            <EditListingContent params={resolvedParams} />
+        </React.Suspense>
+    )
 }

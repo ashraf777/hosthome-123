@@ -10,9 +10,11 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import { ChevronLeft, CheckCircle2, CreditCard, Wallet, Building2, ShieldCheck, Loader2 } from "lucide-react"
 import Link from "next/link"
+import { useParams } from "next/navigation"
 import { guestApi } from "@/services/guest-api"
 
 export default function CheckoutPage() {
+    const { slug } = useParams()
     const { cart, total, nights, dateRange, weekdayNights, weekendNights, clearCart } = useBooking()
     const [formData, setFormData] = React.useState({
         firstName: "",
@@ -83,7 +85,7 @@ export default function CheckoutPage() {
                 rooms: parsedRooms
             };
 
-            const response = await guestApi.createBooking(bookingData);
+            const response = await guestApi.createBooking(slug, bookingData);
             
             if (response && response.guest_portal_token) {
                 setBookingToken(response.guest_portal_token);
@@ -113,13 +115,13 @@ export default function CheckoutPage() {
                     
                     <div className="flex flex-col sm:flex-row gap-4 w-full justify-center max-w-md">
                         {bookingToken && (
-                            <Link href={`/guest/booking/${bookingToken}`} className="w-full sm:w-1/2">
+                            <Link href={`/${slug}/booking/${bookingToken}`} className="w-full sm:w-1/2">
                                 <Button size="lg" className="w-full bg-indigo-600 hover:bg-indigo-700">
                                     Manage My Booking
                                 </Button>
                             </Link>
                         )}
-                        <Link href="/" className={bookingToken ? "w-full sm:w-1/2" : ""}>
+                        <Link href={`/${slug}`} className={bookingToken ? "w-full sm:w-1/2" : ""}>
                             <Button size="lg" variant={bookingToken ? "outline" : "default"} className="w-full">
                                 Return to Home
                             </Button>
@@ -135,7 +137,7 @@ export default function CheckoutPage() {
             <GuestLayout>
                 <div className="container mx-auto px-4 py-20 text-center">
                     <h1 className="text-2xl font-bold mb-4">Your cart is empty</h1>
-                    <Link href="/">
+                    <Link href={`/${slug}`}>
                         <Button>Explore Properties</Button>
                     </Link>
                 </div>
@@ -147,7 +149,7 @@ export default function CheckoutPage() {
         <GuestLayout>
             <div className="container mx-auto px-4 py-8">
                 <div className="flex items-center gap-2 mb-8">
-                    <Link href="/" className="hover:text-primary transition">
+                    <Link href={`/${slug}`} className="hover:text-primary transition">
                         <ChevronLeft size={20} />
                     </Link>
                     <h1 className="text-3xl font-bold">Confirm and pay</h1>

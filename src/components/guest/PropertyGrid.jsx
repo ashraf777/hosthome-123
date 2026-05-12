@@ -4,16 +4,23 @@
 import * as React from "react"
 import Image from "next/image"
 import Link from "next/link"
+import { useParams } from "next/navigation"
 import { guestApi } from "@/services/guest-api"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 
-export function PropertyGrid({ searchParams }) {
+export function PropertyGrid({ searchParams, slug: propSlug }) {
+    const params = useParams()
+    const slug = propSlug || params?.slug
     const [properties, setProperties] = React.useState([])
     const [loading, setLoading] = React.useState(true)
 
     React.useEffect(() => {
+        if (!slug || slug === 'undefined') {
+            console.warn('PropertyGrid: Missing or invalid slug, skipping fetch');
+            return;
+        }
         const fetch = async () => {
             setLoading(true)
             const queryParams = {};
@@ -22,13 +29,13 @@ export function PropertyGrid({ searchParams }) {
             if (searchParams.to) queryParams.check_out = searchParams.to.toISOString().split('T')[0];
             if (searchParams.guests) queryParams.guests = searchParams.guests;
 
-            const data = await guestApi.getProperties(queryParams);
+            const data = await guestApi.getProperties(slug, queryParams);
 
             setProperties(data || [])
             setLoading(false)
         }
         fetch()
-    }, [searchParams.location, searchParams.from, searchParams.to, searchParams.guests])
+    }, [slug, searchParams.location, searchParams.from, searchParams.to, searchParams.guests])
 
     if (loading) {
         return (
@@ -57,15 +64,15 @@ export function PropertyGrid({ searchParams }) {
     return (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {properties.map((property) => (
-                <PropertyCard key={property.id} property={property} />
+                <PropertyCard key={property.id} property={property} slug={slug} />
             ))}
         </div>
     )
 }
 
-function PropertyCard({ property }) {
+function PropertyCard({ property, slug }) {
     return (
-        <Link href={`/p/${property.id}`} className="group cursor-pointer">
+        <Link href={`/${slug}/p/${property.id}`} className="group cursor-pointer">
             <div className="flex flex-col gap-2">
                 <div className="relative aspect-[4/3] w-full overflow-hidden rounded-xl">
                     <Image

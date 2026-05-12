@@ -1,7 +1,7 @@
 
 'use client';
 import { SidebarProvider, Sidebar, SidebarHeader, SidebarContent, SidebarFooter, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar.jsx"
-import { DashboardNav } from "@/components/dashboard-nav.jsx"
+import { DashboardNav } from "./dashboard-nav.jsx"
 import { UserNav } from "@/components/user-nav.jsx"
 import { Logo } from "@/components/icons.jsx"
 import Link from "next/link"

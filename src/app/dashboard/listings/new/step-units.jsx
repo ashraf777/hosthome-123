@@ -93,7 +93,7 @@ export function StepUnits({ onNext, onBack, initialData, roomTypes, propertyId }
     setIsSubmitting(true);
     try {
         const responses = await Promise.all(unitCreationPromises);
-        const createdUnitIds = responses.map(res => res.data.id);
+        const createdUnitIds = responses.map(res => (res.data ? res.data.id : res.id));
         
         toast({
             title: "Units Created",

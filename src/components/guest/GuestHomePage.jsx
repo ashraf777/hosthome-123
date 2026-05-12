@@ -4,7 +4,7 @@ import * as React from "react"
 import { SearchBar } from "./SearchBar"
 import { PropertyGrid } from "./PropertyGrid"
 
-export function GuestHomePage() {
+export function GuestHomePage({ slug }) {
     const [searchParams, setSearchParams] = React.useState({
         location: "",
         checkIn: null,
@@ -22,7 +22,7 @@ export function GuestHomePage() {
             <div className="relative py-12 bg-muted/20">
                 <div className="container mx-auto px-4 flex flex-col items-center">
                     <div className="w-full max-w-4xl bg-background rounded-full shadow-lg border p-2 mb-8">
-                        <SearchBar onSearch={handleSearch} />
+                        <SearchBar onSearch={handleSearch} slug={slug} />
                     </div>
                 </div>
             </div>
@@ -35,7 +35,7 @@ export function GuestHomePage() {
                         <p className="text-muted-foreground">Find the perfect place to stay in Malaysia.</p>
                     </div>
 
-                    <PropertyGrid searchParams={searchParams} />
+                    <PropertyGrid searchParams={searchParams} slug={slug} />
                 </div>
             </div>
         </div>

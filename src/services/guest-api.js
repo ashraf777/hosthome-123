@@ -33,12 +33,16 @@ const formatPropertyData = (property) => ({
  */
 export const guestApi = {
     /**
-     * Fetch all properties. Fallback to MOCK_PROPERTIES if API fails or returns empty.
+     * Fetch all properties for a specific hosting company.
      */
-    getProperties: async (params = {}) => {
+    getProperties: async (slug, params = {}) => {
+        if (!slug || slug === 'undefined') {
+            console.error('guestApi.getProperties: Missing slug');
+            return [];
+        }
         try {
-            const response = await api.get('guest/properties', { params });
-            const data = response?.data?.data || response?.data || response; // Handle pagination wrapper if present
+            const response = await api.get(`guest/${slug}/properties`, { params });
+            const data = response?.data?.data || response?.data || response; 
             if (Array.isArray(data)) {
                 return data.map(formatPropertyData);
             }
@@ -52,13 +56,10 @@ export const guestApi = {
     /**
      * Fetch property details and its room types.
      */
-    getPropertyDetails: async (id) => {
+    getPropertyDetails: async (slug, id) => {
         try {
-            // The guest API show endpoint now includes room_types and amenities
-            const propResponse = await api.get(`guest/properties/${id}`);
+            const propResponse = await api.get(`guest/${slug}/properties/${id}`);
             const property = propResponse?.data || propResponse;
-
-            const roomTypes = property.room_types || [];
 
             if (property && property.id) {
                 return formatPropertyData(property);
@@ -71,19 +72,44 @@ export const guestApi = {
         }
     },
 
+    /**
+     * Fetch amenities for a specific hosting company.
+     */
+    getAmenities: async (slug) => {
+        try {
+            const response = await api.get(`guest/${slug}/amenities`);
+            return response?.data || response;
+        } catch (error) {
+            console.error('Failed to fetch amenities:', error);
+            return [];
+        }
+    },
+
+    /**
+     * Fetch countries.
+     */
+    getCountries: async (slug) => {
+        try {
+            const response = await api.get(`guest/${slug}/countries`);
+            return response?.data || response;
+        } catch (error) {
+            console.error('Failed to fetch countries:', error);
+            return [];
+        }
+    },
+
     // Check availability for specific dates
-    checkAvailability: async (params) => {
+    checkAvailability: async (slug, params) => {
         const query = new URLSearchParams(params).toString();
-        // The custom API client automatically throws if !response.ok and parses JSON
-        return await api.get(`guest/availability/check?${query}`);
+        return await api.get(`guest/${slug}/availability/check?${query}`);
     },
 
     /**
      * Store a new booking
      */
-    createBooking: async (bookingData) => {
+    createBooking: async (slug, bookingData) => {
         try {
-            const response = await api.post('guest/bookings', bookingData);
+            const response = await api.post(`guest/${slug}/bookings`, bookingData);
             return response?.data || response;
         } catch (error) {
             console.error('Failed to create booking:', error);

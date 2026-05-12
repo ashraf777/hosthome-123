@@ -13,6 +13,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useToast } from "@/hooks/use-toast"
+import { useAuth } from "@/contexts/auth-context"
 import { api } from "@/services/api"
 import { CreateHostingCompanyDialog } from "./create-hosting-company-dialog.jsx"
 
@@ -24,12 +25,13 @@ export function StepOwner({ onNext, initialData }) {
   const [hostingCompanies, setHostingCompanies] = React.useState([])
   const [loading, setLoading] = React.useState(true)
   const [isCreateCompanyOpen, setCreateCompanyOpen] = React.useState(false)
+  const { user } = useAuth()
   const { toast } = useToast()
 
   const form = useForm({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      hosting_company_id: initialData?.hosting_company?.id || undefined,
+      hosting_company_id: initialData?.hosting_company?.id || user?.hosting_company_id || undefined,
     },
   })
 
@@ -37,7 +39,13 @@ export function StepOwner({ onNext, initialData }) {
     setLoading(true);
     try {
       const response = await api.get('hosting-companies');
-      setHostingCompanies(response.data);
+      const allCompanies = response.data || [];
+      // Filter to only show the user's hosting company
+      if (user?.hosting_company_id) {
+        setHostingCompanies(allCompanies.filter(c => c.id === user.hosting_company_id));
+      } else {
+        setHostingCompanies(allCompanies);
+      }
     } catch (error) {
        toast({ variant: "destructive", title: "Error", description: "Could not fetch hosting companies." });
     } finally {
@@ -49,6 +57,12 @@ export function StepOwner({ onNext, initialData }) {
   React.useEffect(() => {
     fetchHostingCompanies();
   }, [fetchHostingCompanies])
+
+  React.useEffect(() => {
+    if (user?.hosting_company_id && !form.getValues("hosting_company_id")) {
+      form.setValue("hosting_company_id", user.hosting_company_id);
+    }
+  }, [user, form]);
   
   React.useEffect(() => {
       if (initialData) {

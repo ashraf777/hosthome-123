@@ -1,11 +1,6 @@
-import { GuestLayout } from '@/components/guest/GuestLayout';
-import { GuestHomePage } from '@/components/guest/GuestHomePage';
+import { redirect } from "next/navigation";
 
 export default function RootPage() {
-  return (
-    <GuestLayout>
-      <GuestHomePage />
-    </GuestLayout>
-  );
+  // Redirect to login by default if no company slug is provided
+  redirect("/login");
 }
-

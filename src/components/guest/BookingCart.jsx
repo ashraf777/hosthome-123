@@ -13,8 +13,10 @@ import {
 import { Button } from "@/components/ui/button"
 import { Trash2, ShoppingCart, ArrowRight } from "lucide-react"
 import Link from "next/link"
+import { useParams } from "next/navigation"
 
 export function BookingCart() {
+    const { slug } = useParams()
     const { cart, removeFromCart, total, nights, isCartOpen, setIsCartOpen } = useBooking()
 
     return (
@@ -66,7 +68,7 @@ export function BookingCart() {
                             <span className="text-2xl font-bold">RM {total}</span>
                         </div>
                         <div className="flex flex-col gap-2 w-full">
-                            <Link href="/checkout" className="w-full" onClick={() => setIsCartOpen(false)}>
+                            <Link href={`/${slug}/checkout`} className="w-full" onClick={() => setIsCartOpen(false)}>
                                 <Button className="w-full py-6 text-lg font-bold flex gap-2">
                                     Confirm Booking <ArrowRight size={20} />
                                 </Button>

@@ -2,6 +2,7 @@
 "use client";
 
 import { useEffect } from 'react';
+import { useAuth } from '@/contexts/auth-context';
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { CleaningTeamForm } from "./cleaning-team-form";
@@ -21,10 +22,11 @@ const formSchema = z.object({
 
 export function CleaningTeamDialog({ isOpen, onOpenChange, onTeamCreated }) {
     const { toast } = useToast();
+    const { user } = useAuth();
     const form = useForm({
         resolver: zodResolver(formSchema),
         defaultValues: {
-            hosting_company_id: undefined,
+            hosting_company_id: user?.hosting_company_id,
             team_name: "",
             team_leader_id: null,
             members: [],
@@ -35,7 +37,7 @@ export function CleaningTeamDialog({ isOpen, onOpenChange, onTeamCreated }) {
     useEffect(() => {
         if (isOpen) {
             form.reset({
-                hosting_company_id: undefined,
+                hosting_company_id: user?.hosting_company_id,
                 team_name: "",
                 team_leader_id: null,
                 members: [],

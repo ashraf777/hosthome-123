@@ -11,7 +11,6 @@ import { api } from '@/services/api';
 
 export function CleaningTeamForm({ form, team }) {
     const [allUsers, setAllUsers] = useState([]);
-    const [hostingCompanies, setHostingCompanies] = useState([]);
 
     useEffect(() => {
         async function fetchUsers() {
@@ -23,17 +22,9 @@ export function CleaningTeamForm({ form, team }) {
             }
         }
 
-        async function fetchHostingCompanies() {
-            try {
-                const response = await api.get('hosting-companies');
-                setHostingCompanies(response.data || []);
-            } catch (error) {
-                console.error("Failed to fetch hosting companies", error);
-            }
-        }
+
 
         fetchUsers();
-        fetchHostingCompanies();
     }, []);
 
     const selectedUserIds = form.watch('members', []);
@@ -53,28 +44,7 @@ export function CleaningTeamForm({ form, team }) {
     return (
         <Form {...form}>
             <div className="grid gap-4 py-4">
-                <FormField
-                    control={form.control}
-                    name="hosting_company_id"
-                    render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Hosting Company</FormLabel>
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Select a hosting company" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {hostingCompanies.map(company => (
-                                        <SelectItem key={company.id} value={company.id}>
-                                            {company.name}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                            <FormMessage />
-                        </FormItem>
-                    )}
-                />
+
                 <FormField
                     control={form.control}
                     name="team_name"
