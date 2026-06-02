@@ -27,7 +27,8 @@ import {
   Sparkles,
   Paintbrush,
   List,
-  CheckSquare
+  CheckSquare,
+  FileText
 } from "lucide-react"
 import {
   Collapsible,
@@ -47,7 +48,7 @@ import { cn } from "@/lib/utils"
 export function DashboardNav() {
   const pathname = usePathname()
   const { user, loading } = useAuth()
-  
+
   if (loading || !user) return null;
 
   const role = user?.role?.name || "";
@@ -68,6 +69,7 @@ export function DashboardNav() {
   const isTaskManagementActive = pathname.startsWith("/dashboard/task-management");
   const isCalendarActive = pathname.startsWith("/dashboard/calendar");
   const isMultiCalendarActive = pathname.startsWith("/dashboard/multi-calendar");
+  const isMessagingActive = pathname.startsWith("/dashboard/messaging");
 
   return (
     <SidebarMenu>
@@ -218,6 +220,44 @@ export function DashboardNav() {
 
       {!isStaff && (
         <>
+
+          <Collapsible asChild>
+            <>
+              <SidebarMenuItem>
+                <CollapsibleTrigger asChild>
+                  <SidebarMenuButton
+                    isActive={isMessagingActive}
+                    isSubmenu
+                  >
+                    <MessageCircle className="text-sidebar-primary" />
+                    <span>Guest Messaging</span>
+                  </SidebarMenuButton>
+                </CollapsibleTrigger>
+              </SidebarMenuItem>
+
+              <CollapsibleContent asChild>
+                <SidebarMenuSub>
+                  <SidebarMenuSubItem>
+                    <SidebarMenuSubButton asChild isActive={pathname.startsWith('/dashboard/messaging/inbox')}>
+                      <Link href="/dashboard/messaging/inbox">
+                        <MessageCircle className="h-4 w-4 mr-2" />
+                        <span>Inbox</span>
+                      </Link>
+                    </SidebarMenuSubButton>
+                  </SidebarMenuSubItem>
+                  <SidebarMenuSubItem>
+                    <SidebarMenuSubButton asChild isActive={pathname.startsWith('/dashboard/messaging/templates')}>
+                      <Link href="/dashboard/messaging/templates">
+                        <FileText className="h-4 w-4 mr-2" />
+                        <span>Templates</span>
+                      </Link>
+                    </SidebarMenuSubButton>
+                  </SidebarMenuSubItem>
+                </SidebarMenuSub>
+              </CollapsibleContent>
+            </>
+          </Collapsible>
+
           <SidebarMenuItem>
             <Link href="/dashboard/users">
               <SidebarMenuButton isActive={isUserManagementActive} tooltip="User Management">
@@ -239,7 +279,7 @@ export function DashboardNav() {
       )}
 
       {isAdmin && (
-         <Collapsible asChild>
+        <Collapsible asChild>
           <SidebarMenuItem>
             <CollapsibleTrigger asChild>
               <SidebarMenuButton
