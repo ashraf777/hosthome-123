@@ -1,6 +1,6 @@
 
 const BASE_URL = 'https://hosthomestaging.frenclub.com/api';
-// const BASE_URL = 'http://localhost:8001/api';
+// const BASE_URL = 'http://localhost:8002/api';
 
 async function request(endpoint, options = {}) {
     const url = `${BASE_URL}/${endpoint}`;
